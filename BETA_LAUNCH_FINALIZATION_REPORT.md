@@ -179,8 +179,8 @@ cd apps/mobile-flutter && flutter run --dart-define=API_BASE_URL=https://staging
 
 | File | Platform | Status | Owner must supply |
 |------|----------|--------|-------------------|
-| `android/app/google-services.json` | Android | **Present** | None (verify package `com.example.ministry_mobile`) |
-| `ios/Runner/GoogleService-Info.plist` | iOS | **Missing** | Download from Firebase Console (bundle `com.example.ministryMobile`) |
+| `android/app/google-services.json` | Android | **Present** | None (verify package `com.ministrymobile.app`) |
+| `ios/Runner/GoogleService-Info.plist` | iOS | **Missing** | Download from Firebase Console (bundle `com.ministrymobile.app`) |
 
 #### APNs (iOS push — manual)
 

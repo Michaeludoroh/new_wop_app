@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCTp0fW_R_G00jlQm2Tu5dNQ1PMCslKGsk',
-    appId: '1:920723067172:android:787c4af5da953cecc8a3b1',
+    appId: '1:920723067172:android:7fb9f48f55e68469c8a3b1',
     messagingSenderId: '920723067172',
     projectId: 'ministry-mobile',
     storageBucket: 'ministry-mobile.firebasestorage.app',
@@ -59,10 +59,10 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDDBseEiGtPmq6gWQXVC5DPaHfri58-UgY',
-    appId: '1:920723067172:ios:b90790d9701f5fc4c8a3b1',
+    appId: '1:920723067172:ios:9e599c0e97fa717bc8a3b1',
     messagingSenderId: '920723067172',
     projectId: 'ministry-mobile',
     storageBucket: 'ministry-mobile.firebasestorage.app',
-    iosBundleId: 'com.example.ministryMobile',
+    iosBundleId: 'com.ministrymobile.app',
   );
 }

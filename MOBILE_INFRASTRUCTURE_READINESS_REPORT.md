@@ -31,7 +31,7 @@ Mobile push infrastructure **code is now wired** for Android 13+, iOS background
 
 ### Required setup steps (Android)
 
-1. Create Android app in Firebase Console with package `com.example.ministry_mobile`.
+1. Create Android app in Firebase Console with package `com.ministrymobile.app`.
 2. Download `google-services.json` and place at `apps/mobile-flutter/android/app/google-services.json`.
 3. Rebuild: `flutter clean && flutter run` (Gradle plugin auto-applies when file is present).
 4. On Android 13+ device, accept notification permission when prompted after login.
@@ -48,7 +48,7 @@ Mobile push infrastructure **code is now wired** for Android 13+, iOS background
 
 ### APNs requirements (manual, Firebase Console + Apple Developer)
 
-1. Create iOS app in Firebase Console with bundle ID matching Xcode (`com.example.ministryMobile` or your production ID).
+1. Create iOS app in Firebase Console with bundle ID matching Xcode (`com.ministrymobile.app`).
 2. Download `GoogleService-Info.plist` → `apps/mobile-flutter/ios/Runner/GoogleService-Info.plist`.
 3. In Apple Developer: create APNs Authentication Key (.p8) or push certificate.
 4. Upload APNs key to Firebase Console → Project Settings → Cloud Messaging → Apple app configuration.

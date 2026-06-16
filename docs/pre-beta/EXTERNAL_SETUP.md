@@ -84,7 +84,7 @@ cd services/api && npm test -- --testPathPatterns=beta-smoke
 
 1. [Firebase Console](https://console.firebase.google.com) → Create or select **staging** project.
 2. **Add app → Android**.
-3. Package name: `com.example.ministry_mobile` (must match `android/app/build.gradle.kts`).
+3. Package name: `com.ministrymobile.app` (must match `android/app/build.gradle.kts`).
 4. Download **`google-services.json`**.
 5. Place at:
 
@@ -114,7 +114,7 @@ flutter run --dart-define=API_BASE_URL=https://staging-api.example.com/api/v1
 ### Steps
 
 1. Firebase Console → **Add app → iOS**.
-2. Bundle ID: `com.example.ministryMobile` (must match Xcode `PRODUCT_BUNDLE_IDENTIFIER`).
+2. Bundle ID: `com.ministrymobile.app` (must match Xcode `PRODUCT_BUNDLE_IDENTIFIER`).
 3. Download **`GoogleService-Info.plist`**.
 4. Place at:
 

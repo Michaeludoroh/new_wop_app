@@ -46,7 +46,7 @@ Push notification **application logic and backend APIs are implemented and unit-
 | Plugin applied in app module | **Missing** | `android/app/build.gradle.kts` |
 | FCM service meta-data | **Missing** | `AndroidManifest.xml` — only Flutter embedding meta-data |
 | `POST_NOTIFICATIONS` permission | **Missing** | Only `INTERNET` in debug/profile manifests |
-| Application ID | Placeholder | `com.example.ministry_mobile` |
+| Application ID | Production | `com.ministrymobile.app` |
 
 ### Result: **FAIL** — Android cannot obtain FCM tokens or receive pushes without `google-services.json` and Gradle plugin.
 
@@ -328,7 +328,7 @@ Push remains a **beta blocker** until P0 items above are resolved and one device
 
 ## Recommended Validation Checklist (Next Steps)
 
-1. Create Firebase project; register Android (`com.example.ministry_mobile`) and iOS apps
+1. Create Firebase project; register Android (`com.ministrymobile.app`) and iOS apps
 2. Place `google-services.json` and `GoogleService-Info.plist` in repo (or CI secrets)
 3. Apply Google Services Gradle plugin; add `POST_NOTIFICATIONS` permission
 4. Set `FIREBASE_SERVICE_ACCOUNT_JSON` in staging API env

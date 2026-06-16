@@ -1,1 +1,22 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"ministry-mobile","appId":"1:920723067172:android:787c4af5da953cecc8a3b1","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"ministry-mobile","configurations":{"android":"1:920723067172:android:787c4af5da953cecc8a3b1","ios":"1:920723067172:ios:b90790d9701f5fc4c8a3b1"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "ministry-mobile",
+          "appId": "1:920723067172:android:7fb9f48f55e68469c8a3b1",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "ministry-mobile",
+          "configurations": {
+            "android": "1:920723067172:android:7fb9f48f55e68469c8a3b1",
+            "ios": "1:920723067172:ios:9e599c0e97fa717bc8a3b1"
+          }
+        }
+      }
+    }
+  }
+}

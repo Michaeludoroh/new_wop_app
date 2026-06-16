@@ -1,4 +1,4 @@
-package com.example.ministry_mobile
+package com.ministrymobile.app
 
 import io.flutter.embedding.android.FlutterActivity
 

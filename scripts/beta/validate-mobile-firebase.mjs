@@ -90,6 +90,50 @@ check(
     : 'Missing aps-environment in Runner.entitlements',
 );
 
+const EXPECTED_ANDROID_PACKAGE = 'com.ministrymobile.app';
+const EXPECTED_IOS_BUNDLE = 'com.ministrymobile.app';
+const EXPECTED_ANDROID_FIREBASE_APP_ID = '7fb9f48f55e68469c8a3b1';
+
+const firebaseOptions = fs.readFileSync(
+  path.join(root, 'apps/mobile-flutter/lib/firebase_options.dart'),
+  'utf8',
+);
+const googleServices = androidConfig
+  ? fs.readFileSync(path.join(root, 'apps/mobile-flutter/android/app/google-services.json'), 'utf8')
+  : '';
+const pbxproj = fs.readFileSync(
+  path.join(root, 'apps/mobile-flutter/ios/Runner.xcodeproj/project.pbxproj'),
+  'utf8',
+);
+
+check(
+  'Android applicationId',
+  appGradle.includes(`applicationId = "${EXPECTED_ANDROID_PACKAGE}"`),
+  `Expected ${EXPECTED_ANDROID_PACKAGE}`,
+);
+check(
+  'Android google-services package name',
+  googleServices.includes(`"package_name": "${EXPECTED_ANDROID_PACKAGE}"`),
+  googleServices
+    ? `google-services.json references ${EXPECTED_ANDROID_PACKAGE}`
+    : 'google-services.json missing',
+);
+check(
+  'Firebase Android app ID',
+  firebaseOptions.includes(EXPECTED_ANDROID_FIREBASE_APP_ID),
+  `firebase_options.dart uses app ID suffix ${EXPECTED_ANDROID_FIREBASE_APP_ID}`,
+);
+check(
+  'iOS bundle identifier',
+  pbxproj.includes(`PRODUCT_BUNDLE_IDENTIFIER = ${EXPECTED_IOS_BUNDLE};`),
+  `Expected ${EXPECTED_IOS_BUNDLE} in project.pbxproj`,
+);
+check(
+  'Firebase iOS bundle ID',
+  firebaseOptions.includes(`iosBundleId: '${EXPECTED_IOS_BUNDLE}'`),
+  `firebase_options.dart iosBundleId is ${EXPECTED_IOS_BUNDLE}`,
+);
+
 const mobileStagingExample = fileExists('apps/mobile-flutter/.env.staging.example');
 check(
   'Mobile staging API_BASE_URL template',

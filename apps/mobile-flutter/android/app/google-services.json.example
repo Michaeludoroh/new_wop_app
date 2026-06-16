@@ -8,9 +8,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:REPLACE:android:REPLACE",
+        "mobilesdk_app_id": "1:920723067172:android:7fb9f48f55e68469c8a3b1",
         "android_client_info": {
-          "package_name": "com.example.ministry_mobile"
+          "package_name": "com.ministrymobile.app"
         }
       },
       "oauth_client": [],

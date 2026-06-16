@@ -168,7 +168,7 @@ Execute in this order to minimize rework. Parallel tracks noted where safe.
 | **D1** | Firebase Console → Project Settings → Service accounts → generate JSON | Firebase | 15 min | **Firebase project owner access** |
 | **D2** | Set `FIREBASE_SERVICE_ACCOUNT_JSON={...}` (or `FCM_*` trio) on staging API `.env` | Firebase | 10 min | D1 |
 | **D3** | Restart staging API; publish test announcement → push send succeeds (no FCM error in logs) | Firebase | 20 min | D2 |
-| **D4** | Firebase Console → add iOS app → download `GoogleService-Info.plist` | Firebase | 15 min | Bundle ID `com.example.ministryMobile` |
+| **D4** | Firebase Console → add iOS app → download `GoogleService-Info.plist` | Firebase | 15 min | Bundle ID `com.ministrymobile.app` |
 | **D5** | Place at `apps/mobile-flutter/ios/Runner/GoogleService-Info.plist` | Firebase | 5 min | D4 |
 | **D6** | Apple Developer → create APNs Auth Key (`.p8`); upload to Firebase → Cloud Messaging | Firebase | 45 min | **Apple Developer Program ($99/yr)** |
 | **D7** | Re-run `validate-mobile-firebase.mjs` | Firebase | 2 min | **100% (11/11)**, **exit 0** |

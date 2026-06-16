@@ -208,7 +208,7 @@ https://staging-api.example.com/api/v1/payments/webhooks/flutterwave
 
 **Type:** External credential requirement
 
-1. Firebase Console → Add Android app, package `com.example.ministry_mobile`.
+1. Firebase Console → Add Android app, package `com.ministrymobile.app`.
 2. Download `google-services.json` → `apps/mobile-flutter/android/app/google-services.json`.
 3. Build:
 
@@ -225,7 +225,7 @@ cd apps/mobile-flutter && flutter clean && flutter run --dart-define=API_BASE_UR
 
 **Type:** External credential requirement
 
-1. Firebase Console → Add iOS app, bundle `com.example.ministryMobile`.
+1. Firebase Console → Add iOS app, bundle `com.ministrymobile.app`.
 2. Download `GoogleService-Info.plist` → `apps/mobile-flutter/ios/Runner/GoogleService-Info.plist`.
 3. Xcode → Runner → Signing & Capabilities → enable **Push Notifications** (repo includes `Runner.entitlements`).
 4. Build on physical device with same `--dart-define=API_BASE_URL=...`.
