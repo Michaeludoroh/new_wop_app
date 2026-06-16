@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-05-30T15:09:20.844Z",
+  "environment": "local",
+  "auth": {
+    "status": "PASS",
+    "score": 90.63,
+    "totalChecks": 8
+  },
+  "payments": {
+    "status": "PASS",
+    "score": 100,
+    "totalChecks": 5
+  },
+  "notifications": {
+    "status": "PASS",
+    "score": 87.5,
+    "totalChecks": 6
+  },
+  "websocket": {
+    "status": "WARNING",
+    "score": 46.43,
+    "totalChecks": 7
+  },
+  "infrastructure": {},
+  "suiteBreakdown": {
+    "runtime": {
+      "status": "WARNING",
+      "score": 75,
+      "totalChecks": 2
+    },
+    "auth": {
+      "status": "PASS",
+      "score": 90.63,
+      "totalChecks": 8
+    },
+    "websocket": {
+      "status": "WARNING",
+      "score": 46.43,
+      "totalChecks": 7
+    },
+    "payments": {
+      "status": "PASS",
+      "score": 100,
+      "totalChecks": 5
+    },
+    "notifications": {
+      "status": "PASS",
+      "score": 87.5,
+      "totalChecks": 6
+    }
+  },
+  "overallScore": 79.91,
+  "blockingFailures": [],
+  "warnings": [
+    {
+      "suite": "runtime",
+      "checkId": "ws-health",
+      "checkName": "WebSocket service health endpoint",
+      "details": {
+        "message": ""
+      }
+    },
+    {
+      "suite": "websocket",
+      "checkId": "ws-valid-handshake",
+      "checkName": "Valid WebSocket handshake",
+      "details": {
+        "message": "timeout waiting for connect"
+      }
+    },
+    {
+      "suite": "websocket",
+      "checkId": "ws-reconnect-cycle",
+      "checkName": "Reconnect cycle behavior",
+      "details": {
+        "message": "timeout waiting for connect"
+      }
+    },
+    {
+      "suite": "websocket",
+      "checkId": "ws-disconnect-cleanup",
+      "checkName": "Disconnect cleanup shape",
+      "details": {
+        "message": "timeout waiting for connect"
+      }
+    }
+  ]
+}

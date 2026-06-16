@@ -1,0 +1,816 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        String                       @id @default(cuid())
+  email                     String                       @unique
+  fullName                  String
+  passwordHash              String
+  role                      Role                         @default(USER)
+  passwordResetTokenHash    String?
+  passwordResetExpiresAt    DateTime?
+  lastLoginAt               DateTime?
+  createdAt                 DateTime                     @default(now())
+  updatedAt                 DateTime                     @updatedAt
+  deletedAt                 DateTime?
+  announcementsAuthored     Announcement[]               @relation("AnnouncementAuthor")
+  auditLogs                 AuditLog[]
+  ebookPurchases            EbookPurchase[]
+  createdPrograms           EmpowermentProgram[]         @relation("ProgramCreator")
+  eventAttendances          EventAttendee[]
+  mentorshipAttendances     MentorshipAttendance[]
+  createdMentorships        MentorshipClass[]            @relation("MentorshipCreator")
+  mentorshipClasses         MentorshipClassParticipant[]
+  mentorshipFeedback        MentorshipFeedback[]
+  mentorshipProgress        MentorshipProgress[]
+  notifications             Notification[]               @relation("UserNotifications")
+  paymentTransactions       PaymentTransaction[]
+  policyAcceptances         PolicyAcceptance[]
+  programEnrollments        ProgramEnrollment[]
+  programProgress           ProgramProgress[]
+  pushDeliveryLogs          PushDeliveryLog[]
+  pushDeviceTokens          PushDeviceToken[]
+  readingProgress           ReadingProgress[]
+  refreshTokens             RefreshToken[]
+  subscriptionStatusHistory SubscriptionStatusHistory[]
+  userSubscriptions         UserSubscription[]
+
+  @@index([role])
+  @@index([deletedAt])
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  deviceId   String?
+  userAgent  String?
+  ipAddress  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@index([lastUsedAt])
+}
+
+model SubscriptionPlan {
+  id                  String               @id @default(cuid())
+  code                String               @unique
+  name                String
+  description         String?
+  amount              Decimal              @db.Decimal(10, 2)
+  currency            String               @default("USD")
+  isActive            Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  billingInterval     BillingInterval
+  trialPeriodDays     Int                  @default(0)
+  recurringEnabled    Boolean              @default(true)
+  metadata            Json?
+  paymentTransactions PaymentTransaction[]
+  userSubscriptions   UserSubscription[]
+}
+
+model UserSubscription {
+  id                   String                      @id @default(cuid())
+  userId               String
+  planId               String
+  status               SubscriptionStatus          @default(PENDING)
+  startedAt            DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  trialStartedAt       DateTime?
+  trialEndsAt          DateTime?
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  cancelAtPeriodEnd    Boolean                     @default(true)
+  upgradeFromId        String?
+  downgradedFromId     String?
+  lastPaymentAttemptAt DateTime?
+  nextRetryAt          DateTime?
+  retryCount           Int                         @default(0)
+  maxRetryCount        Int                         @default(3)
+  invoiceReference     String?
+  receiptReference     String?
+  metadata             Json?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  graceEndsAt          DateTime?
+  paymentTransactions  PaymentTransaction[]
+  statusHistory        SubscriptionStatusHistory[]
+  plan                 SubscriptionPlan            @relation(fields: [planId], references: [id])
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@index([trialEndsAt])
+  @@index([currentPeriodEnd])
+  @@index([graceEndsAt])
+}
+
+model SubscriptionStatusHistory {
+  id             String              @id @default(cuid())
+  subscriptionId String
+  userId         String
+  fromStatus     SubscriptionStatus?
+  toStatus       SubscriptionStatus
+  reason         String?
+  metadata       Json?
+  createdAt      DateTime            @default(now())
+  subscription   UserSubscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
+model PaymentTransaction {
+  id                 String                @id @default(cuid())
+  userId             String
+  userSubscriptionId String?
+  provider           PaymentProvider
+  providerReference  String                @unique
+  transactionType    TransactionType
+  amount             Decimal               @db.Decimal(10, 2)
+  currency           String                @default("USD")
+  status             PaymentStatus         @default(PENDING)
+  initiatedAt        DateTime              @default(now())
+  paidAt             DateTime?
+  failedAt           DateTime?
+  refundedAt         DateTime?
+  failureCode        String?
+  failureMessage     String?
+  retryable          Boolean               @default(false)
+  retryCount         Int                   @default(0)
+  nextRetryAt        DateTime?
+  invoiceReference   String?
+  receiptReference   String?
+  providerPayload    Json?
+  normalizedEvent    Json?
+  metadata           Json?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  subscriptionPlanId String?
+  SubscriptionPlan   SubscriptionPlan?     @relation(fields: [subscriptionPlanId], references: [id])
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userSubscription   UserSubscription?     @relation(fields: [userSubscriptionId], references: [id])
+  webhookEvents      PaymentWebhookEvent[]
+
+  @@index([userId])
+  @@index([userSubscriptionId])
+  @@index([status])
+  @@index([transactionType])
+  @@index([provider, providerReference])
+}
+
+model PaymentWebhookEvent {
+  id                   String                  @id @default(cuid())
+  provider             PaymentProvider
+  externalEventId      String
+  eventType            String
+  eventHash            String
+  paymentTransactionId String?
+  receivedAt           DateTime                @default(now())
+  processedAt          DateTime?
+  processingStatus     WebhookProcessingStatus @default(RECEIVED)
+  signatureValid       Boolean                 @default(false)
+  rawPayload           Json
+  normalizedPayload    Json?
+  errorMessage         String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  paymentTransaction   PaymentTransaction?     @relation(fields: [paymentTransactionId], references: [id])
+
+  @@unique([provider, externalEventId])
+  @@index([eventHash])
+  @@index([processingStatus])
+  @@index([paymentTransactionId])
+}
+
+model Announcement {
+  id                   String               @id @default(cuid())
+  title                String
+  body                 String
+  status               ContentStatus        @default(DRAFT)
+  publishedAt          DateTime?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  adminUserId          String
+  deletedAt            DateTime?
+  imageUrl             String?
+  category             AnnouncementCategory @default(GENERAL_UPDATE)
+  isPublished          Boolean              @default(false)
+  pushNotificationSent Boolean              @default(false)
+  adminUser            User                 @relation("AnnouncementAuthor", fields: [adminUserId], references: [id])
+  notifications        Notification[]
+  pushDeliveryLogs     PushDeliveryLog[]
+
+  @@index([status])
+  @@index([isPublished])
+  @@index([category])
+  @@index([adminUserId])
+  @@index([deletedAt])
+}
+
+model Clip {
+  id                  String        @id @default(cuid())
+  title               String
+  description         String?
+  mediaUrl            String
+  thumbnailUrl        String?
+  status              ContentStatus @default(DRAFT)
+  publishedAt         DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  deletedAt           DateTime?
+  category            String        @default("GENERAL")
+  durationSeconds     Int?
+  speaker             String?
+  scriptureReferences String[]      @default([])
+  tags                String[]      @default([])
+  viewCount           Int           @default(0)
+  featured            Boolean       @default(false)
+
+  @@index([status])
+  @@index([category])
+  @@index([featured])
+  @@index([publishedAt])
+  @@index([deletedAt])
+}
+
+model Event {
+  id                   String            @id @default(cuid())
+  title                String
+  slug                 String            @unique
+  description          String?
+  category             String            @default("GENERAL")
+  bannerImageUrl       String?
+  locationType         EventLocationType
+  venue                String?
+  meetingLink          String?
+  startDateTime        DateTime
+  endDateTime          DateTime
+  registrationRequired Boolean           @default(false)
+  maxCapacity          Int?
+  featured             Boolean           @default(false)
+  published            Boolean           @default(false)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  attendees            EventAttendee[]
+
+  @@index([published])
+  @@index([featured])
+  @@index([category])
+  @@index([startDateTime])
+}
+
+model EventAttendee {
+  id           String          @id @default(cuid())
+  eventId      String
+  userId       String
+  status       EventRsvpStatus @default(REGISTERED)
+  registeredAt DateTime        @default(now())
+  cancelledAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Ebook {
+  id              String            @id @default(cuid())
+  title           String
+  description     String?
+  fileUrl         String
+  coverUrl        String?
+  status          ContentStatus     @default(DRAFT)
+  publishedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+  author          String?
+  category        String?
+  price           Decimal           @default(0) @db.Decimal(10, 2)
+  isPremium       Boolean           @default(false)
+  secureFileKey   String?
+  purchases       EbookPurchase[]
+  readingProgress ReadingProgress[]
+
+  @@index([status])
+  @@index([deletedAt])
+  @@index([isPremium])
+  @@index([category])
+}
+
+model EbookPurchase {
+  id               String   @id @default(cuid())
+  userId           String
+  ebookId          String
+  paymentReference String?
+  amount           Decimal  @db.Decimal(10, 2)
+  purchasedAt      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  ebook            Ebook    @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ebookId])
+  @@index([userId])
+  @@index([ebookId])
+  @@index([purchasedAt])
+}
+
+model ReadingProgress {
+  id            String    @id @default(cuid())
+  userId        String
+  ebookId       String
+  currentPage   Int       @default(1)
+  totalPages    Int?
+  progressPct   Float     @default(0)
+  lastReadAt    DateTime  @default(now())
+  bookmarkPages Json?
+  downloaded    Boolean   @default(false)
+  downloadedAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  ebook         Ebook     @relation(fields: [ebookId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ebookId])
+  @@index([userId])
+  @@index([ebookId])
+  @@index([lastReadAt])
+}
+
+model Policy {
+  id            String             @id @default(cuid())
+  title         String
+  content       String
+  effectiveDate DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  type          PolicyType
+  slug          String             @unique
+  version       Int                @default(1)
+  published     Boolean            @default(false)
+  deletedAt     DateTime?
+  acceptances   PolicyAcceptance[]
+
+  @@index([type])
+  @@index([published])
+  @@index([deletedAt])
+  @@index([type, version])
+}
+
+model PolicyAcceptance {
+  id         String   @id @default(cuid())
+  userId     String
+  policyId   String
+  version    Int
+  acceptedAt DateTime @default(now())
+  policy     Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, policyId])
+  @@index([userId])
+  @@index([policyId])
+  @@index([acceptedAt])
+}
+
+model EmpowermentProgram {
+  id                   String              @id @default(cuid())
+  title                String
+  description          String?
+  createdById          String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  deletedAt            DateTime?
+  slug                 String              @unique
+  category             String              @default("GENERAL")
+  bannerImageUrl       String?
+  instructorName       String?
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  capacity             Int?
+  enrolledCount        Int                 @default(0)
+  featured             Boolean             @default(false)
+  published            Boolean             @default(false)
+  createdBy            User?               @relation("ProgramCreator", fields: [createdById], references: [id])
+  enrollments          ProgramEnrollment[]
+  progressRecords      ProgramProgress[]
+
+  @@index([published])
+  @@index([featured])
+  @@index([category])
+  @@index([startDate])
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+model ProgramEnrollment {
+  id          String                  @id @default(cuid())
+  programId   String
+  userId      String
+  status      ProgramEnrollmentStatus @default(ENROLLED)
+  enrolledAt  DateTime                @default(now())
+  cancelledAt DateTime?
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  program     EmpowermentProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, userId])
+  @@index([programId])
+  @@index([userId])
+  @@index([status])
+}
+
+model ProgramProgress {
+  id            String             @id @default(cuid())
+  programId     String
+  userId        String
+  completionPct Float              @default(0)
+  currentModule String?
+  notes         String?
+  lastUpdatedAt DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  program       EmpowermentProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, userId])
+  @@index([programId])
+  @@index([userId])
+  @@index([lastUpdatedAt])
+}
+
+model MentorshipClass {
+  id                   String                       @id @default(cuid())
+  title                String
+  description          String?
+  mentorName           String?
+  createdById          String?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  deletedAt            DateTime?
+  slug                 String                       @unique
+  category             String                       @default("GENERAL")
+  bannerImageUrl       String?
+  mentorBio            String?
+  mentorImageUrl       String?
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  capacity             Int?
+  enrolledCount        Int                          @default(0)
+  waitlistCount        Int                          @default(0)
+  featured             Boolean                      @default(false)
+  published            Boolean                      @default(false)
+  createdBy            User?                        @relation("MentorshipCreator", fields: [createdById], references: [id])
+  participants         MentorshipClassParticipant[]
+  feedback             MentorshipFeedback[]
+  progressRecords      MentorshipProgress[]
+  sessions             MentorshipSession[]
+
+  @@index([published])
+  @@index([featured])
+  @@index([category])
+  @@index([startDate])
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+model MentorshipSession {
+  id                String                 @id @default(cuid())
+  mentorshipClassId String
+  title             String
+  description       String?
+  scheduledAt       DateTime
+  durationMinutes   Int                    @default(60)
+  meetingLink       String?
+  location          String?
+  sortOrder         Int                    @default(0)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  attendances       MentorshipAttendance[]
+  mentorshipClass   MentorshipClass        @relation(fields: [mentorshipClassId], references: [id], onDelete: Cascade)
+
+  @@index([mentorshipClassId])
+  @@index([scheduledAt])
+}
+
+model MentorshipAttendance {
+  id        String                     @id @default(cuid())
+  sessionId String
+  userId    String
+  status    MentorshipAttendanceStatus @default(PRESENT)
+  notes     String?
+  markedAt  DateTime                   @default(now())
+  createdAt DateTime                   @default(now())
+  updatedAt DateTime                   @updatedAt
+  session   MentorshipSession          @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([status])
+}
+
+model MentorshipFeedback {
+  id                String          @id @default(cuid())
+  mentorshipClassId String
+  userId            String
+  rating            Int
+  comment           String?
+  submittedAt       DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  mentorshipClass   MentorshipClass @relation(fields: [mentorshipClassId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorshipClassId, userId])
+  @@index([mentorshipClassId])
+  @@index([userId])
+}
+
+model MentorshipProgress {
+  id                String          @id @default(cuid())
+  mentorshipClassId String
+  userId            String
+  completionPct     Float           @default(0)
+  currentMilestone  String?
+  notes             String?
+  lastUpdatedAt     DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  mentorshipClass   MentorshipClass @relation(fields: [mentorshipClassId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorshipClassId, userId])
+  @@index([mentorshipClassId])
+  @@index([userId])
+  @@index([lastUpdatedAt])
+}
+
+model Notification {
+  id             String              @id @default(cuid())
+  userId         String?
+  title          String
+  body           String
+  channel        NotificationChannel
+  isRead         Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  deletedAt      DateTime?
+  announcementId String?
+  announcement   Announcement?       @relation(fields: [announcementId], references: [id])
+  user           User?               @relation("UserNotifications", fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([announcementId])
+  @@index([channel])
+  @@index([deletedAt])
+}
+
+model MentorshipClassParticipant {
+  id                String                      @id @default(cuid())
+  mentorshipClassId String
+  userId            String
+  joinedAt          DateTime                    @default(now())
+  status            MentorshipParticipantStatus @default(ENROLLED)
+  waitlistedAt      DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @default(now()) @updatedAt
+  mentorshipClass   MentorshipClass             @relation(fields: [mentorshipClassId], references: [id], onDelete: Cascade)
+  user              User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([mentorshipClassId, userId])
+  @@index([mentorshipClassId])
+  @@index([userId])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+model PushDeviceToken {
+  id         String       @id @default(cuid())
+  userId     String
+  token      String       @unique
+  platform   PushPlatform
+  deviceId   String?
+  isActive   Boolean      @default(true)
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([platform])
+  @@index([revokedAt])
+}
+
+model PushDeliveryLog {
+  id                String             @id @default(cuid())
+  announcementId    String?
+  userId            String
+  token             String
+  dedupeKey         String
+  category          PushCategory
+  provider          PushProvider
+  status            PushDeliveryStatus @default(SENT)
+  success           Boolean
+  providerMessageId String?
+  errorCode         String?
+  errorMessage      String?
+  retryable         Boolean            @default(false)
+  retryCount        Int                @default(0)
+  maxRetryCount     Int                @default(3)
+  nextRetryAt       DateTime?
+  payload           Json?
+  createdAt         DateTime           @default(now())
+  announcement      Announcement?      @relation(fields: [announcementId], references: [id])
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([announcementId, createdAt])
+  @@index([userId])
+  @@index([provider])
+  @@index([dedupeKey])
+  @@index([category])
+  @@index([success])
+  @@index([status, retryCount, nextRetryAt])
+  @@index([retryable, retryCount])
+  @@index([nextRetryAt])
+  @@index([createdAt])
+}
+
+enum PolicyType {
+  TERMS_OF_USE
+  PRIVACY_POLICY
+  COMMUNITY_GUIDELINES
+  CONTENT_SHARING_RULES
+}
+
+enum ProgramEnrollmentStatus {
+  ENROLLED
+  CANCELLED
+}
+
+enum MentorshipParticipantStatus {
+  ENROLLED
+  WAITLISTED
+  CANCELLED
+}
+
+enum MentorshipAttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  GRACE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum TransactionType {
+  SUBSCRIPTION_INITIAL
+  SUBSCRIPTION_RENEWAL
+  SUBSCRIPTION_UPGRADE
+  SUBSCRIPTION_DOWNGRADE
+  RETRY_CHARGE
+  REFUND
+  EBOOK_PURCHASE
+}
+
+enum WebhookProcessingStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  DUPLICATE
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  FLUTTERWAVE
+  MANUAL
+  STRIPE
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EventLocationType {
+  PHYSICAL
+  ONLINE
+  HYBRID
+}
+
+enum EventRsvpStatus {
+  REGISTERED
+  CANCELLED
+}
+
+enum AnnouncementCategory {
+  NEWS
+  EVENT
+  GENERAL_UPDATE
+  PRAYER_MEETING
+  CONFERENCE
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+}
+
+enum PushPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+enum PushCategory {
+  NOTIFICATION
+  PAYMENT
+  SUBSCRIPTION
+  SECURITY
+  SYSTEM
+}
+
+enum PushProvider {
+  FCM
+}
+
+enum PushDeliveryStatus {
+  SENT
+  FAILED
+  RETRYING
+}

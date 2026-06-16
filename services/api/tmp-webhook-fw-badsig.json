@@ -1,0 +1,11 @@
+{
+  "provider": "FLUTTERWAVE",
+  "eventId": "evt-fw-badsig-001",
+  "eventType": "charge.completed",
+  "signature": "bad",
+  "providerReference": "fw-ref-001",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "provider": "STRIPE",
+  "eventId": "evt-stripe-badsig-001",
+  "eventType": "payment_intent.succeeded",
+  "signature": "bad",
+  "providerReference": "st-ref-001",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

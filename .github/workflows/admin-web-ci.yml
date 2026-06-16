@@ -1,0 +1,76 @@
+name: Admin Web CI
+
+on:
+  push:
+    paths:
+      - "apps/admin-web/**"
+      - "eslint.config.js"
+      - ".github/workflows/admin-web-ci.yml"
+  pull_request:
+    paths:
+      - "apps/admin-web/**"
+      - "eslint.config.js"
+      - ".github/workflows/admin-web-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: admin-web-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-build:
+    name: Validate / Build Admin Web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/admin-web/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/admin-web
+        run: npm ci
+
+      - name: Env validation
+        working-directory: apps/admin-web
+        run: npm run env:validate
+        env:
+          NODE_ENV: staging
+          NEXT_PUBLIC_API_BASE_URL: https://staging-api.example.com/api/v1
+          NEXT_PUBLIC_WEBSOCKET_URL: https://staging-ws.example.com
+
+      - name: Type check
+        working-directory: apps/admin-web
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: apps/admin-web
+        run: npm run lint
+
+      - name: Build
+        working-directory: apps/admin-web
+        run: npm run build
+
+      - name: Upload Next build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-web-next
+          path: apps/admin-web/.next
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## Admin Web CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ npm ci" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ type-check" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ lint" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ build" >> $GITHUB_STEP_SUMMARY

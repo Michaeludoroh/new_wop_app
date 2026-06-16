@@ -1,0 +1,79 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "name": "Known Issue WS-001",
+        "datasource": { "type": "datasource", "uid": "grafana" },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "text": "WS-001 stale_session_rejected timeout investigation (non-blocking tech debt)",
+        "type": "dashboard"
+      },
+      {
+        "name": "Known Issue WS-002",
+        "datasource": { "type": "datasource", "uid": "grafana" },
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(255, 170, 0, 1)",
+        "text": "WS-002 reconnect_cycle timeout investigation (non-blocking tech debt)",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Active Connections",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "websocket_active_connections", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Connections/sec",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(websocket_connections_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disconnects/sec",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(websocket_disconnects_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth Failures",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(websocket_auth_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Room Count",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "websocket_room_count", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Reconnect Attempts",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(websocket_reconnects_total[5m]))", "refId": "A" }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["phase-3b", "realtime"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Realtime",
+  "uid": "realtime-dashboard",
+  "version": 1
+}

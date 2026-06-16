@@ -1,0 +1,323 @@
+{
+  "tokens": {
+    "sa": 201,
+    "ad": 201,
+    "md": 201
+  },
+  "endpoint": {
+    "publicList": {
+      "status": 200,
+      "body": {
+        "data": [],
+        "meta": {
+          "page": 1,
+          "limit": 20,
+          "total": 0,
+          "totalPages": 0
+        }
+      }
+    },
+    "create": {
+      "status": 201,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 E2E",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.093Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "adminGetById": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 E2E",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.093Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "publicGetById": {
+      "status": 404,
+      "body": {
+        "message": "Announcement not found",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "update": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 Updated",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.149Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "publish": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 Updated",
+        "content": "body",
+        "status": "PUBLISHED",
+        "isPublished": true,
+        "publishedAt": "2026-06-09T13:33:13.171Z",
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.172Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "unpublish": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 Updated",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.204Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "delete": {
+      "status": 200,
+      "body": {
+        "success": true
+      }
+    }
+  },
+  "security": {
+    "publicListAnon": {
+      "status": 200,
+      "body": {
+        "data": [],
+        "meta": {
+          "page": 1,
+          "limit": 20,
+          "total": 0,
+          "totalPages": 0
+        }
+      }
+    },
+    "adminListAnon": {
+      "status": 401,
+      "body": {
+        "message": "Unauthorized",
+        "statusCode": 401
+      }
+    },
+    "adminListModerator": {
+      "status": 403,
+      "body": {
+        "message": "Insufficient role permissions",
+        "error": "Forbidden",
+        "statusCode": 403
+      }
+    },
+    "adminListAdmin": {
+      "status": 200,
+      "body": {
+        "data": [],
+        "meta": {
+          "page": 1,
+          "limit": 20,
+          "total": 0,
+          "totalPages": 0
+        }
+      }
+    },
+    "adminListSuper": {
+      "status": 200,
+      "body": {
+        "data": [],
+        "meta": {
+          "page": 1,
+          "limit": 20,
+          "total": 0,
+          "totalPages": 0
+        }
+      }
+    },
+    "createAnon": {
+      "status": 401,
+      "body": {
+        "message": "Unauthorized",
+        "statusCode": 401
+      }
+    },
+    "createModerator": {
+      "status": 403,
+      "body": {
+        "message": "Insufficient role permissions",
+        "error": "Forbidden",
+        "statusCode": 403
+      }
+    },
+    "createAdmin": {
+      "status": 201,
+      "body": {
+        "id": "cmq6ok14e000rxnn08ti81nte",
+        "title": "Phase1 E2E",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.263Z",
+        "updatedAt": "2026-06-09T13:33:13.263Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    }
+  },
+  "validation": {
+    "missingRequired": {
+      "status": 400,
+      "body": {
+        "message": [
+          "title must be shorter than or equal to 160 characters",
+          "title must be a string",
+          "content must be a string"
+        ],
+        "error": "Bad Request",
+        "statusCode": 400
+      }
+    },
+    "invalidCategory": {
+      "status": 400,
+      "body": {
+        "message": [
+          "category must be one of the following values: NEWS, EVENT, GENERAL_UPDATE, PRAYER_MEETING, CONFERENCE"
+        ],
+        "error": "Bad Request",
+        "statusCode": 400
+      }
+    },
+    "invalidPayload": {
+      "status": 201,
+      "body": {
+        "id": "cmq6ok15h000vxnn0mpi2axow",
+        "title": "123",
+        "content": "[object Object]",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.301Z",
+        "updatedAt": "2026-06-09T13:33:13.301Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "invalidId": {
+      "status": 404,
+      "body": {
+        "message": "Announcement not found",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "notFound": {
+      "status": 404,
+      "body": {
+        "message": "Announcement not found",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "audit": {
+    "logsEndpoint": {
+      "status": 404,
+      "body": {
+        "message": "Cannot GET /api/v1/audit-logs?resource=announcement",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "state": {
+    "draftToPublished": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 Updated",
+        "content": "body",
+        "status": "PUBLISHED",
+        "isPublished": true,
+        "publishedAt": "2026-06-09T13:33:13.171Z",
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.172Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "publishedToUnpublished": {
+      "status": 200,
+      "body": {
+        "id": "cmq6ok0zp000fxnn0r4jkrjce",
+        "title": "Phase1 Updated",
+        "content": "body",
+        "status": "DRAFT",
+        "isPublished": false,
+        "publishedAt": null,
+        "createdAt": "2026-06-09T13:33:13.093Z",
+        "updatedAt": "2026-06-09T13:33:13.204Z",
+        "publishedBy": {
+          "id": "dbbcfbfc6d6d4590ab9226138eceff05",
+          "name": "Seeded Admin",
+          "email": "admin@wop.local"
+        }
+      }
+    },
+    "softDelete": {
+      "status": 200,
+      "body": {
+        "success": true
+      }
+    }
+  }
+}

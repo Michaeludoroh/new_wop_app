@@ -1,0 +1,9 @@
+﻿{
+    "meBefore":  200,
+    "replayRefreshStatus":  401,
+    "postLogoutRefreshStatus":  401,
+    "resetReplayStatus":  401,
+    "meAfterReset":  200,
+    "logoutMessage":  "Logged out successfully",
+    "resetMessage":  "Password reset successful"
+}

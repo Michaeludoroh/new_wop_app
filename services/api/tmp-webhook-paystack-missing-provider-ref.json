@@ -1,0 +1,10 @@
+{
+  "provider": "PAYSTACK",
+  "eventId": "evt-paystack-missing-ref-001",
+  "eventType": "charge.success",
+  "signature": "sig_paystack_valid_123456",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

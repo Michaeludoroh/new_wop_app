@@ -1,0 +1,109 @@
+name: Reusable Deploy Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment_name:
+        required: true
+        type: string
+      image_tag:
+        required: true
+        type: string
+      api_health_url:
+        required: true
+        type: string
+      ws_health_url:
+        required: true
+        type: string
+      admin_health_url:
+        required: true
+        type: string
+    secrets:
+      DATABASE_URL:
+        required: true
+      REDIS_URL:
+        required: true
+      JWT_ACCESS_SECRET:
+        required: true
+      JWT_REFRESH_SECRET:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: ${{ inputs.environment_name }}
+    concurrency:
+      group: deploy-${{ inputs.environment_name }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate environment variables
+        run: node scripts/env/validate-env.mjs
+        env:
+          NODE_ENV: ${{ inputs.environment_name == 'production' && 'production' || 'staging' }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          NEXT_PUBLIC_API_BASE_URL: https://api.example.com/api/v1
+          NEXT_PUBLIC_WEBSOCKET_URL: https://ws.example.com
+          CORS_ORIGIN: https://admin.example.com
+
+      - name: Install API deps
+        working-directory: services/api
+        run: npm ci
+
+      - name: Install Admin deps
+        working-directory: apps/admin-web
+        run: npm ci
+
+      - name: Lint + typecheck + tests
+        run: |
+          cd services/api
+          npm run lint
+          npm run test -- --runInBand
+          npm run build
+          cd ../../apps/admin-web
+          npm run lint
+          npm run type-check
+          npm run build
+
+      - name: Build Docker images
+        run: |
+          docker build -t ministry-api:${{ inputs.image_tag }} ./services/api
+          docker build -t ministry-admin:${{ inputs.image_tag }} ./apps/admin-web
+
+      - name: Run Prisma migrations
+        run: node scripts/prisma/validate-schema-diff.mjs
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy services
+        run: |
+          echo "Placeholder deploy command for ${{ inputs.environment_name }}"
+          echo "Integrate provider CLI here (Railway/Render/DO)"
+
+      - name: Verify health endpoints
+        run: node scripts/deploy/verify-health.mjs
+        env:
+          API_HEALTH_URL: ${{ inputs.api_health_url }}
+          WS_HEALTH_URL: ${{ inputs.ws_health_url }}
+          ADMIN_HEALTH_URL: ${{ inputs.admin_health_url }}
+
+      - name: Rollback on failure
+        if: failure()
+        run: node scripts/deploy/rollback.mjs
+        env:
+          DEPLOY_ENV: ${{ inputs.environment_name }}

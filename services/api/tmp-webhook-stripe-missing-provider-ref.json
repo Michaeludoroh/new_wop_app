@@ -1,0 +1,10 @@
+{
+  "provider": "STRIPE",
+  "eventId": "evt-stripe-missing-ref-001",
+  "eventType": "payment_intent.succeeded",
+  "signature": "sig_stripe_valid_123456",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

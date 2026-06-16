@@ -1,0 +1,118 @@
+name: Monorepo CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: monorepo-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API - lint/test/build/prisma/env
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ministry_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ministry_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Install
+        working-directory: services/api
+        run: npm ci
+
+      - name: Env validation
+        working-directory: services/api
+        run: npm run env:validate
+        env:
+          NODE_ENV: staging
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ministry_ci?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci_access_secret_123456789012345678901234
+          JWT_REFRESH_SECRET: ci_refresh_secret_12345678901234567890123
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          CORS_ORIGIN: https://staging-admin.example.com
+
+      - name: Env template contract
+        run: node scripts/env/validate-env.mjs --check-templates
+
+      - name: Prisma generate
+        working-directory: services/api
+        run: npm run prisma:generate
+
+      - name: Prisma migrate deploy and schema diff
+        working-directory: services/api
+        run: npm run prisma:validate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ministry_ci?schema=public
+
+      - name: Lint
+        working-directory: services/api
+        run: npm run lint
+
+      - name: Test
+        working-directory: services/api
+        run: npm run test -- --runInBand
+
+      - name: Build
+        working-directory: services/api
+        run: npm run build
+
+  admin-web:
+    name: Admin Web - type/lint/build/env
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/admin-web/package-lock.json
+
+      - name: Install
+        working-directory: apps/admin-web
+        run: npm ci
+
+      - name: Env validation
+        working-directory: apps/admin-web
+        run: npm run env:validate
+        env:
+          NODE_ENV: staging
+          NEXT_PUBLIC_API_BASE_URL: https://staging-api.example.com/api/v1
+          NEXT_PUBLIC_WEBSOCKET_URL: https://staging-ws.example.com
+
+      - name: Type check
+        working-directory: apps/admin-web
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: apps/admin-web
+        run: npm run lint
+
+      - name: Build
+        working-directory: apps/admin-web
+        run: npm run build

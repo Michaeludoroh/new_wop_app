@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Broadcasts Sent",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(notification_broadcast_sent_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Targeted Notifications Sent",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(notification_targeted_sent_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery Success Rate",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(notification_delivery_success_total[5m])) / clamp_min(sum(rate(notification_delivery_attempt_total[5m])), 0.001)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery Failures",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(notification_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Queue Size",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "notification_queue_size", "refId": "A" }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["phase-3b", "notifications"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Notifications",
+  "uid": "notifications-dashboard",
+  "version": 1
+}

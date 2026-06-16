@@ -1,0 +1,708 @@
+{
+  "meta": {
+    "phase": "2B",
+    "generatedAt": "2026-06-09T19:30:11.352Z",
+    "baseUrl": "http://localhost:3000/api/v1"
+  },
+  "authBootstrap": {
+    "superAdmin": true,
+    "admin": false,
+    "user": true
+  },
+  "endpointMatrix": [
+    {
+      "name": "my-devices unauthorized",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "my-devices success (user)",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "register unauthorized",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "register success",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        201
+      ]
+    },
+    {
+      "name": "register duplicate",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        201,
+        409
+      ]
+    },
+    {
+      "name": "register invalid payload",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{platform:ANDROID}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        400,
+        422
+      ]
+    },
+    {
+      "name": "refresh unauthorized",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "refresh success",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "refresh invalid token",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        400,
+        404,
+        409
+      ]
+    },
+    {
+      "name": "revoke unauthorized",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:tok-user-b}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "revoke success",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:tok-user-b}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "revoke already revoked",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:tok-user-b}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        400,
+        404,
+        409
+      ]
+    },
+    {
+      "name": "re-register after revoke",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        201
+      ]
+    },
+    {
+      "name": "admin register own token",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        201
+      ]
+    },
+    {
+      "name": "super_admin register own token",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        200,
+        201
+      ]
+    },
+    {
+      "name": "refresh ownership violation",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        403,
+        404
+      ]
+    },
+    {
+      "name": "revoke ownership violation",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        403,
+        404
+      ]
+    }
+  ],
+  "securityMatrix": [
+    {
+      "name": "anonymous my-devices blocked (JWT enforcement)",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        401,
+        403
+      ]
+    },
+    {
+      "name": "USER my-devices allowed",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "ADMIN my-devices allowed",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "SUPER_ADMIN my-devices allowed",
+      "status": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}",
+      "expected": [
+        200
+      ]
+    },
+    {
+      "name": "USER cannot refresh ADMIN token (ownership)",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        403,
+        404
+      ]
+    },
+    {
+      "name": "USER cannot revoke ADMIN token (ownership)",
+      "status": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}",
+      "expected": [
+        403,
+        404
+      ]
+    }
+  ],
+  "dbVerification": {
+    "checks": [
+      {
+        "name": "duplicate prevention (user token count <= 2)",
+        "pass": false,
+        "detail": {
+          "userCount": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select count(*) from \"PushDeviceToken\" where \"userId\"=(selec...\n                             ^"
+        }
+      },
+      {
+        "name": "user linkage + register/reactivation evidence",
+        "pass": false,
+        "detail": {
+          "userRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...edAt\" is null) as active,\"deviceId\",\"userId\" from \"PushDevic...\n                                                             ^"
+        }
+      },
+      {
+        "name": "ownership preserved for admin token",
+        "pass": false,
+        "detail": {
+          "adminRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+        }
+      },
+      {
+        "name": "super admin token created",
+        "pass": false,
+        "detail": {
+          "superRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+        }
+      },
+      {
+        "name": "revoke/reactivation transition observable",
+        "pass": false,
+        "detail": {
+          "revokeState": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...t token,(\"revokedAt\" is not null) as revoked from \"PushDevic...\n                                                             ^"
+        }
+      }
+    ]
+  },
+  "defects": [
+    {
+      "type": "endpoint_or_security",
+      "name": "my-devices unauthorized",
+      "expected": [
+        401,
+        403
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "my-devices success (user)",
+      "expected": [
+        200
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "register unauthorized",
+      "expected": [
+        401,
+        403
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "register success",
+      "expected": [
+        200,
+        201
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "register duplicate",
+      "expected": [
+        200,
+        201,
+        409
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "refresh unauthorized",
+      "expected": [
+        401,
+        403
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "refresh success",
+      "expected": [
+        200
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "revoke unauthorized",
+      "expected": [
+        401,
+        403
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:tok-user-b}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "revoke success",
+      "expected": [
+        200
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:tok-user-b}'\\\" is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "re-register after revoke",
+      "expected": [
+        200,
+        201
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "admin register own token",
+      "expected": [
+        200,
+        201
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "super_admin register own token",
+      "expected": [
+        200,
+        201
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "refresh ownership violation",
+      "expected": [
+        403,
+        404
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "revoke ownership violation",
+      "expected": [
+        403,
+        404
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "anonymous my-devices blocked (JWT enforcement)",
+      "expected": [
+        401,
+        403
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "USER my-devices allowed",
+      "expected": [
+        200
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "ADMIN my-devices allowed",
+      "expected": [
+        200
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "SUPER_ADMIN my-devices allowed",
+      "expected": [
+        200
+      ],
+      "actualStatus": 404,
+      "response": "{\"message\":\"Cannot GET /api/v1/push/my-devices\",\"error\":\"Not Found\",\"statusCode\":404}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "USER cannot refresh ADMIN token (ownership)",
+      "expected": [
+        403,
+        404
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{oldToken\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "endpoint_or_security",
+      "name": "USER cannot revoke ADMIN token (ownership)",
+      "expected": [
+        403,
+        404
+      ],
+      "actualStatus": 400,
+      "response": "{\"message\":\"Unexpected token ''', \\\"'{token:to\\\"... is not valid JSON\",\"error\":\"Bad Request\",\"statusCode\":400}"
+    },
+    {
+      "type": "db",
+      "name": "duplicate prevention (user token count <= 2)",
+      "detail": {
+        "userCount": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select count(*) from \"PushDeviceToken\" where \"userId\"=(selec...\n                             ^"
+      }
+    },
+    {
+      "type": "db",
+      "name": "user linkage + register/reactivation evidence",
+      "detail": {
+        "userRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...edAt\" is null) as active,\"deviceId\",\"userId\" from \"PushDevic...\n                                                             ^"
+      }
+    },
+    {
+      "type": "db",
+      "name": "ownership preserved for admin token",
+      "detail": {
+        "adminRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+      }
+    },
+    {
+      "type": "db",
+      "name": "super admin token created",
+      "detail": {
+        "superRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+      }
+    },
+    {
+      "type": "db",
+      "name": "revoke/reactivation transition observable",
+      "detail": {
+        "revokeState": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...t token,(\"revokedAt\" is not null) as revoked from \"PushDevic...\n                                                             ^"
+      }
+    }
+  ],
+  "readiness": {
+    "readinessScore": 11,
+    "classification": "FAIL",
+    "failures": [
+      {
+        "type": "http",
+        "name": "my-devices unauthorized",
+        "status": 404,
+        "expected": [
+          401,
+          403
+        ]
+      },
+      {
+        "type": "http",
+        "name": "my-devices success (user)",
+        "status": 404,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "register unauthorized",
+        "status": 400,
+        "expected": [
+          401,
+          403
+        ]
+      },
+      {
+        "type": "http",
+        "name": "register success",
+        "status": 400,
+        "expected": [
+          200,
+          201
+        ]
+      },
+      {
+        "type": "http",
+        "name": "register duplicate",
+        "status": 400,
+        "expected": [
+          200,
+          201,
+          409
+        ]
+      },
+      {
+        "type": "http",
+        "name": "refresh unauthorized",
+        "status": 400,
+        "expected": [
+          401,
+          403
+        ]
+      },
+      {
+        "type": "http",
+        "name": "refresh success",
+        "status": 400,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "revoke unauthorized",
+        "status": 400,
+        "expected": [
+          401,
+          403
+        ]
+      },
+      {
+        "type": "http",
+        "name": "revoke success",
+        "status": 400,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "re-register after revoke",
+        "status": 400,
+        "expected": [
+          200,
+          201
+        ]
+      },
+      {
+        "type": "http",
+        "name": "admin register own token",
+        "status": 400,
+        "expected": [
+          200,
+          201
+        ]
+      },
+      {
+        "type": "http",
+        "name": "super_admin register own token",
+        "status": 400,
+        "expected": [
+          200,
+          201
+        ]
+      },
+      {
+        "type": "http",
+        "name": "refresh ownership violation",
+        "status": 400,
+        "expected": [
+          403,
+          404
+        ]
+      },
+      {
+        "type": "http",
+        "name": "revoke ownership violation",
+        "status": 400,
+        "expected": [
+          403,
+          404
+        ]
+      },
+      {
+        "type": "http",
+        "name": "anonymous my-devices blocked (JWT enforcement)",
+        "status": 404,
+        "expected": [
+          401,
+          403
+        ]
+      },
+      {
+        "type": "http",
+        "name": "USER my-devices allowed",
+        "status": 404,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "ADMIN my-devices allowed",
+        "status": 404,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "SUPER_ADMIN my-devices allowed",
+        "status": 404,
+        "expected": [
+          200
+        ]
+      },
+      {
+        "type": "http",
+        "name": "USER cannot refresh ADMIN token (ownership)",
+        "status": 400,
+        "expected": [
+          403,
+          404
+        ]
+      },
+      {
+        "type": "http",
+        "name": "USER cannot revoke ADMIN token (ownership)",
+        "status": 400,
+        "expected": [
+          403,
+          404
+        ]
+      },
+      {
+        "type": "db",
+        "name": "duplicate prevention (user token count <= 2)",
+        "detail": {
+          "userCount": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select count(*) from \"PushDeviceToken\" where \"userId\"=(selec...\n                             ^"
+        }
+      },
+      {
+        "type": "db",
+        "name": "user linkage + register/reactivation evidence",
+        "detail": {
+          "userRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...edAt\" is null) as active,\"deviceId\",\"userId\" from \"PushDevic...\n                                                             ^"
+        }
+      },
+      {
+        "type": "db",
+        "name": "ownership preserved for admin token",
+        "detail": {
+          "adminRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+        }
+      },
+      {
+        "type": "db",
+        "name": "super admin token created",
+        "detail": {
+          "superRows": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: select token,\"userId\",\"revokedAt\" from \"PushDeviceToken\" whe...\n                                               ^"
+        }
+      },
+      {
+        "type": "db",
+        "name": "revoke/reactivation transition observable",
+        "detail": {
+          "revokeState": "ERROR:  relation \"PushDeviceToken\" does not exist\nLINE 1: ...t token,(\"revokedAt\" is not null) as revoked from \"PushDevic...\n                                                             ^"
+        }
+      }
+    ]
+  }
+}

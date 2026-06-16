@@ -1,0 +1,11 @@
+{
+  "provider": "PAYSTACK",
+  "eventId": "evt-paystack-1",
+  "eventType": "charge.success",
+  "signature": "sig_paystack_valid_123456",
+  "providerReference": "missing-ref-paystack-1",
+  "payload": {
+    "amount": 250000,
+    "currency": "NGN"
+  }
+}

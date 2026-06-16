@@ -1,0 +1,58 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Logins",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_logins_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Failed Logins",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_login_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Refresh Requests",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_refresh_requests_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Logout Requests",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_logout_requests_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "JWT Validation Failures",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_jwt_validation_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "RBAC Denials",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(auth_rbac_denials_total[5m]))", "refId": "A" }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["phase-3b", "auth"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Authentication",
+  "uid": "authentication-dashboard",
+  "version": 1
+}

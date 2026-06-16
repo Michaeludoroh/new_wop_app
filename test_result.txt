@@ -1,0 +1,32 @@
+﻿00:00 +0: loading C:/new_wop_app/apps/mobile-flutter/test/widget_test.dart
+00:00 +0: renders MinistryMobileApp shell
+ΓòÉΓòÉΓòí EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK Γò₧ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+The following FirebaseException was thrown running a test:
+[core/no-app] No Firebase App '[DEFAULT]' has been created - call Firebase.initializeApp()
+
+When the exception was thrown, this was the stack:
+#0      MethodChannelFirebase.app (package:firebase_core_platform_interface/src/method_channel/method_channel_firebase.dart:190:5)
+#1      Firebase.app (package:firebase_core/src/firebase.dart:92:41)
+#2      FirebaseMessaging.instance (package:firebase_messaging/src/messaging.dart:32:47)
+#3      new FirebaseMessagingService (package:ministry_mobile/core/notifications/services/firebase_messaging_service.dart:22:53)
+#4      new AuthProvider (package:ministry_mobile/core/auth/auth_provider.dart:17:41)
+#5      new _TestAuthProvider (file:///C:/new_wop_app/apps/mobile-flutter/test/widget_test.dart:58:9)
+#6      main.<anonymous closure> (file:///C:/new_wop_app/apps/mobile-flutter/test/widget_test.dart:72:22)
+#7      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:29)
+<asynchronous suspension>
+#8      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1952:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  renders MinistryMobileApp shell
+ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
+00:00 +0 -1: renders MinistryMobileApp shell [E]
+  Test failed. See exception logs above.
+  The test description was: renders MinistryMobileApp shell
+  
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/new_wop_app/apps/mobile-flutter/test/widget_test.dart: renders MinistryMobileApp shell

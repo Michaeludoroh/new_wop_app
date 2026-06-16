@@ -1,0 +1,116 @@
+global:
+  resolve_timeout: 5m
+
+templates: []
+
+route:
+  receiver: default-webhook
+  group_by: ['alertname', 'service', 'domain', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 3h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: critical-escalation
+      continue: true
+
+    - matchers:
+        - severity="high"
+      receiver: high-priority
+
+    - matchers:
+        - severity="medium"
+      receiver: medium-priority
+
+    - matchers:
+        - domain="payments"
+      receiver: payments-webhook
+
+    - matchers:
+        - domain="notifications"
+      receiver: notifications-webhook
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity=~"high|medium"
+    equal: ['alertname', 'service', 'domain']
+
+  - source_matchers:
+      - alertname="ApiUnavailable"
+    target_matchers:
+      - domain="api"
+    equal: ['service']
+
+receivers:
+  - name: default-webhook
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/default
+        send_resolved: true
+        max_alerts: 0
+
+  - name: critical-escalation
+    email_configs:
+      - to: sre-critical@ministry-platform.local
+        from: alertmanager@ministry-platform.local
+        smarthost: smtp:587
+        auth_username: ${SMTP_USERNAME}
+        auth_password: ${SMTP_PASSWORD}
+        require_tls: true
+        send_resolved: true
+    slack_configs:
+      - api_url_file: /etc/alertmanager/secrets/slack_webhook_url
+        channel: '#ops-critical'
+        title: '[CRITICAL] {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ "\n" }}{{ end }}'
+        send_resolved: true
+    discord_configs:
+      - webhook_url: http://webhook-relay:8080/discord
+        title: '[CRITICAL] {{ .CommonLabels.alertname }}'
+        message: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ "\n" }}{{ end }}'
+        send_resolved: true
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/critical
+        send_resolved: true
+
+  - name: high-priority
+    email_configs:
+      - to: sre-high@ministry-platform.local
+        from: alertmanager@ministry-platform.local
+        smarthost: smtp:587
+        auth_username: ${SMTP_USERNAME}
+        auth_password: ${SMTP_PASSWORD}
+        require_tls: true
+        send_resolved: true
+    slack_configs:
+      - api_url_file: /etc/alertmanager/secrets/slack_webhook_url
+        channel: '#ops-high'
+        title: '[HIGH] {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ "\n" }}{{ end }}'
+        send_resolved: true
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/high
+        send_resolved: true
+
+  - name: medium-priority
+    slack_configs:
+      - api_url_file: /etc/alertmanager/secrets/slack_webhook_url
+        channel: '#ops-medium'
+        title: '[MEDIUM] {{ .CommonLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }} - {{ .Annotations.description }}{{ "\n" }}{{ end }}'
+        send_resolved: true
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/medium
+        send_resolved: true
+
+  - name: payments-webhook
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/payments
+        send_resolved: true
+
+  - name: notifications-webhook
+    webhook_configs:
+      - url: http://webhook-relay:8080/alerts/notifications
+        send_resolved: true

@@ -1,0 +1,25 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy-reusable.yml
+    with:
+      environment_name: staging
+      image_tag: staging-${{ github.sha }}
+      api_health_url: https://staging-api.example.com/api/v1/health
+      ws_health_url: https://staging-ws.example.com/api/v1/health
+      admin_health_url: https://staging-admin.example.com
+    secrets:
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      REDIS_URL: ${{ secrets.STAGING_REDIS_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.STAGING_JWT_ACCESS_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.STAGING_JWT_REFRESH_SECRET }}

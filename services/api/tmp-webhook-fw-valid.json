@@ -1,0 +1,11 @@
+{
+  "provider": "FLUTTERWAVE",
+  "eventId": "evt-fw-ok-001",
+  "eventType": "charge.completed",
+  "signature": "abcdefgh123456",
+  "providerReference": "fw-ref-001",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

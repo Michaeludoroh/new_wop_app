@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "920723067172",
+    "project_id": "ministry-mobile",
+    "storage_bucket": "ministry-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920723067172:android:7fb9f48f55e68469c8a3b1",
+        "android_client_info": {
+          "package_name": "com.ministrymobile.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTp0fW_R_G00jlQm2Tu5dNQ1PMCslKGsk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

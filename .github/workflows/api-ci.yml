@@ -1,0 +1,109 @@
+name: API CI
+
+on:
+  push:
+    paths:
+      - "services/api/**"
+      - "eslint.config.js"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    paths:
+      - "services/api/**"
+      - "eslint.config.js"
+      - ".github/workflows/api-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-build:
+    name: Validate / Test / Build API
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ministry_api_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ministry_api_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/api
+        run: npm ci
+
+      - name: Env validation
+        working-directory: services/api
+        run: npm run env:validate
+        env:
+          NODE_ENV: staging
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ministry_api_ci?schema=public
+          REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci_access_secret_123456789012345678901234
+          JWT_REFRESH_SECRET: ci_refresh_secret_12345678901234567890123
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          CORS_ORIGIN: https://staging-admin.example.com
+
+      - name: Env template contract
+        run: node scripts/env/validate-env.mjs --check-templates
+
+      - name: Prisma generate
+        working-directory: services/api
+        run: npm run prisma:generate
+
+      - name: Prisma migrate deploy and schema diff
+        working-directory: services/api
+        run: npm run prisma:validate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ministry_api_ci?schema=public
+
+      - name: Lint
+        working-directory: services/api
+        run: npm run lint
+
+      - name: Test
+        working-directory: services/api
+        run: npm run test -- --runInBand
+
+      - name: Build
+        working-directory: services/api
+        run: npm run build
+
+      - name: Upload API build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-dist
+          path: services/api/dist
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          echo "## API CI Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ npm ci" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ prisma generate" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ lint" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ test" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ build" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": ".",
+    "incremental": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@ministry/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@ministry/shared-types/*": ["../../packages/shared-types/src/*"]
+    },
+    "ignoreDeprecations": "5.0"
+  },
+  "include": ["src/**/*", "prisma/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

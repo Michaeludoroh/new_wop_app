@@ -1,0 +1,379 @@
+{
+  "startedAt": "2026-05-29T15:26:52.890Z",
+  "commandsExecuted": [
+    "POST http://localhost:3000/api/v1/auth/login",
+    "GET http://localhost:3002/api/v1/realtime/health",
+    "WS runtime matrix",
+    "GET http://localhost:3002/api/v1/realtime/health",
+    "POST http://localhost:3000/api/v1/payments/webhook (8 negative cases)",
+    "Notifications route audit"
+  ],
+  "auth": {
+    "status": 201,
+    "user": {
+      "id": "ec36ef8d261d4c978d9e08604b7e1702",
+      "email": "superadmin@wop.local",
+      "fullName": "Seeded Super Admin",
+      "role": "SUPER_ADMIN"
+    },
+    "hasAccessToken": true,
+    "observedAt": "2026-05-29T15:26:53.229Z"
+  },
+  "realtime": {
+    "before": {
+      "status": 200,
+      "body": {
+        "websocketOperationalStatus": "UP",
+        "activeConnections": 0,
+        "authenticatedConnections": 0,
+        "totalConnections": 0,
+        "authFailures": 0,
+        "unauthorizedDisconnects": 0,
+        "staleSessionDisconnects": 0,
+        "tokenExpiryDisconnects": 0,
+        "emittedEvents": 0,
+        "emitFailures": 0,
+        "duplicateDrops": 0,
+        "reconnects": 0,
+        "disconnects": 0,
+        "eventCounters": {
+          "notificationCreated": 0,
+          "notificationUpdated": 0,
+          "notificationReadStateChanged": 0,
+          "paymentUpdated": 0,
+          "subscriptionUpdated": 0,
+          "analyticsRefresh": 0
+        },
+        "dedupeCacheSize": 0,
+        "observedAt": "2026-05-29T15:26:53.239Z"
+      },
+      "raw": "{\"websocketOperationalStatus\":\"UP\",\"activeConnections\":0,\"authenticatedConnections\":0,\"totalConnections\":0,\"authFailures\":0,\"unauthorizedDisconnects\":0,\"staleSessionDisconnects\":0,\"tokenExpiryDisconnects\":0,\"emittedEvents\":0,\"emitFailures\":0,\"duplicateDrops\":0,\"reconnects\":0,\"disconnects\":0,\"eventCounters\":{\"notificationCreated\":0,\"notificationUpdated\":0,\"notificationReadStateChanged\":0,\"paymentUpdated\":0,\"subscriptionUpdated\":0,\"analyticsRefresh\":0},\"dedupeCacheSize\":0,\"observedAt\":\"2026-05-29T15:26:53.239Z\"}"
+    },
+    "wsMatrix": [
+      {
+        "test": "valid_handshake",
+        "ok": true,
+        "ts": 16,
+        "id": "GG7vditFnX0FLuNxAAAZ"
+      },
+      {
+        "test": "reconnect_hint_handshake",
+        "ok": true,
+        "ts": 35,
+        "id": "LsT0LAIrPxTeEsz5AAAb"
+      },
+      {
+        "test": "stale_session_rejected",
+        "ok": false,
+        "payload": {
+          "code": "REALTIME_UNAUTHORIZED",
+          "message": "Unauthorized realtime connection",
+          "disconnect": true,
+          "reason": "unauthorized_handshake"
+        },
+        "ts": 45
+      },
+      {
+        "test": "invalid_token_rejected",
+        "ok": true,
+        "payload": {
+          "code": "REALTIME_UNAUTHORIZED",
+          "message": "Unauthorized realtime connection",
+          "disconnect": true,
+          "reason": "unauthorized_handshake"
+        },
+        "ts": 55
+      },
+      {
+        "test": "client_reconnect_cycle",
+        "ok": false,
+        "error": "Error: timeout waiting for event: connect",
+        "ts": 7575
+      }
+    ],
+    "after": {
+      "status": 200,
+      "body": {
+        "websocketOperationalStatus": "UP",
+        "activeConnections": 0,
+        "authenticatedConnections": 0,
+        "totalConnections": 0,
+        "authFailures": 6,
+        "unauthorizedDisconnects": 6,
+        "staleSessionDisconnects": 0,
+        "tokenExpiryDisconnects": 0,
+        "emittedEvents": 0,
+        "emitFailures": 0,
+        "duplicateDrops": 0,
+        "reconnects": 0,
+        "disconnects": 6,
+        "eventCounters": {
+          "notificationCreated": 0,
+          "notificationUpdated": 0,
+          "notificationReadStateChanged": 0,
+          "paymentUpdated": 0,
+          "subscriptionUpdated": 0,
+          "analyticsRefresh": 0
+        },
+        "dedupeCacheSize": 0,
+        "observedAt": "2026-05-29T15:27:00.824Z"
+      },
+      "raw": "{\"websocketOperationalStatus\":\"UP\",\"activeConnections\":0,\"authenticatedConnections\":0,\"totalConnections\":0,\"authFailures\":6,\"unauthorizedDisconnects\":6,\"staleSessionDisconnects\":0,\"tokenExpiryDisconnects\":0,\"emittedEvents\":0,\"emitFailures\":0,\"duplicateDrops\":0,\"reconnects\":0,\"disconnects\":6,\"eventCounters\":{\"notificationCreated\":0,\"notificationUpdated\":0,\"notificationReadStateChanged\":0,\"paymentUpdated\":0,\"subscriptionUpdated\":0,\"analyticsRefresh\":0},\"dedupeCacheSize\":0,\"observedAt\":\"2026-05-29T15:27:00.824Z\"}"
+    },
+    "redisPropagationProof": {
+      "status": "BLOCKED",
+      "reason": "Cannot scale websocket service for cross-instance validation because docker-compose.dev.yml sets a fixed container_name for websocket (ministry_ws_dev), preventing --scale websocket=2.",
+      "scaleAttempt": "docker compose -f docker-compose.dev.yml up -d --scale websocket=2 websocket",
+      "scaleError": "Docker requires unique container names; remove custom container name to scale service"
+    },
+    "additionalFindings": {
+      "notificationBroadcastCreate": {
+        "status": 201,
+        "id": "cmpr2wjeq000ent332zstoba0"
+      },
+      "notificationTargetedCreate": {
+        "status": 400,
+        "reason": "No UUID userId available from /api/v1/users scaffold (empty data)"
+      }
+    }
+  },
+  "payments": {
+    "matrix": [
+      {
+        "case": "missing_required_fields",
+        "request": {
+          "provider": "STRIPE"
+        },
+        "status": 400,
+        "response": {
+          "message": [
+            "eventId should not be empty",
+            "eventId must be a string",
+            "eventType should not be empty",
+            "eventType must be a string",
+            "signature should not be empty",
+            "signature must be a string",
+            "payload must be an object"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "observedAt": "2026-05-29T15:27:00.830Z"
+      },
+      {
+        "case": "invalid_provider",
+        "request": {
+          "provider": "INVALID_PROVIDER",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "sig",
+          "providerReference": "st-ref-001",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "message": [
+            "provider must be one of the following values: "
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "observedAt": "2026-05-29T15:27:00.835Z"
+      },
+      {
+        "case": "unsupported_provider",
+        "request": {
+          "provider": "FLUTTERWAVE",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "sig",
+          "providerReference": "st-ref-001",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Flutterwave signature"
+        },
+        "observedAt": "2026-05-29T15:27:00.841Z"
+      },
+      {
+        "case": "invalid_signature",
+        "request": {
+          "provider": "STRIPE",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "definitely-invalid-signature",
+          "providerReference": "st-ref-001",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 500,
+        "response": {
+          "statusCode": 500,
+          "message": "Internal server error"
+        },
+        "observedAt": "2026-05-29T15:27:00.858Z"
+      },
+      {
+        "case": "missing_signature",
+        "request": {
+          "provider": "STRIPE",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "",
+          "providerReference": "st-ref-001",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "message": [
+            "signature should not be empty"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "observedAt": "2026-05-29T15:27:00.865Z"
+      },
+      {
+        "case": "unknown_transaction_reference",
+        "request": {
+          "provider": "STRIPE",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "sig",
+          "providerReference": "st-ref-does-not-exist",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Stripe signature"
+        },
+        "observedAt": "2026-05-29T15:27:00.869Z"
+      },
+      {
+        "case": "unknown_subscription_reference",
+        "request": {
+          "provider": "STRIPE",
+          "eventId": "evt-phase2k-1780068420821",
+          "eventType": "payment.succeeded",
+          "signature": "sig",
+          "providerReference": "st-ref-does-not-exist-sub",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Stripe signature"
+        },
+        "observedAt": "2026-05-29T15:27:00.875Z"
+      },
+      {
+        "case": "duplicate_webhook_replay",
+        "request": {
+          "provider": "STRIPE",
+          "eventId": "evt-stripe-ok-001",
+          "eventType": "payment.succeeded",
+          "signature": "sig",
+          "providerReference": "st-ref-001",
+          "payload": {
+            "amount": 1000,
+            "currency": "USD"
+          }
+        },
+        "status": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Stripe signature"
+        },
+        "observedAt": "2026-05-29T15:27:00.879Z"
+      }
+    ]
+  },
+  "notifications": {
+    "audit": [
+      {
+        "method": "GET",
+        "path": "/api/v1/notifications",
+        "status": 200,
+        "response": {
+          "data": [],
+          "total": 0,
+          "limit": 20,
+          "offset": 0
+        },
+        "observedAt": "2026-05-29T15:27:00.891Z"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/notifications",
+        "body": {
+          "title": "x",
+          "body": "y"
+        },
+        "status": 404,
+        "response": {
+          "message": "Cannot POST /api/v1/notifications",
+          "error": "Not Found",
+          "statusCode": 404
+        },
+        "observedAt": "2026-05-29T15:27:00.894Z"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/notifications/broadcast",
+        "body": {
+          "title": "x",
+          "body": "y"
+        },
+        "status": 400,
+        "response": {
+          "message": [
+            "channel must be one of the following values: IN_APP, EMAIL, PUSH"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "observedAt": "2026-05-29T15:27:00.899Z"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/notifications/targeted",
+        "body": {
+          "userId": "u",
+          "title": "x",
+          "body": "y"
+        },
+        "status": 400,
+        "response": {
+          "message": [
+            "channel must be one of the following values: ",
+            "userId must be a UUID"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "observedAt": "2026-05-29T15:27:00.904Z"
+      }
+    ]
+  },
+  "finishedAt": "2026-05-29T15:27:00.904Z"
+}

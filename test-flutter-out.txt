@@ -1,0 +1,3 @@
+00:00 +0: loading C:/new_wop_app/apps/mobile-flutter/test/subscription_screen_test.dart
+00:00 +0: subscription screen shows grace-period messaging
+00:02 +1: All tests passed!

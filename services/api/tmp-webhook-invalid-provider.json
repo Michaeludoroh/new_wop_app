@@ -1,0 +1,11 @@
+{
+  "provider": "UNKNOWN_PROVIDER",
+  "eventId": "evt-invalid-provider-001",
+  "eventType": "payment.completed",
+  "signature": "sig_any",
+  "providerReference": "st-ref-001",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}

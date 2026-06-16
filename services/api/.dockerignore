@@ -1,0 +1,14 @@
+node_modules
+coverage
+.git
+.gitignore
+Dockerfile
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+.env.*
+*.md
+tmp-*
+tmp-hardening
+test-auth.http

@@ -1,0 +1,10 @@
+﻿{
+    "user":  {
+                 "id":  "cmphm5gsq0002ulufxanny9zi",
+                 "email":  "moderator@wop.local",
+                 "fullName":  "Seeded Moderator",
+                 "role":  "MODERATOR"
+             },
+    "accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXBobTVnc3EwMDAydWx1Znhhbm55OXppIiwiZW1haWwiOiJtb2RlcmF0b3JAd29wLmxvY2FsIiwicm9sZSI6Ik1PREVSQVRPUiIsImlhdCI6MTc3OTQ5ODUxNiwiZXhwIjoxNzc5NDk5NDE2fQ.0wLMEoFe9v5TXI9QUa-bV-v0H7bNLUIaeCDL55srKII",
+    "refreshToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXBobTVnc3EwMDAydWx1Znhhbm55OXppIiwiZW1haWwiOiJtb2RlcmF0b3JAd29wLmxvY2FsIiwicm9sZSI6Ik1PREVSQVRPUiIsImp0aSI6ImJmYmMzZGZkLTQ1NTEtNGE4MC1iMDljLWU0YzUxYzRkY2E5MyIsImlhdCI6MTc3OTQ5ODUxNiwiZXhwIjoxNzgwMTAzMzE2fQ.Xa54P4BA24djNKASv_6PLLoK44UJZ5-zOu6Eo__N8nk"
+}

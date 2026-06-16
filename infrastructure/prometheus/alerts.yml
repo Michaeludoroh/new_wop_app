@@ -1,0 +1,114 @@
+groups:
+  - name: ministry-platform-critical
+    interval: 30s
+    rules:
+      - alert: ApiUnavailable
+        expr: up{job="ministry_api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "API unavailable"
+          description: "API scrape target is down for more than 1 minute."
+
+      - alert: WebSocketUnavailable
+        expr: up{job="ministry_websocket"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: websocket
+        annotations:
+          summary: "WebSocket unavailable"
+          description: "WebSocket scrape target is down for more than 1 minute."
+
+      - alert: RedisExporterUnavailable
+        expr: up{job="redis_exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis exporter unavailable"
+          description: "Redis exporter target is down."
+
+      - alert: PostgresExporterUnavailable
+        expr: up{job="postgres_exporter"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL exporter unavailable"
+          description: "PostgreSQL exporter target is down."
+
+  - name: ministry-platform-high
+    interval: 30s
+    rules:
+      - alert: PaymentFailureSpike
+        expr: increase(payment_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: high
+          domain: payments
+        annotations:
+          summary: "Payment failure spike detected"
+          description: "More than 10 payment failures in 5 minutes."
+
+      - alert: WebhookFailureSpike
+        expr: increase(api_errors_total{route=~".*webhook.*"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: high
+          domain: payments
+        annotations:
+          summary: "Webhook failure spike detected"
+          description: "Webhook-related API errors spiked in last 5 minutes."
+
+      - alert: NotificationFailureSpike
+        expr: increase(notification_failures_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: high
+          domain: notifications
+        annotations:
+          summary: "Notification failure spike detected"
+          description: "Notification failures exceeded threshold in 5 minutes."
+
+  - name: ministry-platform-medium
+    interval: 30s
+    rules:
+      - alert: ElevatedAuthFailures
+        expr: increase(auth_failures_total[10m]) > 25
+        for: 10m
+        labels:
+          severity: medium
+          domain: auth
+        annotations:
+          summary: "Elevated authentication failures"
+          description: "Auth failures exceeded threshold in 10 minutes."
+
+      - alert: ElevatedReconnectAttempts
+        expr: increase(websocket_reconnects_total[10m]) > 20
+        for: 10m
+        labels:
+          severity: medium
+          domain: realtime
+        annotations:
+          summary: "Elevated websocket reconnect attempts"
+          description: "Reconnect attempts exceeded threshold in 10 minutes."
+
+      - alert: Elevated5xxRate
+        expr: |
+          (
+            sum(rate(api_requests_total{status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(api_requests_total[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: medium
+          domain: api
+        annotations:
+          summary: "Elevated 5xx error rate"
+          description: "5xx response ratio is above 5% for 5 minutes."

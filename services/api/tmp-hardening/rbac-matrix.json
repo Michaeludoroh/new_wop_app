@@ -1,0 +1,227 @@
+﻿[
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/users",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/users",
+        "status":  200
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/users",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/users",
+        "status":  200
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/users",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/payments",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/payments",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/payments",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/payments",
+        "status":  403
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/payments",
+        "status":  403
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/analytics",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/analytics",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/analytics",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/analytics",
+        "status":  403
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/analytics",
+        "status":  403
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/notifications",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/notifications",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/notifications",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/notifications",
+        "status":  403
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/notifications",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/announcements",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/announcements",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/announcements",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/announcements",
+        "status":  200
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/announcements",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/ebooks",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/ebooks",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/ebooks",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/ebooks",
+        "status":  200
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/ebooks",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/programs",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/programs",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/programs",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/programs",
+        "status":  200
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/programs",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/mentorship",
+        "status":  401
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/mentorship",
+        "status":  403
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/mentorship",
+        "status":  200
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/mentorship",
+        "status":  200
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/mentorship",
+        "status":  200
+    },
+    {
+        "role":  "unauthenticated",
+        "endpoint":  "/subscriptions",
+        "status":  404
+    },
+    {
+        "role":  "superadmin_wop_local",
+        "endpoint":  "/subscriptions",
+        "status":  404
+    },
+    {
+        "role":  "admin_wop_local",
+        "endpoint":  "/subscriptions",
+        "status":  404
+    },
+    {
+        "role":  "moderator_wop_local",
+        "endpoint":  "/subscriptions",
+        "status":  404
+    },
+    {
+        "role":  "user_wop_local",
+        "endpoint":  "/subscriptions",
+        "status":  404
+    }
+]

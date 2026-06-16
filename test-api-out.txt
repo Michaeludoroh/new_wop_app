@@ -1,0 +1,11 @@
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
+
+> ministry-platform-api@0.1.0 test
+> jest --config jest.config.js subscriptions content-access subscription-lifecycle payments.service.spec.ts
+
+
+Test Suites: 4 passed, 4 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        22.237 s, estimated 26 s
+Ran all test suites matching subscriptions|content-access|subscription-lifecycle|payments.service.spec.ts.

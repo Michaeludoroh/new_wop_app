@@ -1,0 +1,41 @@
+name: ministry_mobile
+description: WOP mobile app.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.2
+  connectivity_plus: ^6.0.5
+  url_launcher: ^6.3.1
+  firebase_core: ^4.10.0
+  firebase_messaging: ^16.3.0
+  socket_io_client: ^3.1.5
+  video_player: ^2.11.1
+  pdfx: ^2.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/logo_icon.png
+  adaptive_icon_background: "#6A1B9A"
+  adaptive_icon_foreground: assets/images/logo_icon.png
+  remove_alpha_ios: true
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/logo.png

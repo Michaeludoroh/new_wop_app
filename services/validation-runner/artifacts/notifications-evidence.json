@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-05-30T15:09:20.841Z",
+  "environment": "local",
+  "suite": "notifications",
+  "status": "PASS",
+  "checks": [
+    {
+      "id": "notifications-list",
+      "name": "List notifications",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 200,
+        "count": null
+      },
+      "durationMs": 32
+    },
+    {
+      "id": "notifications-broadcast",
+      "name": "Broadcast notification create",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 201
+      },
+      "durationMs": 24
+    },
+    {
+      "id": "notifications-targeted-shape",
+      "name": "Targeted notification route shape",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 400
+      },
+      "durationMs": 5
+    },
+    {
+      "id": "notifications-invalid-payload",
+      "name": "Invalid payload handling",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 400
+      },
+      "durationMs": 6
+    },
+    {
+      "id": "notifications-authz-shape",
+      "name": "Authorization behavior shape",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 401
+      },
+      "durationMs": 6
+    },
+    {
+      "id": "notifications-realtime-delivery-shape",
+      "name": "Realtime delivery contract",
+      "status": "SKIPPED",
+      "details": {
+        "status": "SKIPPED",
+        "reason": "full realtime coupling excluded in critical-path mode"
+      },
+      "durationMs": 0
+    }
+  ],
+  "metadata": {
+    "durationMs": 365
+  }
+}

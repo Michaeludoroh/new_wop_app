@@ -1,0 +1,175 @@
+{
+  "login": {
+    "superadmin": 201,
+    "admin": 201,
+    "moderator": 201
+  },
+  "security": {
+    "anonCreate": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "userLikeCreate": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "adminCreate": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "publishAnon": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/publish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "publishModerator": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/publish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "publishAdmin": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/publish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "endpoint": {
+    "create": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "read": {
+      "status": 404,
+      "body": {
+        "message": "Cannot GET /api/v1/announcements/undefined",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "update": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "publish": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/publish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "unpublish": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/unpublish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "delete": {
+      "status": 404,
+      "body": {
+        "message": "Cannot DELETE /api/v1/announcements/undefined",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "validation": {
+    "missingFields": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "invalidCategory": {
+      "status": 404,
+      "body": {
+        "message": "Cannot POST /api/v1/announcements",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "invalidId": {
+      "status": 404,
+      "body": {
+        "message": "Cannot GET /api/v1/announcements/not-a-uuid",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "notFound": {
+      "status": 404,
+      "body": {
+        "message": "Cannot GET /api/v1/announcements/cm99999999999999999999999",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "state": {
+    "afterPublish": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/publish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "afterUnpublish": {
+      "status": 404,
+      "body": {
+        "message": "Cannot PATCH /api/v1/announcements/undefined/unpublish",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    },
+    "afterSoftDelete": {
+      "status": 404,
+      "body": {
+        "message": "Cannot DELETE /api/v1/announcements/undefined",
+        "error": "Not Found",
+        "statusCode": 404
+      }
+    }
+  },
+  "audit": {
+    "status": 404,
+    "body": {
+      "message": "Cannot GET /api/v1/audit-logs?resource=announcement",
+      "error": "Not Found",
+      "statusCode": 404
+    }
+  }
+}

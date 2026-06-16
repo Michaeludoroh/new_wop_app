@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-05-30T15:08:53.214Z",
+  "environment": "local",
+  "suite": "auth",
+  "status": "PASS",
+  "checks": [
+    {
+      "id": "auth-register-shape",
+      "name": "Register endpoint validation shape",
+      "status": "SKIPPED",
+      "details": {
+        "status": "SKIPPED",
+        "note": "register mutation skipped for deterministic runs"
+      },
+      "durationMs": 0
+    },
+    {
+      "id": "auth-login",
+      "name": "Login with configured credentials",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 201,
+        "hasAccessToken": true,
+        "hasRefreshToken": true
+      },
+      "durationMs": 1112
+    },
+    {
+      "id": "auth-invalid-credentials",
+      "name": "Invalid credentials rejected",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 401
+      },
+      "durationMs": 450
+    },
+    {
+      "id": "auth-malformed-payload",
+      "name": "Malformed payload handling",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 400
+      },
+      "durationMs": 31
+    },
+    {
+      "id": "auth-refresh",
+      "name": "Refresh endpoint lifecycle",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 201,
+        "hasAccessToken": true
+      },
+      "durationMs": 188
+    },
+    {
+      "id": "auth-expired-jwt-check",
+      "name": "Expired JWT guard behavior (synthetic)",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "note": "synthetic expired token generated for runner-level contract check"
+      },
+      "durationMs": 6
+    },
+    {
+      "id": "auth-rbac-shape",
+      "name": "RBAC protected route behavior shape",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 500
+      },
+      "durationMs": 40
+    },
+    {
+      "id": "auth-logout-shape",
+      "name": "Logout endpoint validation shape",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "statusCode": 201
+      },
+      "durationMs": 14
+    }
+  ],
+  "metadata": {
+    "durationMs": 1842
+  }
+}

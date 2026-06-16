@@ -1,0 +1,10 @@
+{
+    "user":  {
+                 "id":  "cmphmzkba0000xlxmzzgzaomw",
+                 "email":  "hardening.user1@example.com",
+                 "fullName":  "Hardening User",
+                 "role":  "USER"
+             },
+    "accessToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXBobXprYmEwMDAweGx4bXp6Z3phb213IiwiZW1haWwiOiJoYXJkZW5pbmcudXNlcjFAZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc3OTQ5NzcwNCwiZXhwIjoxNzc5NDk4NjA0fQ.666dyhsJ72YIVwZH4a4PdJa7SAb8GqqtAi8Ykjo6Cg0",
+    "refreshToken":  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjbXBobXprYmEwMDAweGx4bXp6Z3phb213IiwiZW1haWwiOiJoYXJkZW5pbmcudXNlcjFAZXhhbXBsZS5jb20iLCJyb2xlIjoiVVNFUiIsImp0aSI6IjYwN2ZhZGYzLTE4OGMtNGE2Yi1hOTM3LWVjZDRkZTBiZDljZSIsImlhdCI6MTc3OTQ5NzcwNCwiZXhwIjoxNzgwMTAyNTA0fQ.voi-S3SSNyRvSS16EnLKZ841Qc-agpNmpn5cTXDPHTM"
+}

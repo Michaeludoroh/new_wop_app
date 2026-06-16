@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-05-30T15:09:20.474Z",
+  "environment": "local",
+  "suite": "payments",
+  "status": "PASS",
+  "checks": [
+    {
+      "id": "payments-invalid-signature",
+      "name": "Invalid signature handling",
+      "status": "PASS",
+      "details": {
+        "statusCode": 500,
+        "response": {
+          "statusCode": 500,
+          "message": "Internal server error"
+        },
+        "message": "Request failed with status code 500"
+      },
+      "durationMs": 13
+    },
+    {
+      "id": "payments-missing-signature",
+      "name": "Missing signature handling",
+      "status": "PASS",
+      "details": {
+        "statusCode": 400,
+        "response": {
+          "message": [
+            "signature should not be empty"
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "message": "Request failed with status code 400"
+      },
+      "durationMs": 8
+    },
+    {
+      "id": "payments-invalid-provider",
+      "name": "Invalid provider handling",
+      "status": "PASS",
+      "details": {
+        "statusCode": 400,
+        "response": {
+          "message": [
+            "provider must be one of the following values: "
+          ],
+          "error": "Bad Request",
+          "statusCode": 400
+        },
+        "message": "Request failed with status code 400"
+      },
+      "durationMs": 7
+    },
+    {
+      "id": "payments-duplicate-webhook-shape",
+      "name": "Duplicate webhook replay shape",
+      "status": "PASS",
+      "details": {
+        "statusCode": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Stripe signature"
+        },
+        "message": "Request failed with status code 400"
+      },
+      "durationMs": 7
+    },
+    {
+      "id": "payments-unknown-reference",
+      "name": "Unknown reference handling",
+      "status": "PASS",
+      "details": {
+        "statusCode": 400,
+        "response": {
+          "code": "WEBHOOK_SIGNATURE_INVALID",
+          "message": "Invalid Stripe signature"
+        },
+        "message": "Request failed with status code 400"
+      },
+      "durationMs": 7
+    }
+  ],
+  "metadata": {
+    "durationMs": 359
+  }
+}

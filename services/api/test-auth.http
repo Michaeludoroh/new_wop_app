@@ -1,0 +1,169 @@
+@baseUrl = http://localhost:4000/api/v1
+@testEmail = testuser@example.com
+@testPassword = Password123!
+@newPassword = NewPassword123!
+
+### Health
+GET {{baseUrl}}/health
+
+### Register - success
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "fullName": "Test User"
+}
+
+### Register - duplicate email (expected 409)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}",
+  "fullName": "Test User Duplicate"
+}
+
+### Register - missing required fields (expected 400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+### Register - malformed JSON (expected 400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "badjson@example.com",
+  "password": "Password123!",
+  "fullName": "Bad Json"
+}
+
+### Login - success
+# Capture accessToken + refreshToken from response manually for subsequent calls.
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Login - invalid credentials (expected 401)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "invalid@example.com",
+  "password": "wrongpass"
+}
+
+### Login - missing fields (expected 400)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+### Auth Me - unauthorized no token (expected 401)
+GET {{baseUrl}}/auth/me
+
+### Auth Me - invalid JWT (expected 401)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer invalid.token.value
+
+### Auth Me - success (expected 200)
+# Replace with valid access token from login/refresh.
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+
+### Refresh token - success (expected 200)
+# Replace with valid refresh token from login.
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Refresh token - invalid token (expected 401)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid-refresh-token"
+}
+
+### Refresh token - missing field (expected 400)
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+}
+
+### Forgot password - existing user (expected 200)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}
+
+### Forgot password - non-existing user (expected 200 generic)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "notfound@example.com"
+}
+
+### Forgot password - missing email (expected 400)
+POST {{baseUrl}}/auth/forgot-password
+Content-Type: application/json
+
+{
+}
+
+### Reset password - invalid token (expected 401)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "invalid-token",
+  "newPassword": "{{newPassword}}"
+}
+
+### Reset password - missing fields (expected 400)
+POST {{baseUrl}}/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "some-token"
+}
+
+### Logout - success (expected 200)
+# Replace with valid refresh token.
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Logout - invalid refresh token format/content (expected 200/401 depending on implementation)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "invalid-refresh-token"
+}
+
+### Unauthorized access attempt to protected module endpoint (expected 401 once guards are applied globally/per-route)
+GET {{baseUrl}}/users
+Authorization: Bearer invalid.token.value

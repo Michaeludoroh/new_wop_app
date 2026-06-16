@@ -1,0 +1,58 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "id": null,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Payment Attempts",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(payment_attempts_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Successful Payments",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(payment_success_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Failed Payments",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(payment_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Webhook Volume",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(payment_webhook_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Webhook Failures",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(payment_webhook_failures_total[5m]))", "refId": "A" }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Subscription Lifecycle Events",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(subscription_lifecycle_events_total[5m]))", "refId": "A" }]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["phase-3b", "payments"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Payments",
+  "uid": "payments-dashboard",
+  "version": 1
+}

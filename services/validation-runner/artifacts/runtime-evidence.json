@@ -1,0 +1,29 @@
+{
+  "timestamp": "2026-05-30T15:08:51.363Z",
+  "environment": "local",
+  "suite": "runtime",
+  "status": "WARNING",
+  "checks": [
+    {
+      "id": "api-health",
+      "name": "API health endpoint",
+      "status": "PASS",
+      "details": {
+        "statusCode": 200
+      },
+      "durationMs": 433
+    },
+    {
+      "id": "ws-health",
+      "name": "WebSocket service health endpoint",
+      "status": "WARNING",
+      "details": {
+        "message": ""
+      },
+      "durationMs": 11
+    }
+  ],
+  "metadata": {
+    "durationMs": 444
+  }
+}

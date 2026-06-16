@@ -1,0 +1,23 @@
+{
+  "name": "@wop/validation-runner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic validation framework for API, WebSocket, Payments, Notifications, Auth, and readiness evidence.",
+  "main": "src/index.js",
+  "scripts": {
+    "validate": "node src/index.js",
+    "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.5.0",
+    "socket.io-client": "^4.8.1",
+    "supertest": "^7.0.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-05-30T15:09:20.113Z",
+  "environment": "local",
+  "suite": "websocket",
+  "status": "WARNING",
+  "checks": [
+    {
+      "id": "ws-valid-handshake",
+      "name": "Valid WebSocket handshake",
+      "status": "WARNING",
+      "details": {
+        "message": "timeout waiting for connect"
+      },
+      "durationMs": 8018
+    },
+    {
+      "id": "ws-invalid-token",
+      "name": "Invalid token rejection",
+      "status": "PASS",
+      "details": {
+        "status": "PASS",
+        "note": "invalid token was blocked from connect"
+      },
+      "durationMs": 2504
+    },
+    {
+      "id": "ws-reconnect-cycle",
+      "name": "Reconnect cycle behavior",
+      "status": "WARNING",
+      "details": {
+        "message": "timeout waiting for connect"
+      },
+      "durationMs": 8008
+    },
+    {
+      "id": "ws-disconnect-cleanup",
+      "name": "Disconnect cleanup shape",
+      "status": "WARNING",
+      "details": {
+        "message": "timeout waiting for connect"
+      },
+      "durationMs": 8013
+    },
+    {
+      "id": "ws-redis-propagation-shape",
+      "name": "Redis propagation check contract",
+      "status": "SKIPPED",
+      "details": {
+        "status": "SKIPPED",
+        "reason": "deterministic contract check only in critical path run"
+      },
+      "durationMs": 0
+    },
+    {
+      "id": "ws-targeted-notification-shape",
+      "name": "Targeted notification realtime contract",
+      "status": "SKIPPED",
+      "details": {
+        "status": "SKIPPED",
+        "reason": "deterministic contract check only in critical path run"
+      },
+      "durationMs": 0
+    },
+    {
+      "id": "ws-restart-recovery-shape",
+      "name": "WebSocket restart recovery contract",
+      "status": "SKIPPED",
+      "details": {
+        "status": "SKIPPED",
+        "reason": "service restart not triggered in critical-path mode"
+      },
+      "durationMs": 0
+    }
+  ],
+  "metadata": {
+    "durationMs": 26897
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "provider": "FLUTTERWAVE",
+  "eventId": "evt-fw-unauth-1",
+  "eventType": "charge.completed",
+  "signature": "abcdefgh123456",
+  "providerReference": "missing-ref-1",
+  "payload": {
+    "amount": 1000,
+    "currency": "NGN"
+  }
+}

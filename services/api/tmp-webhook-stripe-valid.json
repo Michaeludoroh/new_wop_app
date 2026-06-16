@@ -1,0 +1,11 @@
+{
+  "provider": "STRIPE",
+  "eventId": "evt-stripe-ok-001",
+  "eventType": "payment_intent.succeeded",
+  "signature": "sig_stripe_valid_123456",
+  "providerReference": "st-ref-001",
+  "payload": {
+    "amount": 1000,
+    "currency": "USD"
+  }
+}
