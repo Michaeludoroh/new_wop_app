@@ -105,6 +105,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         _navigateToPushRoute(route);
       }
     });
+    messaging.markOpenedMessageListenersReady();
   }
 
   void _navigateToPushRoute(PushNotificationRoute route) {

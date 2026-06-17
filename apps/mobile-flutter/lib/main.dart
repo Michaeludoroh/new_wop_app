@@ -3,11 +3,13 @@ import 'app.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/auth/auth_scope.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'core/notifications/services/firebase_messaging_service.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await FirebaseBootstrap.initialize();
+  registerFirebaseMessagingBackgroundHandler();
 
   final authProvider = AuthProvider();
   await authProvider.bootstrap();

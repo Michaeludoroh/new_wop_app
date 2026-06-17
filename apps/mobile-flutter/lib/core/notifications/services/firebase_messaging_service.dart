@@ -14,6 +14,12 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await FirebaseBootstrap.initialize();
 }
 
+/// Registers the FCM background isolate handler. Must run in [main] before
+/// [runApp] (Firebase requirement).
+void registerFirebaseMessagingBackgroundHandler() {
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+}
+
 class FirebaseMessagingService {
   FirebaseMessagingService({
     FirebaseMessaging? messaging,
@@ -43,8 +49,17 @@ class FirebaseMessagingService {
   Stream<RemoteMessage> get foregroundMessages => _foregroundMessages.stream;
   Stream<RemoteMessage> get openedMessages => _openedMessages.stream;
 
+  /// Called when the dashboard (or other UI) has subscribed to [openedMessages].
+  /// Flushes any cold-start notification tap buffered by [getInitialMessage].
+  void markOpenedMessageListenersReady() {
+    _openedMessageListenersReady = true;
+    _deliverPendingColdStartMessageIfNeeded();
+  }
+
   String? _registeredToken;
   bool _initialized = false;
+  RemoteMessage? _pendingColdStartMessage;
+  bool _openedMessageListenersReady = false;
 
   /// Resolves messaging only when Firebase is configured, avoiding test/runtime
   /// crashes from [FirebaseMessaging.instance] before [Firebase.initializeApp].
@@ -74,7 +89,6 @@ class FirebaseMessagingService {
       return;
     }
 
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     await messaging.requestPermission();
     await registerCurrentToken();
 
@@ -83,7 +97,7 @@ class FirebaseMessagingService {
 
     final initial = await messaging.getInitialMessage();
     if (initial != null) {
-      _openedMessages.add(initial);
+      _bufferColdStartMessage(initial);
     }
 
     messaging.onTokenRefresh.listen((newToken) async {
@@ -123,6 +137,29 @@ class FirebaseMessagingService {
   Future<void> dispose() async {
     await _foregroundMessages.close();
     await _openedMessages.close();
+  }
+
+  void _bufferColdStartMessage(RemoteMessage message) {
+    _pendingColdStartMessage = message;
+    _deliverPendingColdStartMessageIfNeeded();
+  }
+
+  void _deliverPendingColdStartMessageIfNeeded() {
+    if (!_openedMessageListenersReady) {
+      return;
+    }
+    final pending = _pendingColdStartMessage;
+    if (pending == null) {
+      return;
+    }
+    _pendingColdStartMessage = null;
+    _openedMessages.add(pending);
+  }
+
+  /// Test hook for cold-start delivery without Firebase initialization.
+  @visibleForTesting
+  void stageColdStartMessageForTesting(RemoteMessage message) {
+    _bufferColdStartMessage(message);
   }
 
   Future<void> _registerToken(String token) async {
