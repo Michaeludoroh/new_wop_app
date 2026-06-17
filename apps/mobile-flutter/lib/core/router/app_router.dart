@@ -24,6 +24,7 @@ import '../../screens/mentorship_screen.dart';
 import '../../screens/mentorship_details_screen.dart';
 import '../../screens/announcements_screen.dart';
 import '../../screens/announcement_details_screen.dart';
+import '../../screens/about_screen.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/policy_screen.dart';
 
@@ -58,6 +59,7 @@ class AppRouter {
     ClipDetailsScreen.routeName: {'admin', 'member', 'user'},
     MyLibraryScreen.routeName: {'admin', 'member', 'user'},
     SubscriptionScreen.routeName: {'admin', 'member', 'user'},
+    AboutScreen.routeName: {'admin', 'member', 'user'},
     PdfReaderScreen.routeName: {'admin', 'member', 'user'},
   };
 
@@ -193,6 +195,8 @@ class AppRouter {
             return const MyLibraryScreen();
           case SubscriptionScreen.routeName:
             return const SubscriptionScreen();
+          case AboutScreen.routeName:
+            return const AboutScreen();
           case PdfReaderScreen.routeName:
             final args = settings.arguments as PdfReaderArgs?;
             if (args == null) {

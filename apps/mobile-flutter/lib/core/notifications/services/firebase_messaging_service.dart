@@ -19,7 +19,7 @@ class FirebaseMessagingService {
     FirebaseMessaging? messaging,
     Dio? dio,
     TokenStorageService? tokenStorageService,
-  })  : _messaging = messaging ?? FirebaseMessaging.instance,
+  })  : _messagingOverride = messaging,
         _dio = dio ??
             Dio(
               BaseOptions(
@@ -32,7 +32,7 @@ class FirebaseMessagingService {
             ),
         _tokenStorage = tokenStorageService ?? TokenStorageService();
 
-  FirebaseMessaging? _messaging;
+  final FirebaseMessaging? _messagingOverride;
   final Dio _dio;
   final TokenStorageService _tokenStorage;
   final StreamController<RemoteMessage> _foregroundMessages =
@@ -46,6 +46,18 @@ class FirebaseMessagingService {
   String? _registeredToken;
   bool _initialized = false;
 
+  /// Resolves messaging only when Firebase is configured, avoiding test/runtime
+  /// crashes from [FirebaseMessaging.instance] before [Firebase.initializeApp].
+  FirebaseMessaging? get _messaging {
+    if (_messagingOverride != null) {
+      return _messagingOverride;
+    }
+    if (!FirebaseBootstrap.isConfigured) {
+      return null;
+    }
+    return FirebaseMessaging.instance;
+  }
+
   Future<void> initialize() async {
     if (_initialized) return;
     _initialized = true;
@@ -56,19 +68,25 @@ class FirebaseMessagingService {
       return;
     }
 
+    final messaging = _messaging;
+    if (messaging == null) {
+      debugPrint('FCM initialization skipped: messaging unavailable.');
+      return;
+    }
+
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    await _messaging.requestPermission();
+    await messaging.requestPermission();
     await registerCurrentToken();
 
     FirebaseMessaging.onMessage.listen(_foregroundMessages.add);
     FirebaseMessaging.onMessageOpenedApp.listen(_openedMessages.add);
 
-    final initial = await _messaging.getInitialMessage();
+    final initial = await messaging.getInitialMessage();
     if (initial != null) {
       _openedMessages.add(initial);
     }
 
-    _messaging.onTokenRefresh.listen((newToken) async {
+    messaging.onTokenRefresh.listen((newToken) async {
       final oldToken = _registeredToken;
       if (oldToken == null || oldToken.isEmpty) {
         await _registerToken(newToken);
@@ -80,7 +98,10 @@ class FirebaseMessagingService {
 
   Future<void> registerCurrentToken() async {
     try {
-      final token = await _messaging?.getToken();
+      final messaging = _messaging;
+      if (messaging == null) return;
+
+      final token = await messaging.getToken();
       if (token == null || token.isEmpty) return;
       await _registerToken(token);
     } catch (error) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/constants/app_constants.dart';
 import 'core/auth/auth_scope.dart';
 import 'core/auth/auth_state.dart';
 import 'core/theme/app_theme.dart';
@@ -9,7 +10,10 @@ import 'screens/splash_screen.dart';
 import 'screens/auth_landing_screen.dart';
 
 class MinistryMobileApp extends StatelessWidget {
-  const MinistryMobileApp({super.key});
+  const MinistryMobileApp({super.key, this.theme});
+
+  /// Optional theme override; defaults to [AppTheme.lightTheme].
+  final ThemeData? theme;
 
   @override
   Widget build(BuildContext context) {
@@ -47,9 +51,9 @@ class MinistryMobileApp extends StatelessWidget {
                 : const AuthLandingScreen());
 
         return MaterialApp(
-          title: 'Ministry Community',
+          title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
+          theme: theme ?? AppTheme.lightTheme,
           onGenerateRoute: AppRouter.onGenerateRoute,
           home: home,
         );

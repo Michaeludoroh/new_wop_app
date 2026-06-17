@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'about_screen.dart';
 import 'announcements_screen.dart';
 import 'mentorship_screen.dart';
 import 'programs_screen.dart';
@@ -62,6 +63,16 @@ class MoreScreen extends StatelessWidget {
     ),
   ];
 
+  /// App information and credits.
+  static const List<MoreMenuItem> appItems = [
+    MoreMenuItem(
+      title: 'About WOP',
+      subtitle: 'App info, credits, and version',
+      icon: Icons.info_outline,
+      routeName: AboutScreen.routeName,
+    ),
+  ];
+
   /// Add future ministry features here — no bottom-nav redesign required.
   static const List<MoreMenuItem> upcomingItems = [
     // MoreMenuItem(
@@ -111,6 +122,7 @@ class MoreScreen extends StatelessWidget {
   static const List<MoreMenuSection> sections = [
     MoreMenuSection(title: 'Ministry', items: ministryItems),
     MoreMenuSection(title: 'Coming Soon', items: upcomingItems),
+    MoreMenuSection(title: 'App', items: appItems),
   ];
 
   void _openItem(BuildContext context, MoreMenuItem item) {

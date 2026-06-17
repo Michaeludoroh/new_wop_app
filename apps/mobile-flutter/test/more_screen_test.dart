@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ministry_mobile/screens/about_screen.dart';
 import 'package:ministry_mobile/screens/announcements_screen.dart';
 import 'package:ministry_mobile/screens/mentorship_screen.dart';
 import 'package:ministry_mobile/screens/more_screen.dart';
@@ -18,6 +19,25 @@ void main() {
     expect(find.text('Programs'), findsOneWidget);
     expect(find.text('Mentorship'), findsOneWidget);
     expect(find.text('Subscription'), findsOneWidget);
+    expect(find.text('About WOP'), findsOneWidget);
+  });
+
+  testWidgets('MoreScreen navigates to about', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        routes: {
+          AboutScreen.routeName: (_) => const Scaffold(
+                body: Text('About Screen'),
+              ),
+        },
+        home: const MoreScreen(),
+      ),
+    );
+
+    await tester.tap(find.text('About WOP'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('About Screen'), findsOneWidget);
   });
 
   testWidgets('MoreScreen navigates to announcements', (tester) async {

@@ -3,9 +3,9 @@
     "short_name": "WOP",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#6A1B9A",
+    "theme_color": "#6A1B9A",
+    "description": "A faith-based community platform for Men and Women of Passion and Purpose.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

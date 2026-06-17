@@ -32,6 +32,15 @@ class SplashScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 8),
+              Text(
+                AppConstants.organizationName,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.accentGold,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 20),
               CircularProgressIndicator(
                 color: theme.colorScheme.primary,
