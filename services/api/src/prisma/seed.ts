@@ -49,26 +49,67 @@ async function main() {
     });
   }
 
-  await prisma.subscriptionPlan.upsert({
-    where: { code: 'BASIC_MONTHLY' },
-    update: {
-      name: 'Basic Monthly',
-      description: 'Seeded basic monthly plan',
+  const planSeeds = [
+    {
+      code: 'FREE',
+      name: 'Free',
+      description: 'Free tier with limited access',
+      amount: '0',
+      currency: 'USD',
+      billingInterval: 'MONTHLY',
+      isActive: true,
+    },
+    {
+      code: 'PREMIUM',
+      name: 'Premium Monthly',
+      description: 'Full premium ministry access',
       amount: '9.99',
       currency: 'USD',
       billingInterval: 'MONTHLY',
       isActive: true,
     },
-    create: {
+    {
+      code: 'PARTNER',
+      name: 'Partner',
+      description: 'Partner ministry tier (admin-assigned or paid)',
+      amount: '19.99',
+      currency: 'USD',
+      billingInterval: 'MONTHLY',
+      isActive: true,
+    },
+    {
       code: 'BASIC_MONTHLY',
       name: 'Basic Monthly',
-      description: 'Seeded basic monthly plan',
+      description: 'Legacy basic monthly plan (backward compatible)',
       amount: '9.99',
       currency: 'USD',
       billingInterval: 'MONTHLY',
       isActive: true,
     },
-  });
+  ] as const;
+
+  for (const plan of planSeeds) {
+    await prisma.subscriptionPlan.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        description: plan.description,
+        amount: plan.amount,
+        currency: plan.currency,
+        billingInterval: plan.billingInterval,
+        isActive: plan.isActive,
+      },
+      create: {
+        code: plan.code,
+        name: plan.name,
+        description: plan.description,
+        amount: plan.amount,
+        currency: plan.currency,
+        billingInterval: plan.billingInterval,
+        isActive: plan.isActive,
+      },
+    });
+  }
 
   const policySeeds = [
     {

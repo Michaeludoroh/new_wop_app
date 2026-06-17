@@ -1,5 +1,5 @@
-import { Controller, Get, Headers, Param, Post, Body, Query, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Headers, Param, Post, Body, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -7,6 +7,7 @@ import { InitiateEbookCheckoutDto } from './dto/initiate-ebook-checkout.dto';
 import { InitiateSubscriptionCheckoutDto } from './dto/initiate-subscription-checkout.dto';
 import { PaymentHistoryQueryDto } from './dto/payment-history-query.dto';
 import { PaymentStatusQueryDto } from './dto/payment-status-query.dto';
+import { PaymentCompleteQueryDto } from './dto/payment-complete-query.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { PaymentsService } from './payments.service';
 
@@ -20,6 +21,23 @@ type AuthRequest = Request & {
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly service: PaymentsService) {}
+
+  @Get('complete')
+  async complete(
+    @Query() query: PaymentCompleteQueryDto,
+    @Headers('accept') acceptHeader: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.service.completePayment(query.tx_ref);
+    const wantsHtml = (acceptHeader ?? '').includes('text/html');
+
+    if (wantsHtml) {
+      res.type('html');
+      return this.service.renderPaymentCompletePage(result);
+    }
+
+    return result;
+  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'USER')

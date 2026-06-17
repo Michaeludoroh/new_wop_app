@@ -12,6 +12,7 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { authApi } from "../lib/auth/api-client";
+import { isAdminConsoleRole } from "../lib/auth/config";
 import { tokenStorage } from "../lib/auth/token-storage";
 import { AuthState, AuthUser, LoginPayload, UserRole } from "../lib/auth/types";
 
@@ -85,6 +86,13 @@ function normalizeAuthUser(user: AuthUser): AuthUser {
   return role ? { ...user, role } : user;
 }
 
+function assertAdminConsoleAccess(user: AuthUser) {
+  const role = normalizeRole(user.role);
+  if (!role || !isAdminConsoleRole(role)) {
+    throw new Error("This account does not have admin console access.");
+  }
+}
+
 function normalizeError(error: unknown): string {
   if (typeof error === "object" && error && "response" in error) {
     const maybeError = error as {
@@ -107,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback((user: AuthUser, accessToken: string, refreshToken: string) => {
     const normalizedUser = normalizeAuthUser(user);
+    assertAdminConsoleAccess(normalizedUser);
     tokenStorage.setSession(accessToken, refreshToken, normalizedUser);
     setState({
       user: normalizedUser,
@@ -135,6 +144,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!accessToken || !refreshToken || !storedUser) {
       setState((prev) => ({ ...prev, isInitializing: false }));
+      return;
+    }
+
+    if (!isAdminConsoleRole(normalizeRole(storedUser.role) ?? undefined)) {
+      clearSession();
       return;
     }
 
@@ -282,6 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         applySession(result.user, accessToken, refreshToken);
       } catch (error) {
         console.error("[auth-provider.login] login flow exception", error);
+        clearSession();
         setState((prev) => ({
           ...prev,
           loading: false,
@@ -292,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({ ...prev, loading: false }));
       }
     },
-    [applySession]
+    [applySession, clearSession]
   );
 
   const logout = useCallback(async () => {

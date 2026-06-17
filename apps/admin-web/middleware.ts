@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ADMIN_CONSOLE_ROLES } from "./lib/auth/config";
 
-type UserRole = "SUPER_ADMIN" | "ADMIN" | "MODERATOR" | "USER";
+type UserRole = (typeof ADMIN_CONSOLE_ROLES)[number] | "USER";
 
 const ACCESS_TOKEN_KEY = "ministry_admin_access_token";
 const USER_KEY = "ministry_admin_user";
@@ -94,6 +95,16 @@ export function middleware(req: NextRequest) {
   if (!userRole) {
     const url = new URL("/login", req.url);
     url.searchParams.set("reason", "expired_session");
+    const response = NextResponse.redirect(url);
+    response.cookies.delete(ACCESS_TOKEN_KEY);
+    response.cookies.delete("ministry_admin_refresh_token");
+    response.cookies.delete(USER_KEY);
+    return response;
+  }
+
+  if (userRole === "USER") {
+    const url = new URL("/login", req.url);
+    url.searchParams.set("reason", "admin_access_required");
     const response = NextResponse.redirect(url);
     response.cookies.delete(ACCESS_TOKEN_KEY);
     response.cookies.delete("ministry_admin_refresh_token");

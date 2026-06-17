@@ -1,20 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import {
-  PaymentProvider,
   PaymentStatus,
   Prisma,
   SubscriptionStatus,
-  TransactionType,
 } from '@prisma/client';
-import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { PaymentsService } from '../payments/payments.service';
 
 const DEFAULT_GRACE_DAYS = 7;
 const RETRY_WINDOW_MINUTES = 30;
 
 @Injectable()
 export class SubscriptionLifecycleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => PaymentsService))
+    private readonly paymentsService: PaymentsService,
+  ) {}
 
   async recordStatusChange(
     tx: Prisma.TransactionClient | PrismaService,
@@ -134,41 +136,25 @@ export class SubscriptionLifecycleService {
       }
 
       const nextRetryCount = subscription.retryCount + 1;
-      const providerReference = `wop_retry_${randomUUID()}`;
-      await this.prisma.$transaction(async (tx) => {
-        await tx.paymentTransaction.create({
-          data: {
-            userId: subscription.userId,
-            userSubscriptionId: subscription.id,
-            provider: PaymentProvider.FLUTTERWAVE,
-            providerReference,
-            transactionType: TransactionType.RETRY_CHARGE,
-            amount: 0,
-            currency: 'USD',
-            status: PaymentStatus.PENDING,
-            retryable: nextRetryCount < subscription.maxRetryCount,
-            retryCount: nextRetryCount,
-            nextRetryAt:
-              nextRetryCount < subscription.maxRetryCount
-                ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
-                : null,
-            metadata: {
-              purpose: 'SUBSCRIPTION',
-              lifecycle: 'retry_due',
-              retryAttempt: nextRetryCount,
-            },
-          },
-        });
+      const renewal = await this.paymentsService.initiateSubscriptionRenewalCharge({
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+        retryAttempt: nextRetryCount,
+        maxRetryCount: subscription.maxRetryCount,
+      });
 
+      await this.prisma.$transaction(async (tx) => {
         await tx.userSubscription.update({
           where: { id: subscription.id },
           data: {
             retryCount: nextRetryCount,
             lastPaymentAttemptAt: now,
             nextRetryAt:
-              nextRetryCount < subscription.maxRetryCount
-                ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
-                : null,
+              renewal.status === PaymentStatus.SUCCESS
+                ? null
+                : nextRetryCount < subscription.maxRetryCount
+                  ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
+                  : null,
           },
         });
 
@@ -176,9 +162,19 @@ export class SubscriptionLifecycleService {
           subscriptionId: subscription.id,
           userId: subscription.userId,
           fromStatus: subscription.status,
-          toStatus: SubscriptionStatus.GRACE,
-          reason: `Renewal retry attempt ${nextRetryCount} scheduled`,
-          metadata: { providerReference },
+          toStatus:
+            renewal.status === PaymentStatus.SUCCESS
+              ? SubscriptionStatus.ACTIVE
+              : SubscriptionStatus.GRACE,
+          reason:
+            renewal.status === PaymentStatus.SUCCESS
+              ? `Renewal retry attempt ${nextRetryCount} succeeded`
+              : `Renewal retry attempt ${nextRetryCount} ${renewal.charged ? 'processed' : 'scheduled'}`,
+          metadata: {
+            providerReference: renewal.providerReference,
+            charged: renewal.charged,
+            status: renewal.status,
+          },
         });
       });
       processed += 1;

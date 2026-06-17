@@ -211,6 +211,16 @@ export class UsersService {
       select: this.selectSafeUser(),
     });
 
+    if (!active) {
+      await this.prisma.refreshToken.updateMany({
+        where: {
+          userId: id,
+          revokedAt: null,
+        },
+        data: { revokedAt: new Date() },
+      });
+    }
+
     return { data: this.toUserResponse(user) };
   }
 }

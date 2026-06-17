@@ -4,6 +4,9 @@ import {
   CheckoutSessionRequest,
   CheckoutSessionResult,
   NormalizedProviderEvent,
+  TokenizedChargeRequest,
+  TokenizedChargeResult,
+  TransactionVerificationResult,
   VerificationResult,
 } from './payment-provider.types';
 
@@ -12,4 +15,6 @@ export interface PaymentProviderAdapter {
   createCheckoutSession(request: CheckoutSessionRequest): Promise<CheckoutSessionResult>;
   verifySignature(dto: PaymentWebhookDto): Promise<VerificationResult>;
   normalizeEvent(dto: PaymentWebhookDto): Promise<NormalizedProviderEvent>;
+  verifyTransactionByReference(txRef: string): Promise<TransactionVerificationResult>;
+  chargeTokenizedPayment(request: TokenizedChargeRequest): Promise<TokenizedChargeResult>;
 }

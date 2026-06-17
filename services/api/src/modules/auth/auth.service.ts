@@ -86,6 +86,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    if (user.deletedAt) {
+      throw new UnauthorizedException('Account disabled');
+    }
+
     await this.prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -124,6 +128,10 @@ export class AuthService {
 
     if (!session || session.revokedAt || session.expiresAt <= new Date()) {
       throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    if (session.user.deletedAt) {
+      throw new UnauthorizedException('Account disabled');
     }
 
     const now = new Date();
