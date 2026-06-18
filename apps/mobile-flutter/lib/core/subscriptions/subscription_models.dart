@@ -80,7 +80,7 @@ class SubscriptionStatusModel {
         : (planValue ?? '').toString().toLowerCase();
     MembershipPlan plan = MembershipPlan.unknown;
     if (planRaw.contains('free')) plan = MembershipPlan.free;
-    if (planRaw.contains('premium')) plan = MembershipPlan.premium;
+    if (planRaw.contains('premium') || planRaw.contains('basic')) plan = MembershipPlan.premium;
     if (planRaw.contains('partner')) plan = MembershipPlan.partner;
 
     final accessRaw = json['access'];

@@ -13,6 +13,6 @@ import { PaymentProviderRegistry } from './providers/payment-provider.registry';
     PaymentProviderRegistry,
     FlutterwaveProviderAdapter,
   ],
-  exports: [PaymentsService],
+  exports: [PaymentsService, PaymentProviderRegistry],
 })
 export class PaymentsModule {}

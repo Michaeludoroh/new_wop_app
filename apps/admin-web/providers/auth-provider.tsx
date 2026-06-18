@@ -12,7 +12,6 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { authApi } from "../lib/auth/api-client";
-import { isAdminConsoleRole } from "../lib/auth/config";
 import { tokenStorage } from "../lib/auth/token-storage";
 import { AuthState, AuthUser, LoginPayload, UserRole } from "../lib/auth/types";
 
@@ -38,6 +37,7 @@ const defaultState: AuthState = {
 const PUBLIC_ROUTES = new Set(["/login"]);
 const SESSION_INVALIDATED_EVENT = "auth:session-invalidated";
 const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH_GATE === "true";
+const ADMIN_PORTAL_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "MODERATOR"];
 
 function readLatestTokens(): { accessToken: string | null; refreshToken: string | null } {
   return {
@@ -86,10 +86,10 @@ function normalizeAuthUser(user: AuthUser): AuthUser {
   return role ? { ...user, role } : user;
 }
 
-function assertAdminConsoleAccess(user: AuthUser) {
+function assertAdminPortalAccess(user: AuthUser) {
   const role = normalizeRole(user.role);
-  if (!role || !isAdminConsoleRole(role)) {
-    throw new Error("This account does not have admin console access.");
+  if (!role || !ADMIN_PORTAL_ROLES.includes(role)) {
+    throw new Error("This account does not have admin portal access.");
   }
 }
 
@@ -115,7 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback((user: AuthUser, accessToken: string, refreshToken: string) => {
     const normalizedUser = normalizeAuthUser(user);
-    assertAdminConsoleAccess(normalizedUser);
     tokenStorage.setSession(accessToken, refreshToken, normalizedUser);
     setState({
       user: normalizedUser,
@@ -147,11 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!isAdminConsoleRole(normalizeRole(storedUser.role) ?? undefined)) {
-      clearSession();
-      return;
-    }
-
     if (DEBUG_AUTH) {
       console.info("[auth-provider.bootstrap] starting", {
         generation,
@@ -173,6 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return;
       }
+
+      assertAdminPortalAccess(me);
 
       const latest = readLatestTokens();
       applySession(
@@ -207,6 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (generation !== bootstrapGeneration.current) {
           return;
         }
+
+        assertAdminPortalAccess(me);
 
         const latest = readLatestTokens();
         applySession(
@@ -286,6 +284,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await authApi.login(payload);
         const { accessToken, refreshToken } = extractTokens(result);
 
+        assertAdminPortalAccess(result.user);
+
         if (DEBUG_AUTH) {
           console.info("[auth-provider.login] succeeded", {
             role: result.user.role,
@@ -307,7 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((prev) => ({ ...prev, loading: false }));
       }
     },
-    [applySession, clearSession]
+    [applySession]
   );
 
   const logout = useCallback(async () => {

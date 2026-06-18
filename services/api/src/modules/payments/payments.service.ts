@@ -18,6 +18,7 @@ import { InitiateSubscriptionCheckoutDto } from './dto/initiate-subscription-che
 import { PaymentHistoryQueryDto } from './dto/payment-history-query.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { PaymentProviderRegistry } from './providers/payment-provider.registry';
+import { TransactionVerificationResult } from './providers/payment-provider.types';
 
 type TransactionMetadata = {
   purpose?: 'SUBSCRIPTION' | 'EBOOK_PURCHASE';
@@ -305,9 +306,17 @@ export class PaymentsService {
     return { data: transaction };
   }
 
-  async completePayment(providerReference: string) {
+  async completeCheckout(providerReference: string) {
+    const txRef = providerReference.trim();
+    if (!txRef) {
+      throw new BadRequestException({
+        code: 'MISSING_TX_REF',
+        message: 'tx_ref query parameter is required',
+      });
+    }
+
     const transaction = await this.prisma.paymentTransaction.findUnique({
-      where: { providerReference },
+      where: { providerReference: txRef },
       include: {
         userSubscription: { include: { plan: true } },
       },
@@ -321,206 +330,58 @@ export class PaymentsService {
     }
 
     if (transaction.status === PaymentStatus.SUCCESS) {
-      return this.buildPaymentCompleteResponse(true, transaction);
+      return this.buildCompletionPayload(transaction, 'success', 'Payment already completed');
     }
 
-    if (transaction.status === PaymentStatus.FAILED && !transaction.retryable) {
-      return this.buildPaymentCompleteResponse(false, transaction);
+    if (transaction.status === PaymentStatus.FAILED && transaction.retryable === false) {
+      return this.buildCompletionPayload(
+        transaction,
+        'failed',
+        transaction.failureMessage ?? 'Payment failed',
+      );
     }
 
     const adapter = this.providerRegistry.resolve(PaymentProvider.FLUTTERWAVE);
-    const verification = await adapter.verifyTransactionByReference(providerReference);
-
-    const webhookReconciled = await this.reconcileWebhookIfProcessed(providerReference);
-    if (webhookReconciled) {
-      const refreshed = await this.prisma.paymentTransaction.findUnique({
-        where: { providerReference },
-        include: { userSubscription: { include: { plan: true } } },
-      });
-      if (refreshed) {
-        return this.buildPaymentCompleteResponse(
-          refreshed.status === PaymentStatus.SUCCESS,
-          refreshed,
-        );
-      }
-    }
+    const verification = await adapter.verifyTransactionByReference(txRef);
 
     if (verification.mappedStatus === PaymentStatus.SUCCESS) {
       this.assertVerifiedPaymentMatchesTransaction(transaction, verification.normalizedPayload);
-      await this.applyProviderPaymentOutcome(providerReference, {
-        mappedStatus: PaymentStatus.SUCCESS,
-        normalizedPayload: verification.normalizedPayload,
-        failureCode: null,
-        failureMessage: null,
-        retryable: false,
-        source: 'redirect_complete',
-      });
-    } else if (verification.mappedStatus === PaymentStatus.FAILED) {
-      await this.applyProviderPaymentOutcome(providerReference, {
-        mappedStatus: PaymentStatus.FAILED,
-        normalizedPayload: verification.normalizedPayload,
-        failureCode: verification.failureCode ?? 'PAYMENT_FAILED',
-        failureMessage: verification.failureMessage ?? 'Payment verification failed',
-        retryable: verification.mappedStatus === PaymentStatus.FAILED,
-        source: 'redirect_complete',
-      });
-    } else {
-      return {
-        message: 'Payment still pending',
-        data: {
-          success: false,
-          status: PaymentStatus.PENDING,
-          providerReference,
-          transactionId: transaction.id,
-          subscriptionStatus: transaction.userSubscription?.status ?? null,
-        },
-      };
+      const updated = await this.reconcileVerifiedPayment(transaction, verification);
+      return this.buildCompletionPayload(
+        updated,
+        'success',
+        'Payment verified and entitlement activated',
+      );
     }
 
-    const updated = await this.prisma.paymentTransaction.findUnique({
-      where: { providerReference },
-      include: { userSubscription: { include: { plan: true } } },
-    });
-
-    if (!updated) {
-      throw new NotFoundException({
-        code: 'PAYMENT_TRANSACTION_NOT_FOUND',
-        message: 'Payment transaction not found after reconciliation',
-      });
+    if (verification.mappedStatus === PaymentStatus.FAILED) {
+      const updated = await this.reconcileFailedVerification(transaction, verification);
+      return this.buildCompletionPayload(
+        updated,
+        'failed',
+        verification.failureMessage ?? 'Payment verification failed',
+      );
     }
 
-    return this.buildPaymentCompleteResponse(updated.status === PaymentStatus.SUCCESS, updated);
+    return this.buildCompletionPayload(
+      transaction,
+      'pending',
+      'Payment is still being processed. Return to the app and refresh payment status.',
+    );
   }
 
-  async initiateSubscriptionRenewalCharge(input: {
-    subscriptionId: string;
-    userId: string;
-    retryAttempt: number;
-    maxRetryCount: number;
-  }) {
-    const subscription = await this.prisma.userSubscription.findUnique({
-      where: { id: input.subscriptionId },
-      include: {
-        plan: true,
-        user: { select: { id: true, email: true, fullName: true, deletedAt: true } },
-      },
-    });
-
-    if (!subscription?.plan || !subscription.user || subscription.user.deletedAt) {
-      throw new NotFoundException('Subscription or plan not found for renewal');
-    }
-
-    if (Number(subscription.plan.amount) <= 0) {
-      throw new BadRequestException({
-        code: 'FREE_PLAN_RENEWAL_NOT_REQUIRED',
-        message: 'Free plans do not require Flutterwave renewal charges',
-      });
-    }
-
-    const now = new Date();
-    const providerReference = `wop_retry_${randomUUID()}`;
-    const adapter = this.providerRegistry.resolve(PaymentProvider.FLUTTERWAVE);
-    const paymentToken = await this.resolveRenewalPaymentToken(subscription.id);
-
-    const transaction = await this.prisma.paymentTransaction.create({
-      data: {
-        userId: input.userId,
-        userSubscriptionId: subscription.id,
-        subscriptionPlanId: subscription.planId,
-        provider: PaymentProvider.FLUTTERWAVE,
-        providerReference,
-        transactionType: TransactionType.RETRY_CHARGE,
-        amount: subscription.plan.amount,
-        currency: subscription.plan.currency,
-        status: PaymentStatus.PENDING,
-        retryable: input.retryAttempt < input.maxRetryCount,
-        retryCount: input.retryAttempt,
-        nextRetryAt:
-          input.retryAttempt < input.maxRetryCount
-            ? new Date(now.getTime() + 30 * 60 * 1000)
-            : null,
-        metadata: {
-          purpose: 'SUBSCRIPTION',
-          lifecycle: 'retry_due',
-          retryAttempt: input.retryAttempt,
-          planCode: subscription.plan.code,
-          billingInterval: subscription.plan.billingInterval,
-          paymentTokenPresent: Boolean(paymentToken),
-        },
-      },
-    });
-
-    if (!paymentToken) {
-      return {
-        charged: false,
-        providerReference,
-        transactionId: transaction.id,
-        status: PaymentStatus.PENDING,
-        message: 'Renewal charge pending; no stored payment token available',
-      };
-    }
-
-    const charge = await adapter.chargeTokenizedPayment({
-      txRef: providerReference,
-      amount: subscription.plan.amount.toString(),
-      currency: subscription.plan.currency,
-      email: subscription.user.email,
-      token: paymentToken,
-      metadata: {
-        purpose: 'SUBSCRIPTION',
-        subscriptionId: subscription.id,
-        retryAttempt: input.retryAttempt,
-        planCode: subscription.plan.code,
-      },
-    });
-
-    if (charge.mappedStatus === PaymentStatus.SUCCESS) {
-      this.assertVerifiedPaymentMatchesTransaction(transaction, charge.normalizedPayload);
-      await this.applyProviderPaymentOutcome(providerReference, {
-        mappedStatus: PaymentStatus.SUCCESS,
-        normalizedPayload: charge.normalizedPayload,
-        failureCode: null,
-        failureMessage: null,
-        retryable: false,
-        source: 'renewal_charge',
-      });
-
-      return {
-        charged: true,
-        providerReference,
-        transactionId: transaction.id,
-        status: PaymentStatus.SUCCESS,
-        message: 'Renewal charge completed via Flutterwave',
-      };
-    }
-
-    await this.applyProviderPaymentOutcome(providerReference, {
-      mappedStatus: PaymentStatus.FAILED,
-      normalizedPayload: charge.normalizedPayload,
-      failureCode: charge.failureCode ?? 'RENEWAL_CHARGE_FAILED',
-      failureMessage: charge.failureMessage ?? 'Flutterwave renewal charge failed',
-      retryable: input.retryAttempt < input.maxRetryCount,
-      source: 'renewal_charge',
-    });
-
-    return {
-      charged: false,
-      providerReference,
-      transactionId: transaction.id,
-      status: PaymentStatus.FAILED,
-      message: charge.failureMessage ?? 'Flutterwave renewal charge failed',
+  buildCompletionHtml(result: {
+    data: {
+      status: string;
+      providerReference: string;
+      message: string;
+      transaction?: Record<string, unknown>;
     };
-  }
-
-  renderPaymentCompletePage(result: {
-    message: string;
-    data: Record<string, unknown>;
   }) {
-    const success = Boolean(result.data['success']);
-    const status = String(result.data['status'] ?? 'UNKNOWN');
-    const providerReference = String(result.data['providerReference'] ?? '');
-    const title = success ? 'Payment Successful' : 'Payment Incomplete';
-    const accent = success ? '#15803d' : '#b45309';
+    const { status, providerReference, message } = result.data;
+    const isSuccess = status === 'success';
+    const title = isSuccess ? 'Payment Successful' : status === 'failed' ? 'Payment Failed' : 'Payment Pending';
+    const color = isSuccess ? '#15803d' : status === 'failed' ? '#b91c1c' : '#a16207';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -529,20 +390,20 @@ export class PaymentsService {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${title}</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 2rem; }
-    main { max-width: 32rem; margin: 0 auto; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
-    h1 { margin-top: 0; color: ${accent}; }
-    code { background: #f1f5f9; padding: .15rem .35rem; border-radius: 4px; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 2rem; background: #f8fafc; color: #0f172a; }
+    .card { max-width: 32rem; margin: 0 auto; background: #fff; border-radius: 12px; padding: 2rem; box-shadow: 0 8px 24px rgba(15,23,42,.08); }
+    h1 { color: ${color}; font-size: 1.5rem; margin-top: 0; }
+    p { line-height: 1.6; }
+    code { background: #f1f5f9; padding: .15rem .4rem; border-radius: 4px; }
   </style>
 </head>
 <body>
-  <main>
+  <div class="card">
     <h1>${title}</h1>
-    <p>${result.message}</p>
+    <p>${message}</p>
     <p>Reference: <code>${providerReference}</code></p>
-    <p>Status: <strong>${status}</strong></p>
-    <p>You may close this window and return to the app.</p>
-  </main>
+    <p>You may close this page and return to the ministry app.</p>
+  </div>
 </body>
 </html>`;
   }
@@ -749,15 +610,6 @@ export class PaymentsService {
           retryCount: nextRetryCount,
           nextRetryAt,
           normalizedEvent: normalizedEvent.normalizedPayload as Prisma.InputJsonValue,
-          metadata:
-            mappedStatus === PaymentStatus.SUCCESS
-              ? ({
-                  ...this.asMetadata(txRecord.metadata),
-                  paymentToken:
-                    this.stringFrom(normalizedEvent.normalizedPayload['paymentToken']) ??
-                    this.asMetadata(txRecord.metadata).paymentToken,
-                } as Prisma.InputJsonValue)
-              : undefined,
         },
       });
 
@@ -823,6 +675,22 @@ export class PaymentsService {
                   : 'Payment failed; grace period started',
             metadata: { providerReference },
           });
+        }
+
+        if (mappedStatus === PaymentStatus.SUCCESS && normalizedEvent.normalizedPayload) {
+          const flutterwaveToken = this.stringFrom(normalizedEvent.normalizedPayload['flutterwaveToken']);
+          if (flutterwaveToken) {
+            const existingMeta = this.asRecord(existingSubscription?.metadata);
+            await tx.userSubscription.update({
+              where: { id: txRecord.userSubscriptionId! },
+              data: {
+                metadata: {
+                  ...existingMeta,
+                  flutterwaveToken,
+                } as Prisma.InputJsonValue,
+              },
+            });
+          }
         }
       }
 
@@ -912,6 +780,144 @@ export class PaymentsService {
     return `${baseUrl.replace(/\/$/, '')}/payments/complete?tx_ref=${encodeURIComponent(providerReference)}`;
   }
 
+  private buildCompletionPayload(
+    transaction: {
+      providerReference: string;
+      status: PaymentStatus;
+      failureMessage?: string | null;
+      userSubscription?: { status: SubscriptionStatus } | null;
+    },
+    outcome: 'success' | 'failed' | 'pending',
+    message: string,
+  ) {
+    return {
+      message,
+      data: {
+        status: outcome,
+        providerReference: transaction.providerReference,
+        paymentStatus: transaction.status,
+        subscriptionStatus: transaction.userSubscription?.status ?? null,
+        message,
+        transaction: {
+          providerReference: transaction.providerReference,
+          status: transaction.status,
+          failureMessage: transaction.failureMessage ?? null,
+        },
+      },
+    };
+  }
+
+  private async reconcileVerifiedPayment(
+    transaction: {
+      id: string;
+      userId: string;
+      userSubscriptionId: string | null;
+      providerReference: string;
+      amount: Prisma.Decimal;
+      currency: string;
+      status: PaymentStatus;
+      metadata: Prisma.JsonValue | null;
+      retryCount: number;
+      retryable: boolean | null;
+    },
+    verification: TransactionVerificationResult,
+  ) {
+    const now = new Date();
+    const providerReference = transaction.providerReference;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updatedTx = await tx.paymentTransaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: PaymentStatus.SUCCESS,
+          paidAt: now,
+          normalizedEvent: verification.normalizedPayload as Prisma.InputJsonValue,
+        },
+        include: {
+          userSubscription: { include: { plan: true } },
+        },
+      });
+
+      if (transaction.userSubscriptionId) {
+        const existingSubscription = await tx.userSubscription.findUnique({
+          where: { id: transaction.userSubscriptionId },
+        });
+        const periodEnd = this.calculatePeriodEnd(now, transaction.metadata);
+        await tx.userSubscription.update({
+          where: { id: transaction.userSubscriptionId },
+          data: {
+            status: SubscriptionStatus.ACTIVE,
+            startedAt: now,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+            graceEndsAt: null,
+            lastPaymentAttemptAt: now,
+            metadata: verification.flutterwaveToken
+              ? ({
+                  ...this.asRecord(existingSubscription?.metadata),
+                  flutterwaveToken: verification.flutterwaveToken,
+                } as Prisma.InputJsonValue)
+              : undefined,
+          },
+        });
+
+        if (existingSubscription && existingSubscription.status !== SubscriptionStatus.ACTIVE) {
+          await this.lifecycleService.recordStatusChange(tx, {
+            subscriptionId: existingSubscription.id,
+            userId: existingSubscription.userId,
+            fromStatus: existingSubscription.status,
+            toStatus: SubscriptionStatus.ACTIVE,
+            reason: 'Payment verified via completion redirect',
+            metadata: { providerReference },
+          });
+        }
+      }
+
+      const metadata = this.asMetadata(transaction.metadata);
+      if (metadata.purpose === 'EBOOK_PURCHASE' && metadata.ebookId) {
+        await tx.ebookPurchase.upsert({
+          where: {
+            userId_ebookId: {
+              userId: transaction.userId,
+              ebookId: metadata.ebookId,
+            },
+          },
+          update: {
+            paymentReference: providerReference,
+            amount: transaction.amount,
+          },
+          create: {
+            userId: transaction.userId,
+            ebookId: metadata.ebookId,
+            paymentReference: providerReference,
+            amount: transaction.amount,
+          },
+        });
+      }
+
+      return updatedTx;
+    });
+  }
+
+  private async reconcileFailedVerification(
+    transaction: { id: string; retryCount: number; retryable: boolean | null },
+    verification: TransactionVerificationResult,
+  ) {
+    const now = new Date();
+    return this.prisma.paymentTransaction.update({
+      where: { id: transaction.id },
+      data: {
+        status: PaymentStatus.FAILED,
+        failedAt: now,
+        failureMessage: verification.failureMessage ?? 'Payment verification failed',
+        retryable: false,
+      },
+      include: {
+        userSubscription: { include: { plan: true } },
+      },
+    });
+  }
+
   private asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === 'object' && !Array.isArray(value)
       ? (value as Record<string, unknown>)
@@ -972,227 +978,5 @@ export class PaymentsService {
       return Number.isFinite(parsed) ? parsed : null;
     }
     return null;
-  }
-
-  private buildPaymentCompleteResponse(
-    success: boolean,
-    transaction: {
-      id: string;
-      status: PaymentStatus;
-      providerReference: string;
-      failureMessage?: string | null;
-      userSubscription?: { status: SubscriptionStatus; plan?: { code: string } | null } | null;
-    },
-  ) {
-    return {
-      message: success ? 'Payment completed successfully' : 'Payment could not be completed',
-      data: {
-        success,
-        status: transaction.status,
-        providerReference: transaction.providerReference,
-        transactionId: transaction.id,
-        subscriptionStatus: transaction.userSubscription?.status ?? null,
-        planCode: transaction.userSubscription?.plan?.code ?? null,
-        failureMessage: transaction.failureMessage ?? null,
-      },
-    };
-  }
-
-  private async reconcileWebhookIfProcessed(providerReference: string) {
-    const processed = await this.prisma.paymentWebhookEvent.findFirst({
-      where: {
-        processingStatus: WebhookProcessingStatus.PROCESSED,
-        paymentTransaction: { providerReference },
-      },
-      orderBy: { processedAt: 'desc' },
-    });
-    return Boolean(processed);
-  }
-
-  private async resolveRenewalPaymentToken(subscriptionId: string) {
-    const lastSuccess = await this.prisma.paymentTransaction.findFirst({
-      where: {
-        userSubscriptionId: subscriptionId,
-        status: PaymentStatus.SUCCESS,
-      },
-      orderBy: [{ paidAt: 'desc' }, { createdAt: 'desc' }],
-    });
-
-    if (!lastSuccess) {
-      return null;
-    }
-
-    const metadataToken = this.stringFrom(this.asMetadata(lastSuccess.metadata).paymentToken);
-    if (metadataToken) {
-      return metadataToken;
-    }
-
-    const normalized = this.asRecord(lastSuccess.normalizedEvent);
-    return this.stringFrom(normalized['paymentToken']) ?? null;
-  }
-
-  private async applyProviderPaymentOutcome(
-    providerReference: string,
-    input: {
-      mappedStatus: PaymentStatus;
-      normalizedPayload: Record<string, unknown>;
-      failureCode?: string | null;
-      failureMessage?: string | null;
-      retryable?: boolean;
-      source: string;
-    },
-  ) {
-    const txRecord = await this.prisma.paymentTransaction.findUnique({
-      where: { providerReference },
-    });
-
-    if (!txRecord) {
-      throw new NotFoundException({
-        code: 'PAYMENT_TRANSACTION_NOT_FOUND',
-        message: 'Payment transaction not found',
-      });
-    }
-
-    if (txRecord.status === PaymentStatus.SUCCESS) {
-      return txRecord;
-    }
-
-    const now = new Date();
-    const maxRetryCount = 3;
-    const retryWindowMinutes = 30;
-    const shouldRetry =
-      input.mappedStatus === PaymentStatus.FAILED && (input.retryable ?? txRecord.retryable ?? true);
-    const nextRetryCount = shouldRetry ? (txRecord.retryCount ?? 0) + 1 : txRecord.retryCount ?? 0;
-    const retryExhausted = shouldRetry && nextRetryCount >= maxRetryCount;
-    const nextRetryAt =
-      shouldRetry && !retryExhausted
-        ? new Date(now.getTime() + retryWindowMinutes * 60 * 1000)
-        : null;
-
-    return this.prisma.$transaction(async (tx) => {
-      const updatedTx = await tx.paymentTransaction.update({
-        where: { id: txRecord.id },
-        data: {
-          status:
-            input.mappedStatus === PaymentStatus.FAILED && shouldRetry && !retryExhausted
-              ? PaymentStatus.PENDING
-              : input.mappedStatus,
-          paidAt: input.mappedStatus === PaymentStatus.SUCCESS ? now : txRecord.paidAt,
-          failedAt: input.mappedStatus === PaymentStatus.FAILED ? now : txRecord.failedAt,
-          failureCode: input.mappedStatus === PaymentStatus.FAILED ? input.failureCode ?? 'PAYMENT_FAILED' : null,
-          failureMessage:
-            input.mappedStatus === PaymentStatus.FAILED
-              ? input.failureMessage ?? 'Payment could not be verified'
-              : null,
-          retryable:
-            input.mappedStatus === PaymentStatus.FAILED ? shouldRetry && !retryExhausted : txRecord.retryable,
-          retryCount: nextRetryCount,
-          nextRetryAt,
-          normalizedEvent: input.normalizedPayload as Prisma.InputJsonValue,
-          metadata:
-            input.mappedStatus === PaymentStatus.SUCCESS
-              ? ({
-                  ...this.asMetadata(txRecord.metadata),
-                  paymentToken:
-                    this.stringFrom(input.normalizedPayload['paymentToken']) ??
-                    this.asMetadata(txRecord.metadata).paymentToken,
-                  reconciliationSource: input.source,
-                } as Prisma.InputJsonValue)
-              : ({
-                  ...this.asMetadata(txRecord.metadata),
-                  reconciliationSource: input.source,
-                } as Prisma.InputJsonValue),
-        },
-      });
-
-      if (txRecord.userSubscriptionId) {
-        const existingSubscription = await tx.userSubscription.findUnique({
-          where: { id: txRecord.userSubscriptionId },
-        });
-        const periodEnd = this.calculatePeriodEnd(now, txRecord.metadata);
-        const maxRetryCountForSub = existingSubscription?.maxRetryCount ?? 3;
-        const retryExhaustedForSub = shouldRetry && nextRetryCount >= maxRetryCountForSub;
-        const nextStatus =
-          input.mappedStatus === PaymentStatus.SUCCESS
-            ? SubscriptionStatus.ACTIVE
-            : input.mappedStatus === PaymentStatus.FAILED
-              ? retryExhaustedForSub
-                ? SubscriptionStatus.CANCELLED
-                : SubscriptionStatus.GRACE
-              : existingSubscription?.status;
-
-        await tx.userSubscription.update({
-          where: { id: txRecord.userSubscriptionId },
-          data: {
-            lastPaymentAttemptAt: now,
-            retryCount: nextRetryCount,
-            nextRetryAt,
-            status: nextStatus,
-            startedAt: input.mappedStatus === PaymentStatus.SUCCESS ? now : undefined,
-            currentPeriodStart: input.mappedStatus === PaymentStatus.SUCCESS ? now : undefined,
-            currentPeriodEnd: input.mappedStatus === PaymentStatus.SUCCESS ? periodEnd : undefined,
-            graceEndsAt:
-              input.mappedStatus === PaymentStatus.FAILED && !retryExhaustedForSub
-                ? this.lifecycleService.buildGraceEndsAt(now)
-                : input.mappedStatus === PaymentStatus.SUCCESS
-                  ? null
-                  : undefined,
-            cancelledAt:
-              input.mappedStatus === PaymentStatus.FAILED && retryExhaustedForSub ? now : undefined,
-            cancellationReason:
-              input.mappedStatus === PaymentStatus.FAILED && retryExhaustedForSub
-                ? 'Automatic cancellation after retry exhaustion'
-                : undefined,
-          },
-        });
-
-        if (
-          existingSubscription &&
-          nextStatus &&
-          existingSubscription.status !== nextStatus
-        ) {
-          await this.lifecycleService.recordStatusChange(tx, {
-            subscriptionId: existingSubscription.id,
-            userId: existingSubscription.userId,
-            fromStatus: existingSubscription.status,
-            toStatus: nextStatus,
-            reason:
-              input.mappedStatus === PaymentStatus.SUCCESS
-                ? `Payment verified via ${input.source}`
-                : retryExhaustedForSub
-                  ? 'Payment failed; retries exhausted'
-                  : 'Payment failed; grace period started',
-            metadata: { providerReference, source: input.source },
-          });
-        }
-      }
-
-      const metadata = this.asMetadata(txRecord.metadata);
-      if (input.mappedStatus === PaymentStatus.SUCCESS && metadata.purpose === 'EBOOK_PURCHASE') {
-        const ebookId = metadata.ebookId;
-        if (ebookId) {
-          await tx.ebookPurchase.upsert({
-            where: {
-              userId_ebookId: {
-                userId: txRecord.userId,
-                ebookId,
-              },
-            },
-            update: {
-              paymentReference: txRecord.providerReference,
-              amount: txRecord.amount,
-            },
-            create: {
-              userId: txRecord.userId,
-              ebookId,
-              paymentReference: txRecord.providerReference,
-              amount: txRecord.amount,
-            },
-          });
-        }
-      }
-
-      return updatedTx;
-    });
   }
 }

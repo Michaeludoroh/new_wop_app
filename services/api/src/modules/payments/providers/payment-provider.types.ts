@@ -41,12 +41,13 @@ export type NormalizedProviderEvent = {
 };
 
 export type TransactionVerificationResult = {
-  verified: boolean;
+  isVerified: boolean;
   mappedStatus: PaymentStatus;
   providerReference: string;
+  amount?: number | null;
+  currency?: string | null;
+  flutterwaveToken?: string | null;
   normalizedPayload: Record<string, unknown>;
-  rawPayload: Record<string, unknown>;
-  failureCode?: string | null;
   failureMessage?: string | null;
 };
 
@@ -60,11 +61,10 @@ export type TokenizedChargeRequest = {
 };
 
 export type TokenizedChargeResult = {
-  success: boolean;
   providerReference: string;
   mappedStatus: PaymentStatus;
-  normalizedPayload: Record<string, unknown>;
   rawPayload: Record<string, unknown>;
-  failureCode?: string | null;
+  normalizedPayload: Record<string, unknown>;
+  flutterwaveToken?: string | null;
   failureMessage?: string | null;
 };

@@ -1,11 +1,14 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import {
+  PaymentProvider,
   PaymentStatus,
   Prisma,
   SubscriptionStatus,
+  TransactionType,
 } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PaymentsService } from '../payments/payments.service';
+import { PaymentProviderRegistry } from '../payments/providers/payment-provider.registry';
 
 const DEFAULT_GRACE_DAYS = 7;
 const RETRY_WINDOW_MINUTES = 30;
@@ -14,8 +17,8 @@ const RETRY_WINDOW_MINUTES = 30;
 export class SubscriptionLifecycleService {
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => PaymentsService))
-    private readonly paymentsService: PaymentsService,
+    @Inject(forwardRef(() => PaymentProviderRegistry))
+    private readonly paymentProviderRegistry: PaymentProviderRegistry,
   ) {}
 
   async recordStatusChange(
@@ -111,7 +114,7 @@ export class SubscriptionLifecycleService {
       await this.transitionSubscription(subscription, SubscriptionStatus.GRACE, {
         reason: 'Renewal period ended; grace window opened',
         graceEndsAt: graceEndsAtDefault,
-        nextRetryAt: new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000),
+        nextRetryAt: now,
       });
       processed += 1;
     }
@@ -120,6 +123,10 @@ export class SubscriptionLifecycleService {
       where: {
         status: SubscriptionStatus.GRACE,
         nextRetryAt: { lte: now },
+      },
+      include: {
+        plan: true,
+        user: { select: { id: true, email: true } },
       },
     });
 
@@ -136,25 +143,135 @@ export class SubscriptionLifecycleService {
       }
 
       const nextRetryCount = subscription.retryCount + 1;
-      const renewal = await this.paymentsService.initiateSubscriptionRenewalCharge({
-        subscriptionId: subscription.id,
-        userId: subscription.userId,
-        retryAttempt: nextRetryCount,
-        maxRetryCount: subscription.maxRetryCount,
-      });
+      const providerReference = `wop_retry_${Date.now()}_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
+      const plan = subscription.plan;
+      const amount = plan?.amount ?? new Prisma.Decimal(0);
+      const currency = plan?.currency ?? 'USD';
+      const metadataRecord = this.asRecord(subscription.metadata);
+      const flutterwaveToken = this.stringFrom(metadataRecord.flutterwaveToken);
+      const billingInterval = plan?.billingInterval ?? 'MONTHLY';
+
+      if (!plan || Number(amount) <= 0) {
+        await this.transitionSubscription(subscription, SubscriptionStatus.CANCELLED, {
+          reason: 'Renewal plan missing or free tier cannot auto-renew',
+          cancelledAt: now,
+          graceEndsAt: null,
+          nextRetryAt: null,
+        });
+        processed += 1;
+        continue;
+      }
+
+      let chargeStatus: PaymentStatus = PaymentStatus.PENDING;
+      let failureMessage: string | null = null;
+      let normalizedPayload: Record<string, unknown> | null = null;
+
+      if (flutterwaveToken && subscription.user?.email) {
+        try {
+          const adapter = this.paymentProviderRegistry.resolve(PaymentProvider.FLUTTERWAVE);
+          const charge = await adapter.chargeTokenizedPayment({
+            txRef: providerReference,
+            amount: amount.toString(),
+            currency,
+            email: subscription.user.email,
+            token: flutterwaveToken,
+            metadata: {
+              subscriptionId: subscription.id,
+              lifecycle: 'retry_due',
+              retryAttempt: nextRetryCount,
+            },
+          });
+          chargeStatus = charge.mappedStatus;
+          failureMessage = charge.failureMessage ?? null;
+          normalizedPayload = charge.normalizedPayload;
+        } catch (error) {
+          chargeStatus = PaymentStatus.FAILED;
+          failureMessage =
+            error instanceof Error ? error.message : 'Flutterwave renewal charge failed';
+        }
+      } else {
+        chargeStatus = PaymentStatus.FAILED;
+        failureMessage = 'No saved Flutterwave payment token for automatic renewal';
+      }
+
+      const retryExhausted = nextRetryCount >= subscription.maxRetryCount;
+      const chargeSucceeded = chargeStatus === PaymentStatus.SUCCESS;
 
       await this.prisma.$transaction(async (tx) => {
+        await tx.paymentTransaction.create({
+          data: {
+            userId: subscription.userId,
+            userSubscriptionId: subscription.id,
+            subscriptionPlanId: plan.id,
+            provider: PaymentProvider.FLUTTERWAVE,
+            providerReference,
+            transactionType: TransactionType.RETRY_CHARGE,
+            amount,
+            currency,
+            status: chargeSucceeded ? PaymentStatus.SUCCESS : PaymentStatus.FAILED,
+            paidAt: chargeSucceeded ? now : null,
+            failedAt: chargeSucceeded ? null : now,
+            failureMessage: chargeSucceeded ? null : failureMessage,
+            retryable: !chargeSucceeded && !retryExhausted,
+            retryCount: nextRetryCount,
+            nextRetryAt:
+              !chargeSucceeded && !retryExhausted
+                ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
+                : null,
+            normalizedEvent: normalizedPayload as Prisma.InputJsonValue | undefined,
+            metadata: {
+              purpose: 'SUBSCRIPTION',
+              lifecycle: 'retry_due',
+              retryAttempt: nextRetryCount,
+              billingInterval,
+              planCode: plan.code,
+            },
+          },
+        });
+
+        if (chargeSucceeded) {
+          const periodEnd = this.calculatePeriodEnd(now, subscription.metadata);
+          await tx.userSubscription.update({
+            where: { id: subscription.id },
+            data: {
+              status: SubscriptionStatus.ACTIVE,
+              retryCount: 0,
+              graceEndsAt: null,
+              nextRetryAt: null,
+              lastPaymentAttemptAt: now,
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+              cancelledAt: null,
+              cancellationReason: null,
+            },
+          });
+
+          await this.recordStatusChange(tx, {
+            subscriptionId: subscription.id,
+            userId: subscription.userId,
+            fromStatus: subscription.status,
+            toStatus: SubscriptionStatus.ACTIVE,
+            reason: `Renewal charge succeeded (attempt ${nextRetryCount})`,
+            metadata: { providerReference },
+          });
+          return;
+        }
+
         await tx.userSubscription.update({
           where: { id: subscription.id },
           data: {
             retryCount: nextRetryCount,
             lastPaymentAttemptAt: now,
             nextRetryAt:
-              renewal.status === PaymentStatus.SUCCESS
-                ? null
-                : nextRetryCount < subscription.maxRetryCount
-                  ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
-                  : null,
+              !retryExhausted
+                ? new Date(now.getTime() + RETRY_WINDOW_MINUTES * 60 * 1000)
+                : null,
+            status: retryExhausted ? SubscriptionStatus.CANCELLED : SubscriptionStatus.GRACE,
+            cancelledAt: retryExhausted ? now : null,
+            cancellationReason: retryExhausted
+              ? 'Automatic cancellation after renewal retries exhausted'
+              : null,
+            graceEndsAt: retryExhausted ? null : subscription.graceEndsAt,
           },
         });
 
@@ -162,21 +279,14 @@ export class SubscriptionLifecycleService {
           subscriptionId: subscription.id,
           userId: subscription.userId,
           fromStatus: subscription.status,
-          toStatus:
-            renewal.status === PaymentStatus.SUCCESS
-              ? SubscriptionStatus.ACTIVE
-              : SubscriptionStatus.GRACE,
-          reason:
-            renewal.status === PaymentStatus.SUCCESS
-              ? `Renewal retry attempt ${nextRetryCount} succeeded`
-              : `Renewal retry attempt ${nextRetryCount} ${renewal.charged ? 'processed' : 'scheduled'}`,
-          metadata: {
-            providerReference: renewal.providerReference,
-            charged: renewal.charged,
-            status: renewal.status,
-          },
+          toStatus: retryExhausted ? SubscriptionStatus.CANCELLED : SubscriptionStatus.GRACE,
+          reason: retryExhausted
+            ? `Renewal retries exhausted after attempt ${nextRetryCount}`
+            : `Renewal retry attempt ${nextRetryCount} failed`,
+          metadata: { providerReference, failureMessage },
         });
       });
+
       processed += 1;
     }
 
@@ -227,10 +337,7 @@ export class SubscriptionLifecycleService {
   }
 
   private calculatePeriodEnd(start: Date, metadata: Prisma.JsonValue | null) {
-    const record =
-      metadata && typeof metadata === 'object' && !Array.isArray(metadata)
-        ? (metadata as Record<string, unknown>)
-        : {};
+    const record = this.asRecord(metadata);
     const billingInterval = String(record.billingInterval ?? 'MONTHLY').toUpperCase();
     const end = new Date(start);
     if (billingInterval === 'YEARLY') {
@@ -241,5 +348,16 @@ export class SubscriptionLifecycleService {
       end.setMonth(end.getMonth() + 1);
     }
     return end;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  }
+
+  private stringFrom(value: unknown): string | undefined {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    return undefined;
   }
 }

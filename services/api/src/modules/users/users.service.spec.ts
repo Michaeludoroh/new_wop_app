@@ -24,6 +24,9 @@ function createService() {
       findMany: jest.fn().mockResolvedValue([]),
       findFirst: jest.fn().mockResolvedValue(null),
     },
+    refreshToken: {
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
 
@@ -92,6 +95,19 @@ describe('UsersService ownership checks', () => {
         where: expect.objectContaining({
           OR: expect.any(Array),
         }),
+      }),
+    );
+  });
+
+  it('revokes refresh tokens when disabling a user', async () => {
+    const { service, prisma } = createService();
+
+    await service.updateStatus('user-1', false, { sub: 'admin-1', role: 'ADMIN' });
+
+    expect(prisma.refreshToken.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: 'user-1', revokedAt: null },
+        data: { revokedAt: expect.any(Date) },
       }),
     );
   });

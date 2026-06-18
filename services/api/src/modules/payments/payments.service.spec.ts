@@ -94,18 +94,6 @@ function createService(overrides?: {
         txRef: 'wop_ref_1',
       },
     }),
-    verifyTransactionByReference: jest.fn().mockResolvedValue({
-      verified: true,
-      mappedStatus: PaymentStatus.SUCCESS,
-      providerReference: 'wop_ref_1',
-      normalizedPayload: {
-        amount: 25,
-        currency: 'USD',
-        txRef: 'wop_ref_1',
-      },
-      rawPayload: successfulWebhookDto.payload,
-    }),
-    chargeTokenizedPayment: jest.fn(),
   };
 
   const lifecycleService = {
@@ -278,14 +266,18 @@ describe('PaymentsService checkout initiation', () => {
   });
 });
 
-describe('PaymentsService completePayment', () => {
-  it('returns success when transaction already succeeded', async () => {
+describe('PaymentsService payment completion redirect', () => {
+  it('returns success when transaction is already completed', async () => {
     const transaction = {
       id: 'tx_1',
-      status: PaymentStatus.SUCCESS,
+      userId: 'user_1',
+      userSubscriptionId: 'sub_1',
       providerReference: 'wop_ref_done',
+      amount: new Prisma.Decimal(25),
+      currency: 'USD',
+      status: PaymentStatus.SUCCESS,
       failureMessage: null,
-      userSubscription: { status: SubscriptionStatus.ACTIVE, plan: { code: 'PREMIUM' } },
+      userSubscription: { status: SubscriptionStatus.ACTIVE },
     };
 
     const prisma = {
@@ -302,14 +294,14 @@ describe('PaymentsService completePayment', () => {
       { recordStatusChange: jest.fn(), buildGraceEndsAt: jest.fn() } as never,
     );
 
-    const result = await service.completePayment('wop_ref_done');
+    const result = await service.completeCheckout('wop_ref_done');
 
-    expect(result.data.success).toBe(true);
-    expect((result.data as { planCode?: string }).planCode).toBe('PREMIUM');
+    expect(result.data.status).toBe('success');
+    expect(result.data.providerReference).toBe('wop_ref_done');
   });
 
-  it('verifies pending transactions with Flutterwave and activates subscriptions', async () => {
-    const pendingTransaction = {
+  it('verifies pending payment with Flutterwave and activates entitlement', async () => {
+    const transaction = {
       id: 'tx_1',
       userId: 'user_1',
       userSubscriptionId: 'sub_1',
@@ -317,21 +309,17 @@ describe('PaymentsService completePayment', () => {
       amount: new Prisma.Decimal(25),
       currency: 'USD',
       status: PaymentStatus.PENDING,
-      retryable: true,
-      retryCount: 0,
-      paidAt: null,
-      failedAt: null,
-      failureMessage: null,
       metadata: { purpose: 'SUBSCRIPTION', billingInterval: 'MONTHLY' },
-      userSubscription: { status: SubscriptionStatus.PENDING, plan: { code: 'PREMIUM' } },
+      retryCount: 0,
+      retryable: true,
     };
 
     const tx = {
       paymentTransaction: {
-        findUnique: jest.fn().mockResolvedValue(pendingTransaction),
         update: jest.fn().mockResolvedValue({
-          ...pendingTransaction,
+          ...transaction,
           status: PaymentStatus.SUCCESS,
+          userSubscription: { status: SubscriptionStatus.ACTIVE, plan: { code: 'PREMIUM' } },
         }),
       },
       userSubscription: {
@@ -339,47 +327,28 @@ describe('PaymentsService completePayment', () => {
           id: 'sub_1',
           userId: 'user_1',
           status: SubscriptionStatus.PENDING,
-          maxRetryCount: 3,
+          metadata: {},
         }),
-        update: jest.fn().mockResolvedValue({ id: 'sub_1', status: SubscriptionStatus.ACTIVE }),
+        update: jest.fn(),
       },
     };
 
-    let lookupCount = 0;
     const prisma = {
       paymentTransaction: {
-        findUnique: jest.fn().mockImplementation(({ where }: { where: { providerReference: string } }) => {
-          if (where.providerReference !== 'wop_ref_pending') {
-            return null;
-          }
-          lookupCount += 1;
-          if (lookupCount <= 2) {
-            return pendingTransaction;
-          }
-          return {
-            ...pendingTransaction,
-            status: PaymentStatus.SUCCESS,
-            userSubscription: { status: SubscriptionStatus.ACTIVE, plan: { code: 'PREMIUM' } },
-          };
-        }),
-      },
-      paymentWebhookEvent: {
-        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(transaction),
       },
       $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
     };
 
     const adapter = {
       verifyTransactionByReference: jest.fn().mockResolvedValue({
-        verified: true,
+        isVerified: true,
         mappedStatus: PaymentStatus.SUCCESS,
         providerReference: 'wop_ref_pending',
-        normalizedPayload: {
-          amount: 25,
-          currency: 'USD',
-          txRef: 'wop_ref_pending',
-        },
-        rawPayload: {},
+        amount: 25,
+        currency: 'USD',
+        flutterwaveToken: 'flw-token',
+        normalizedPayload: { amount: 25, currency: 'USD', txRef: 'wop_ref_pending' },
       }),
     };
 
@@ -396,10 +365,14 @@ describe('PaymentsService completePayment', () => {
       lifecycleService as never,
     );
 
-    const result = await service.completePayment('wop_ref_pending');
+    const result = await service.completeCheckout('wop_ref_pending');
 
     expect(adapter.verifyTransactionByReference).toHaveBeenCalledWith('wop_ref_pending');
-    expect(result.data.success).toBe(true);
-    expect(tx.userSubscription.update).toHaveBeenCalled();
+    expect(result.data.status).toBe('success');
+    expect(tx.userSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: SubscriptionStatus.ACTIVE }),
+      }),
+    );
   });
 });

@@ -245,7 +245,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final normalized = code.toUpperCase();
     if (normalized.contains('FREE')) return MembershipPlan.free;
     if (normalized.contains('PARTNER')) return MembershipPlan.partner;
-    if (normalized.contains('PREMIUM')) return MembershipPlan.premium;
+    if (normalized.contains('PREMIUM') || normalized.contains('BASIC')) {
+      return MembershipPlan.premium;
+    }
     return MembershipPlan.unknown;
   }
 }

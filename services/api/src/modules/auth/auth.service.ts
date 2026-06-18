@@ -259,6 +259,10 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    if (user.deletedAt) {
+      throw new UnauthorizedException('Account disabled');
+    }
+
     return this.toAuthUser(user);
   }
 

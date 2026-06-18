@@ -7,7 +7,6 @@ import { InitiateEbookCheckoutDto } from './dto/initiate-ebook-checkout.dto';
 import { InitiateSubscriptionCheckoutDto } from './dto/initiate-subscription-checkout.dto';
 import { PaymentHistoryQueryDto } from './dto/payment-history-query.dto';
 import { PaymentStatusQueryDto } from './dto/payment-status-query.dto';
-import { PaymentCompleteQueryDto } from './dto/payment-complete-query.dto';
 import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { PaymentsService } from './payments.service';
 
@@ -21,23 +20,6 @@ type AuthRequest = Request & {
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly service: PaymentsService) {}
-
-  @Get('complete')
-  async complete(
-    @Query() query: PaymentCompleteQueryDto,
-    @Headers('accept') acceptHeader: string | undefined,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.service.completePayment(query.tx_ref);
-    const wantsHtml = (acceptHeader ?? '').includes('text/html');
-
-    if (wantsHtml) {
-      res.type('html');
-      return this.service.renderPaymentCompletePage(result);
-    }
-
-    return result;
-  }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'USER')
@@ -86,5 +68,20 @@ export class PaymentsController {
     return this.service.processWebhook(
       this.service.createWebhookDto(provider, signature, payload),
     );
+  }
+
+  @Get('complete')
+  async complete(
+    @Query('tx_ref') txRef: string,
+    @Query('format') format: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.service.completeCheckout(txRef ?? '');
+    if (format === 'json') {
+      return result;
+    }
+
+    res.type('html');
+    return this.service.buildCompletionHtml(result);
   }
 }

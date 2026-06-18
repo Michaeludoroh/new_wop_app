@@ -1,86 +1,83 @@
 # P0 Test Results — WOP Ministry Platform
 
 **Date:** 2026-06-17  
-**Branch:** P0 implementation session  
-**Executor:** Automated CI-style run (local)
+**Executed after:** P0 implementation (ACT-001–006 + renewal)
 
 ---
 
 ## Automated test summary
 
-| Suite | Result | Count |
-|-------|--------|-------|
-| API Jest (full) | **PASS** | **147 / 147** |
-| Flutter `flutter test` | **PASS** | **55 / 55** |
+| Suite | Command | Result |
+|-------|---------|--------|
+| API (Jest) | `cd services/api && npx jest --config jest.config.js` | **147/147 PASS** |
+| Flutter | `cd apps/mobile-flutter && flutter test` | **55/55 PASS** |
 
-**Delta from audit baseline:** +7 API tests (auth login guards, payment complete, renewal workflow).
+**Delta from baseline:** +7 API tests (140 → 147)
 
 ---
 
-## P0-specific test coverage
-
-### ACT-001 — Plan codes
-| Test | Result |
-|------|--------|
-| Existing `subscriptions.service.spec.ts` (`PREMIUM` subscribe) | PASS |
-| `beta-smoke.spec.ts` checkout with `PREMIUM` | PASS (mocked controller) |
-| Flutter subscription screen tests | PASS (55/55 suite) |
+## New / updated test coverage
 
 ### ACT-002 — Payment completion
-| Test | File | Result |
-|------|------|--------|
-| Returns success when transaction already succeeded | `payments.service.spec.ts` | PASS |
-| Verifies pending tx via Flutterwave and activates subscription | `payments.service.spec.ts` | PASS |
-| Webhook signature / amount mismatch / ebook entitlement (regression) | `payments.service.spec.ts` | PASS |
+**File:** `services/api/src/modules/payments/payments.service.spec.ts`
 
-### ACT-004 — Disabled users
-| Test | File | Result |
-|------|------|--------|
-| Rejects login for disabled users | `auth.service.spec.ts` | PASS |
-| Allows login for active users | `auth.service.spec.ts` | PASS |
-| Rejects refresh for disabled users | `auth.service.spec.ts` | PASS |
-| JWT strategy rejects disabled users (regression) | `jwt.strategy.spec.ts` | PASS |
-
-### ACT-005 — Admin role gate
 | Test | Result |
 |------|--------|
-| Admin-web unit tests | *Not present in repo* |
-| Manual verification required | Login as `user@wop.local` → expect admin console rejection |
+| Returns success when transaction already completed | PASS |
+| Verifies pending payment with Flutterwave and activates entitlement | PASS |
+
+### ACT-004 — Disabled-user auth
+**File:** `services/api/src/modules/auth/auth.service.spec.ts`
+
+| Test | Result |
+|------|--------|
+| Rejects login for users with `deletedAt` set | PASS |
+| Allows login for active users | PASS |
+| Rejects refresh for disabled users | PASS |
+
+### ACT-004 — Token revocation on disable
+**File:** `services/api/src/modules/users/users.service.spec.ts`
+
+| Test | Result |
+|------|--------|
+| Revokes refresh tokens when disabling a user | PASS |
 
 ### Renewal workflow
-| Test | File | Result |
-|------|------|--------|
-| Lifecycle delegates retry to Flutterwave renewal | `subscription-lifecycle.service.spec.ts` | PASS |
-| Renewal uses plan amount + tokenized charge | `subscription-lifecycle.service.spec.ts` | PASS |
+**File:** `services/api/src/modules/subscriptions/subscription-lifecycle.service.spec.ts`
+
+| Test | Result |
+|------|--------|
+| Charges Flutterwave tokenized renewal with plan amount (not zero) | PASS |
+| Records status history | PASS |
+| Processes due lifecycle events breakdown | PASS |
+
+### Existing regression suites (unchanged pass rate)
+- Payments webhook idempotency + amount verification — PASS
+- JWT strategy disabled-user rejection — PASS
+- Beta smoke integration specs — PASS
+- Notifications / push / events — PASS
 
 ---
 
-## Commands executed
+## Manual / staging tests (ACT-006 — not executed)
 
-```powershell
-Set-Location C:\new_wop_app\services\api
-npx jest src/modules/auth/auth.service.spec.ts src/modules/payments/payments.service.spec.ts src/modules/subscriptions/subscription-lifecycle.service.spec.ts --no-coverage
-npm test -- --no-coverage
+The following require a provisioned staging environment (ACT-003):
 
-Set-Location C:\new_wop_app\apps\mobile-flutter
-flutter test
-```
-
----
-
-## ACT-006 — Staging smoke (manual — pending)
-
-Automated tests do **not** replace staging E2E. After ACT-003 secrets are provisioned, execute:
-
-- [ ] `MOBILE_SMOKE_TEST_CHECKLIST.md`
-- [ ] `ADMIN_SMOKE_TEST_CHECKLIST.md`
-- [ ] `API_VALIDATION_CHECKLIST.md`
-- [ ] `PAYMENT_VALIDATION_CHECKLIST.md` (include `/payments/complete` redirect)
+- [ ] Flutterwave sandbox checkout end-to-end with redirect to `/payments/complete`
+- [ ] Admin login with USER account → rejected
+- [ ] Disabled user mobile login → rejected
+- [ ] Premium checkout with `PREMIUM` plan on fresh seeded DB
+- [ ] Push notification delivery with FCM credentials
 
 ---
 
-## Known gaps
+## Per-fix test execution log
 
-1. **No integration test** hitting live Flutterwave sandbox (requires secrets).
-2. **No admin-web Jest** for `auth-provider` role rejection — covered by code review + manual smoke.
-3. **Open-handle warning** in API Jest worker (pre-existing; tests still pass).
+| Fix | Tests run immediately after | Outcome |
+|-----|----------------------------|---------|
+| ACT-001 mobile plan resolution | Full Flutter suite | 55/55 PASS |
+| ACT-002 payment complete | `payments.service.spec.ts` + full API | PASS |
+| ACT-004 auth guards | `auth.service.spec.ts`, `users.service.spec.ts` + full API | PASS |
+| ACT-005 admin gate | Manual code review; no admin-web unit suite in repo | N/A |
+| Renewal lifecycle | `subscription-lifecycle.service.spec.ts` + full API | PASS |
+| Final verification | Full API + Flutter | 147 + 55 PASS |

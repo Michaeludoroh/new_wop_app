@@ -22,7 +22,7 @@ class SubscriptionService {
 
   final Dio _dio;
   final TokenStorageService _tokenStorageService;
-  List<SubscriptionPlanModel>? _cachedPlans;
+  List<SubscriptionPlanModel> _cachedPlans = const [];
 
   Future<SubscriptionStatusModel?> getStatus() async {
     final response = await _authorizedGet('/subscriptions/status');
@@ -58,11 +58,11 @@ class SubscriptionService {
     required MembershipPlan plan,
     String billingInterval = 'MONTHLY',
   }) async {
-    final planCode = await _resolvePlanCode(plan, billingInterval: billingInterval);
+    final planString = await resolvePlanCode(plan, billingInterval: billingInterval);
     final response = await _authorizedPost(
       '/payments/checkout/subscription',
       data: {
-        'planCode': planCode,
+        'planCode': planString,
         'autoRenew': true,
       },
     );
@@ -77,7 +77,7 @@ class SubscriptionService {
     await _authorizedPost(
       '/subscriptions/subscribe',
       data: {
-        'planCode': await _resolvePlanCode(plan, billingInterval: billingInterval),
+        'planCode': await resolvePlanCode(plan, billingInterval: billingInterval),
         'metadata': {'billingInterval': billingInterval},
       },
     );
@@ -102,44 +102,59 @@ class SubscriptionService {
     return PaymentStatusResult.fromJson(_asMap(response.data));
   }
 
-  String _planCode(MembershipPlan plan) {
+  Future<String> resolvePlanCode(
+    MembershipPlan plan, {
+    String billingInterval = 'MONTHLY',
+  }) async {
+    if (_cachedPlans.isEmpty) {
+      try {
+        await getPlans();
+      } catch (_) {
+        // Fall back to static codes when plans cannot be loaded.
+      }
+    }
+
+    final fromApi = _matchPlanFromApi(plan, billingInterval);
+    if (fromApi != null) return fromApi;
+
+    return _fallbackPlanCode(plan);
+  }
+
+  String? _matchPlanFromApi(MembershipPlan plan, String billingInterval) {
+    if (_cachedPlans.isEmpty) return null;
+
+    final normalizedInterval = billingInterval.toUpperCase();
+    bool matchesPlan(SubscriptionPlanModel candidate) {
+      final code = candidate.code.toUpperCase();
+      return switch (plan) {
+        MembershipPlan.free => code == 'FREE' || candidate.amount <= 0,
+        MembershipPlan.premium =>
+          code.contains('PREMIUM') || code.contains('BASIC') || candidate.amount > 0,
+        MembershipPlan.partner => code.contains('PARTNER'),
+        MembershipPlan.unknown => code == 'FREE',
+      };
+    }
+
+    final intervalMatches = _cachedPlans.where(
+      (candidate) =>
+          matchesPlan(candidate) &&
+          candidate.billingInterval.toUpperCase() == normalizedInterval,
+    );
+    if (intervalMatches.isNotEmpty) {
+      return intervalMatches.first.code;
+    }
+
+    final anyMatch = _cachedPlans.where(matchesPlan);
+    return anyMatch.isNotEmpty ? anyMatch.first.code : null;
+  }
+
+  String _fallbackPlanCode(MembershipPlan plan) {
     return switch (plan) {
       MembershipPlan.free => 'FREE',
       MembershipPlan.premium => 'PREMIUM',
       MembershipPlan.partner => 'PARTNER',
       MembershipPlan.unknown => 'FREE',
     };
-  }
-
-  Future<String> _resolvePlanCode(
-    MembershipPlan plan, {
-    String billingInterval = 'MONTHLY',
-  }) async {
-    final preferred = _planCode(plan).toUpperCase();
-    try {
-      final plans = _cachedPlans ?? await getPlans();
-      final exact = plans.where((item) => item.code.toUpperCase() == preferred);
-      if (exact.isNotEmpty) {
-        return exact.first.code;
-      }
-
-      if (plan == MembershipPlan.premium || plan == MembershipPlan.partner) {
-        final paidPlans = plans
-            .where((item) => item.amount > 0)
-            .where(
-              (item) =>
-                  item.billingInterval.toUpperCase() == billingInterval.toUpperCase(),
-            )
-            .toList();
-        if (paidPlans.isNotEmpty) {
-          return paidPlans.first.code;
-        }
-      }
-    } catch (_) {
-      // Fall back to hardcoded plan codes when plans cannot be loaded.
-    }
-
-    return preferred;
   }
 
   Future<Response<dynamic>> _authorizedGet(

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_CONSOLE_ROLES } from "./lib/auth/config";
 
-type UserRole = (typeof ADMIN_CONSOLE_ROLES)[number] | "USER";
+type UserRole = "SUPER_ADMIN" | "ADMIN" | "MODERATOR" | "USER";
 
 const ACCESS_TOKEN_KEY = "ministry_admin_access_token";
 const USER_KEY = "ministry_admin_user";
 
 const PUBLIC_ROUTES = new Set(["/login"]);
+const ADMIN_PORTAL_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "MODERATOR"];
 
 const ROLE_ROUTE_MAP: Record<string, UserRole[]> = {
   "/users": ["SUPER_ADMIN", "ADMIN"],
@@ -102,9 +102,9 @@ export function middleware(req: NextRequest) {
     return response;
   }
 
-  if (userRole === "USER") {
+  if (!ADMIN_PORTAL_ROLES.includes(userRole)) {
     const url = new URL("/login", req.url);
-    url.searchParams.set("reason", "admin_access_required");
+    url.searchParams.set("reason", "insufficient_role");
     const response = NextResponse.redirect(url);
     response.cookies.delete(ACCESS_TOKEN_KEY);
     response.cookies.delete("ministry_admin_refresh_token");

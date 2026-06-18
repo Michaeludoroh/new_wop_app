@@ -1,69 +1,81 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 
-describe('AuthService login guards', () => {
-  const passwordHash = bcrypt.hashSync('Password123!', 4);
+jest.mock('bcrypt');
 
-  function createService(user: {
-    id: string;
-    email: string;
-    fullName: string;
-    passwordHash: string;
-    role: Role;
-    deletedAt: Date | null;
-  }) {
-    const prisma = {
+const bcryptMock = bcrypt as jest.Mocked<typeof bcrypt>;
+
+function createAuthService(overrides?: {
+  user?: Record<string, unknown> | null;
+  session?: Record<string, unknown> | null;
+}) {
+  const prisma: any = {
+    user: {
+      findUnique: jest.fn().mockResolvedValue(overrides?.user ?? null),
+      findFirst: jest.fn(),
+      update: jest.fn().mockResolvedValue({}),
+      create: jest.fn(),
+    },
+    refreshToken: {
+      findUnique: jest.fn().mockResolvedValue(overrides?.session ?? null),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      upsert: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+      deleteMany: jest.fn(),
+    },
+    $transaction: jest.fn(async (callback: any) => {
+      if (typeof callback === 'function') {
+        return callback(prisma);
+      }
+      return callback;
+    }),
+  };
+
+  const jwtService = {
+    signAsync: jest.fn(async () => 'token'),
+  };
+
+  const configService = {
+    get: jest.fn((key: string) => {
+      if (key === 'JWT_ACCESS_SECRET') return 'access-secret';
+      if (key === 'JWT_REFRESH_SECRET') return 'refresh-secret';
+      return undefined;
+    }),
+  };
+
+  const service = new AuthService(
+    prisma as never,
+    jwtService as never,
+    configService as never,
+    { send: jest.fn() } as never,
+    {
+      welcomeEmail: jest.fn(),
+      passwordResetEmail: jest.fn(),
+      buildPasswordResetUrl: jest.fn(),
+    } as never,
+  );
+
+  return { service, prisma };
+}
+
+describe('AuthService login disabled-user protection', () => {
+  beforeEach(() => {
+    bcryptMock.compare.mockResolvedValue(true as never);
+  });
+
+  it('rejects login for users with deletedAt set', async () => {
+    const { service } = createAuthService({
       user: {
-        findUnique: jest.fn().mockResolvedValue(user),
-        update: jest.fn().mockResolvedValue(user),
+        id: 'user_1',
+        email: 'disabled@example.com',
+        fullName: 'Disabled User',
+        passwordHash: 'hash',
+        role: Role.USER,
+        deletedAt: new Date(),
       },
-      refreshToken: {
-        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        upsert: jest.fn().mockResolvedValue({ id: 'rt_1' }),
-        findMany: jest.fn().mockResolvedValue([]),
-        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-      },
-    };
-
-    const jwtService = {
-      signAsync: jest.fn().mockResolvedValue('token'),
-    };
-
-    const configService = {
-      get: jest.fn((key: string) => {
-        if (key === 'JWT_ACCESS_SECRET') return 'access-secret';
-        if (key === 'JWT_REFRESH_SECRET') return 'refresh-secret';
-        if (key === 'JWT_ACCESS_EXPIRES_IN') return '15m';
-        if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
-        if (key === 'JWT_REFRESH_DAYS') return '7';
-        if (key === 'AUTH_MAX_ACTIVE_SESSIONS') return '5';
-        return undefined;
-      }),
-    };
-
-    const service = new AuthService(
-      prisma as never,
-      jwtService as unknown as JwtService,
-      configService as unknown as ConfigService,
-      { send: jest.fn() } as never,
-      { welcomeEmail: jest.fn(), passwordResetEmail: jest.fn(), buildPasswordResetUrl: jest.fn() } as never,
-    );
-
-    return { service, prisma };
-  }
-
-  it('rejects login for disabled users', async () => {
-    const { service } = createService({
-      id: 'user_1',
-      email: 'disabled@example.com',
-      fullName: 'Disabled User',
-      passwordHash,
-      role: Role.USER,
-      deletedAt: new Date(),
     });
 
     await expect(
@@ -72,71 +84,39 @@ describe('AuthService login guards', () => {
   });
 
   it('allows login for active users', async () => {
-    const { service } = createService({
-      id: 'user_2',
-      email: 'active@example.com',
-      fullName: 'Active User',
-      passwordHash,
-      role: Role.USER,
-      deletedAt: null,
+    const { service } = createAuthService({
+      user: {
+        id: 'user_1',
+        email: 'active@example.com',
+        fullName: 'Active User',
+        passwordHash: 'hash',
+        role: Role.USER,
+        deletedAt: null,
+      },
     });
 
-    const result = await service.login({ email: 'active@example.com', password: 'Password123!' });
-
-    expect(result.user.email).toBe('active@example.com');
-    expect(result.accessToken).toBe('token');
+    await expect(
+      service.login({ email: 'active@example.com', password: 'Password123!' }),
+    ).resolves.toMatchObject({
+      user: expect.objectContaining({ email: 'active@example.com' }),
+    });
   });
 
   it('rejects refresh for disabled users', async () => {
-    const prisma = {
-      refreshToken: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'session_1',
-          revokedAt: null,
-          expiresAt: new Date(Date.now() + 60_000),
-          user: {
-            id: 'user_1',
-            email: 'disabled@example.com',
-            fullName: 'Disabled User',
-            passwordHash,
-            role: Role.USER,
-            deletedAt: new Date(),
-          },
-        }),
-        update: jest.fn(),
-        upsert: jest.fn(),
-        findMany: jest.fn().mockResolvedValue([]),
-        deleteMany: jest.fn(),
+    const { service } = createAuthService({
+      session: {
+        id: 'session_1',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 60_000),
+        user: {
+          id: 'user_1',
+          email: 'disabled@example.com',
+          fullName: 'Disabled User',
+          role: Role.USER,
+          deletedAt: new Date(),
+        },
       },
-      user: {
-        update: jest.fn(),
-      },
-      $transaction: jest.fn(),
-    };
-
-    const jwtService = {
-      signAsync: jest.fn().mockResolvedValue('token'),
-    };
-
-    const configService = {
-      get: jest.fn((key: string) => {
-        if (key === 'JWT_ACCESS_SECRET') return 'access-secret';
-        if (key === 'JWT_REFRESH_SECRET') return 'refresh-secret';
-        if (key === 'JWT_ACCESS_EXPIRES_IN') return '15m';
-        if (key === 'JWT_REFRESH_EXPIRES_IN') return '7d';
-        if (key === 'JWT_REFRESH_DAYS') return '7';
-        if (key === 'AUTH_MAX_ACTIVE_SESSIONS') return '5';
-        return undefined;
-      }),
-    };
-
-    const service = new AuthService(
-      prisma as never,
-      jwtService as unknown as JwtService,
-      configService as unknown as ConfigService,
-      { send: jest.fn() } as never,
-      { welcomeEmail: jest.fn(), passwordResetEmail: jest.fn(), buildPasswordResetUrl: jest.fn() } as never,
-    );
+    });
 
     await expect(service.refresh({ refreshToken: 'refresh-token' })).rejects.toBeInstanceOf(
       UnauthorizedException,

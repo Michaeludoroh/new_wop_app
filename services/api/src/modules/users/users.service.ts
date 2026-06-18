@@ -213,10 +213,7 @@ export class UsersService {
 
     if (!active) {
       await this.prisma.refreshToken.updateMany({
-        where: {
-          userId: id,
-          revokedAt: null,
-        },
+        where: { userId: id, revokedAt: null },
         data: { revokedAt: new Date() },
       });
     }
