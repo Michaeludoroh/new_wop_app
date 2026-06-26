@@ -27,14 +27,15 @@ All four deployment blockers from `DEPLOYMENT_READINESS_AUDIT.md` have been reme
 | File | Purpose |
 |------|---------|
 | `infra/nginx/nginx.conf` | Main nginx config |
-| `infra/nginx/conf.d/upstreams.conf` | API, WebSocket, admin upstreams |
+| `infra/nginx/conf.d/resolver.conf` | Docker embedded DNS (`127.0.0.11`) + `resolver_timeout` |
+| `infra/nginx/conf.d/backends.conf` | Runtime backend host variables for dynamic `proxy_pass` |
 | `infra/nginx/conf.d/api.server.conf` | API routing + security headers |
 | `infra/nginx/conf.d/admin.server.conf` | Admin dashboard routing |
 | `infra/nginx/conf.d/websocket.server.conf` | Socket.IO WebSocket upgrade |
 | `infra/nginx/conf.d/default-local.server.conf` | Port 8080 test routing |
 | `infra/nginx/certs/README.md` | TLS setup instructions |
 
-**Features:** HTTPS-ready commented blocks, security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy), WebSocket upgrade headers, 100MB upload limit on API.
+**Features:** HTTPS-ready commented blocks, security headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy), WebSocket upgrade headers, 100MB upload limit on API, Docker Compose runtime DNS resolution (see `NGINX_DOCKER_DNS_REFACTOR_REPORT.md`).
 
 **Validation:** CI runs `nginx -t` in deploy workflow. Local requires Docker daemon.
 

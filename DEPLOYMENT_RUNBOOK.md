@@ -118,6 +118,21 @@ docker compose -f docker-compose.prod.yml run --rm migrate
 docker compose -f docker-compose.prod.yml up -d api websocket admin-web reverse-proxy
 ```
 
+### Nginx / Docker DNS
+
+The reverse-proxy uses Docker embedded DNS (`127.0.0.11`) with variable `proxy_pass` so Compose service names (`api`, `websocket`, `admin-web`) resolve at **request time**, not only at nginx startup. This avoids `host not found in upstream` on first boot.
+
+Validate config before deploy:
+
+```bash
+docker run --rm \
+  -v "$PWD/infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro" \
+  -v "$PWD/infra/nginx/conf.d:/etc/nginx/conf.d:ro" \
+  nginx:1.27-alpine nginx -t
+```
+
+If backends are still starting, nginx will remain up; proxied routes may return `502` until targets are healthy.
+
 ---
 
 ## Phase 5 — Health validation
