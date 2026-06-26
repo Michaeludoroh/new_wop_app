@@ -21,7 +21,6 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
   final ClipService _service = ClipService();
 
   bool _loading = true;
-  bool _favorite = false;
   String? _error;
   ClipItem? _clip;
   VideoPlayerController? _controller;
@@ -46,7 +45,6 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
 
     try {
       final details = await _service.getClipDetails(widget.clipId);
-      final favorites = await _service.getFavoriteIds();
       final controller = VideoPlayerController.networkUrl(Uri.parse(details.data.videoUrl));
       await controller.initialize();
       if (!mounted) {
@@ -55,7 +53,6 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
       }
       setState(() {
         _clip = details.data;
-        _favorite = favorites.contains(details.data.id);
         _controller = controller;
       });
     } catch (_) {
@@ -64,13 +61,6 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _toggleFavorite() async {
-    final clip = _clip;
-    if (clip == null) return;
-    final favorites = await _service.toggleFavorite(clip.id);
-    if (mounted) setState(() => _favorite = favorites.contains(clip.id));
   }
 
   Future<void> _share() async {
@@ -100,11 +90,6 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
       appBar: AppBar(
         title: MinistryAppBarTitle(title: clip?.title ?? 'Clip'),
         actions: [
-          IconButton(
-            tooltip: 'Favorite',
-            onPressed: _toggleFavorite,
-            icon: Icon(_favorite ? Icons.favorite : Icons.favorite_border),
-          ),
           IconButton(
             tooltip: 'Share',
             onPressed: _share,

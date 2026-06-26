@@ -1,50 +1,18 @@
 import 'package:dio/dio.dart';
 
-
-
-import '../auth/auth_service.dart';
-
-import '../auth/token_storage_service.dart';
-
+import '../http/authenticated_dio.dart';
+import '../subscriptions/subscription_service.dart';
 import 'models/ebook_models.dart';
 
-
-
 class EbookService {
-
   EbookService({
-
-    Dio? dio,
-
-    TokenStorageService? tokenStorageService,
-
-  })  : _dio = dio ??
-
-            Dio(
-
-              BaseOptions(
-
-                baseUrl: AuthApiConfig.baseUrl,
-
-                connectTimeout: const Duration(seconds: 15),
-
-                receiveTimeout: const Duration(seconds: 20),
-
-                sendTimeout: const Duration(seconds: 20),
-
-                headers: {'Content-Type': 'application/json'},
-
-              ),
-
-            ),
-
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
-
-
+    AuthenticatedDio? authenticatedDio,
+    SubscriptionService? subscriptionService,
+  })  : _dio = (authenticatedDio ?? AuthenticatedDio()).dio,
+        _subscriptionService = subscriptionService ?? SubscriptionService();
 
   final Dio _dio;
-
-  final TokenStorageService _tokenStorageService;
+  final SubscriptionService _subscriptionService;
 
 
 
@@ -206,7 +174,19 @@ class EbookService {
 
     final response = await _authorizedGet('/ebooks/$ebookId/access');
 
-    return AccessResponse.fromJson(_asMap(response.data));
+    final access = AccessResponse.fromJson(_asMap(response.data));
+
+    if (access.authorized &&
+        access.streamToken != null &&
+        access.streamToken!.isNotEmpty) {
+      await _subscriptionService.validateContentAccess(
+        token: access.streamToken!,
+        resourceType: 'ebook',
+        resourceId: ebookId,
+      );
+    }
+
+    return access;
 
   }
 
@@ -264,10 +244,6 @@ class EbookService {
 
   Future<Response<List<int>>> downloadPdfBytes(String contentUrl) async {
 
-    final isStreamUrl = contentUrl.contains('/ebooks/') && contentUrl.contains('/stream');
-
-    final accessToken = await _tokenStorageService.getAccessToken();
-
     return _dio.get<List<int>>(
 
       contentUrl,
@@ -275,16 +251,6 @@ class EbookService {
       options: Options(
 
         responseType: ResponseType.bytes,
-
-        headers: isStreamUrl
-
-            ? null
-
-            : contentUrl.contains('/api/v1/')
-
-                ? {'Authorization': 'Bearer ${accessToken ?? ''}'}
-
-                : null,
 
       ),
 
@@ -302,19 +268,11 @@ class EbookService {
 
   }) async {
 
-    final accessToken = await _tokenStorageService.getAccessToken();
-
     return _dio.get<dynamic>(
 
       path,
 
       queryParameters: queryParameters,
-
-      options: Options(
-
-        headers: {'Authorization': 'Bearer ${accessToken ?? ''}'},
-
-      ),
 
     );
 
@@ -330,19 +288,11 @@ class EbookService {
 
   }) async {
 
-    final accessToken = await _tokenStorageService.getAccessToken();
-
     return _dio.post<dynamic>(
 
       path,
 
       data: data,
-
-      options: Options(
-
-        headers: {'Authorization': 'Bearer ${accessToken ?? ''}'},
-
-      ),
 
     );
 

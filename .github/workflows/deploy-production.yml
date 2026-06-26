@@ -16,10 +16,15 @@ jobs:
       environment_name: production
       image_tag: prod-${{ github.sha }}
       api_health_url: https://api.example.com/api/v1/health
-      ws_health_url: https://ws.example.com/api/v1/health
+      ws_health_url: https://ws.example.com
       admin_health_url: https://admin.example.com
+      run_compose_up: false
     secrets:
       DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       REDIS_URL: ${{ secrets.PRODUCTION_REDIS_URL }}
       JWT_ACCESS_SECRET: ${{ secrets.PRODUCTION_JWT_ACCESS_SECRET }}
       JWT_REFRESH_SECRET: ${{ secrets.PRODUCTION_JWT_REFRESH_SECRET }}
+      CONTENT_ACCESS_SECRET: ${{ secrets.PRODUCTION_CONTENT_ACCESS_SECRET }}
+      METRICS_AUTH_TOKEN: ${{ secrets.PRODUCTION_METRICS_AUTH_TOKEN }}
+      CORS_ORIGIN: ${{ secrets.PRODUCTION_CORS_ORIGIN }}
+      API_PUBLIC_URL: ${{ secrets.PRODUCTION_API_PUBLIC_URL }}

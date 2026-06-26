@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma, PushDeliveryStatus } from '@prisma/client';
 import {
@@ -19,6 +19,7 @@ type RequestUser = {
 
 @Injectable()
 export class PushService {
+  private readonly logger = new Logger(PushService.name);
   private readonly maxRetryCount = 3;
 
   constructor(
@@ -170,6 +171,10 @@ export class PushService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
+    this.logger.log(
+      `Broadcast device tokens loaded dedupeKey=${message.dedupeKey} tokenCount=${tokenRows.length}`,
+    );
+
     if (tokenRows.length === 0) {
       return { message: 'No active push tokens for broadcast', data: { attempts: 0 } };
     }
@@ -268,13 +273,20 @@ export class PushService {
     const userByToken = new Map(tokenRows.map((row) => [row.token, row.userId]));
     await this.persistDeliveryResult(message, result, userByToken);
 
+    const successCount = result.attempts.filter((a) => a.success).length;
+    const failedCount = result.attempts.filter((a) => !a.success).length;
+
+    this.logger.log(
+      `FCM dispatch processed dedupeKey=${message.dedupeKey} provider=${result.provider} attempts=${result.attempts.length} success=${successCount} failed=${failedCount}`,
+    );
+
     return {
       message: 'Push dispatch processed',
       data: {
         provider: result.provider,
         attempts: result.attempts.length,
-        success: result.attempts.filter((a) => a.success).length,
-        failed: result.attempts.filter((a) => !a.success).length,
+        success: successCount,
+        failed: failedCount,
       },
     };
   }

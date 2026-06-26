@@ -6,6 +6,7 @@ import {
   EmailMessage,
   EmailProvider,
 } from './email.provider.interface';
+import { buildNodemailerTransportOptions } from './smtp-config.util';
 
 @Injectable()
 export class SmtpEmailProvider implements EmailProvider {
@@ -15,15 +16,19 @@ export class SmtpEmailProvider implements EmailProvider {
   constructor(private readonly configService: ConfigService) {}
 
   async send(messages: EmailMessage[]): Promise<EmailDeliveryResult> {
-    const transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('SMTP_HOST'),
-      port: Number(this.configService.get<string>('SMTP_PORT') ?? 587),
-      secure: this.configService.get<string>('SMTP_SECURE') === 'true',
-      auth: {
-        user: this.configService.get<string>('SMTP_USER'),
-        pass: this.configService.get<string>('SMTP_PASS'),
-      },
+    const transportOptions = buildNodemailerTransportOptions({
+      SMTP_HOST: this.configService.get<string>('SMTP_HOST'),
+      SMTP_PORT: this.configService.get<string>('SMTP_PORT'),
+      SMTP_SECURE: this.configService.get<string>('SMTP_SECURE'),
+      SMTP_USER: this.configService.get<string>('SMTP_USER'),
+      SMTP_PASS: this.configService.get<string>('SMTP_PASS'),
     });
+
+    if (!transportOptions) {
+      throw new Error('SMTP provider selected but transport options are incomplete');
+    }
+
+    const transporter = nodemailer.createTransport(transportOptions);
 
     const from =
       this.configService.get<string>('SMTP_FROM') ??

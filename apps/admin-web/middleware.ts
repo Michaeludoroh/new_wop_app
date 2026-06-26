@@ -14,7 +14,7 @@ const ROLE_ROUTE_MAP: Record<string, UserRole[]> = {
   "/payments": ["SUPER_ADMIN", "ADMIN"],
   "/analytics": ["SUPER_ADMIN", "ADMIN"],
   "/notifications": ["SUPER_ADMIN", "ADMIN", "MODERATOR"],
-  "/ebooks": ["SUPER_ADMIN", "ADMIN"],
+  "/ebooks": ["SUPER_ADMIN", "ADMIN", "MODERATOR"],
   "/content": ["SUPER_ADMIN", "ADMIN", "MODERATOR"],
   "/events": ["SUPER_ADMIN", "ADMIN", "MODERATOR"],
   "/clips": ["SUPER_ADMIN", "ADMIN", "MODERATOR"],

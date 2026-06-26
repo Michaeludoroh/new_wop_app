@@ -74,7 +74,7 @@ describe('UsersService ownership checks', () => {
 
     await service.updateProfile(
       'user-1',
-      { fullName: 'Updated User', role: 'ADMIN', email: 'other@example.com' },
+      { fullName: 'Updated User' },
       { sub: 'user-1', role: 'USER' },
     );
 

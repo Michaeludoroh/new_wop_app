@@ -100,7 +100,6 @@ export function createAuthenticatedClient(): AxiosInstance {
       const status = error.response?.status;
 
       if (status === 403) {
-        broadcastSessionInvalidated("forbidden");
         return Promise.reject(error);
       }
 

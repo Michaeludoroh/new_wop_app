@@ -1,30 +1,13 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
-import '../auth/auth_service.dart';
-import '../auth/token_storage_service.dart';
+import '../http/authenticated_dio.dart';
 import 'models/clip_models.dart';
 
 class ClipService {
-  ClipService({
-    Dio? dio,
-    TokenStorageService? tokenStorageService,
-  })  : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AuthApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 20),
-                headers: {'Content-Type': 'application/json'},
-              ),
-            ),
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
-
-  static const _favoritesKey = 'favorite_clip_ids';
+  ClipService({AuthenticatedDio? authenticatedDio})
+      : _dio = (authenticatedDio ?? AuthenticatedDio()).dio;
 
   final Dio _dio;
-  final TokenStorageService _tokenStorageService;
 
   Future<ClipListResponse> getClips({
     String? search,
@@ -33,7 +16,7 @@ class ClipService {
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await _authorizedGet(
+    final response = await _dio.get<dynamic>(
       '/clips/public',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
@@ -48,7 +31,7 @@ class ClipService {
   }
 
   Future<ClipListResponse> getFeaturedClips({int limit = 10}) async {
-    final response = await _authorizedGet(
+    final response = await _dio.get<dynamic>(
       '/clips/public/featured',
       queryParameters: {'limit': limit},
     );
@@ -57,37 +40,8 @@ class ClipService {
   }
 
   Future<ClipDetailsResponse> getClipDetails(String id) async {
-    final response = await _authorizedGet('/clips/public/$id');
+    final response = await _dio.get<dynamic>('/clips/public/$id');
     return ClipDetailsResponse.fromJson(_asMap(response.data));
-  }
-
-  Future<Set<String>> getFavoriteIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    return (prefs.getStringList(_favoritesKey) ?? const <String>[]).toSet();
-  }
-
-  Future<Set<String>> toggleFavorite(String clipId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final favorites = (prefs.getStringList(_favoritesKey) ?? const <String>[]).toSet();
-    if (!favorites.add(clipId)) {
-      favorites.remove(clipId);
-    }
-    await prefs.setStringList(_favoritesKey, favorites.toList()..sort());
-    return favorites;
-  }
-
-  Future<Response<dynamic>> _authorizedGet(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.get<dynamic>(
-      path,
-      queryParameters: queryParameters,
-      options: Options(
-        headers: {'Authorization': 'Bearer ${accessToken ?? ''}'},
-      ),
-    );
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

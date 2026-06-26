@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Role } from '@prisma/client';
@@ -9,6 +10,7 @@ import { ObservabilityService } from '../../observability/observability.service'
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { PushService } from '../push/push.service';
+import { PushMessage } from '../push/push.providers/push-provider.interface';
 import { buildPushData, PushDeepLinkInput, PushEntityType } from '../push/push-deep-link.util';
 import { EmailService } from '../email/email.service';
 import { CreateBroadcastNotificationDto } from './dto/create-broadcast-notification.dto';
@@ -18,6 +20,8 @@ import { RequestUser } from './dto/notification-request.types';
 
 @Injectable()
 export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtimeService: RealtimeService,
@@ -46,6 +50,32 @@ export class NotificationsService {
     return { entityType, entityId, route };
   }
 
+  private buildPushMessage(
+    notification: {
+      id: string;
+      title: string;
+      body: string;
+      createdAt: Date;
+    },
+    channel: 'PUSH',
+    deepLink?: PushDeepLinkInput,
+  ): PushMessage {
+    return {
+      dedupeKey: `notification.created:${notification.id}`,
+      category: 'NOTIFICATION',
+      title: notification.title,
+      body: notification.body,
+      data: buildPushData(
+        {
+          notificationId: notification.id,
+          channel,
+          createdAt: notification.createdAt.toISOString(),
+        },
+        deepLink,
+      ),
+    };
+  }
+
   private async dispatchChannelDelivery(
     channel: 'IN_APP' | 'EMAIL' | 'PUSH',
     notification: {
@@ -57,21 +87,25 @@ export class NotificationsService {
     },
     deepLink?: PushDeepLinkInput,
   ) {
-    if (channel === 'PUSH' && notification.userId) {
-      await this.pushService.sendToUser(notification.userId, {
-        dedupeKey: `notification.created:${notification.id}`,
-        category: 'NOTIFICATION',
-        title: notification.title,
-        body: notification.body,
-        data: buildPushData(
-          {
-            notificationId: notification.id,
-            channel,
-            createdAt: notification.createdAt.toISOString(),
-          },
-          deepLink,
-        ),
-      });
+    if (channel === 'PUSH') {
+      const message = this.buildPushMessage(notification, channel, deepLink);
+
+      if (notification.userId) {
+        this.logger.log(
+          `Targeted push dispatch notificationId=${notification.id} userId=${notification.userId}`,
+        );
+        await this.pushService.sendToUser(notification.userId, message);
+        return;
+      }
+
+      this.logger.log(`Broadcast push dispatch notificationId=${notification.id}`);
+      const result = await this.pushService.sendBroadcast(message);
+      const dispatchStats = result.data as
+        | { attempts?: number; success?: number; failed?: number }
+        | undefined;
+      this.logger.log(
+        `Broadcast push completed notificationId=${notification.id} attempts=${dispatchStats?.attempts ?? 0} success=${dispatchStats?.success ?? 0} failed=${dispatchStats?.failed ?? 0}`,
+      );
       return;
     }
 
@@ -184,6 +218,10 @@ export class NotificationsService {
     if (!this.isAdmin(user.role)) {
       throw new ForbiddenException('Only admins can create broadcast notifications');
     }
+
+    this.logger.log(
+      `Broadcast notification request received channel=${dto.channel} title="${dto.title}" adminId=${user.sub}`,
+    );
 
     const created = await this.prisma.notification.create({
       data: {

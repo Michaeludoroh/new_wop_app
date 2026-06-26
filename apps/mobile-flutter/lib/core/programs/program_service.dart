@@ -1,27 +1,13 @@
 import 'package:dio/dio.dart';
 
-import '../auth/auth_service.dart';
-import '../auth/token_storage_service.dart';
+import '../http/authenticated_dio.dart';
 import 'models/program_models.dart';
 
 class ProgramService {
-  ProgramService({
-    Dio? dio,
-    TokenStorageService? tokenStorageService,
-  })  : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AuthApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 20),
-                headers: {'Content-Type': 'application/json'},
-              ),
-            ),
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
+  ProgramService({AuthenticatedDio? authenticatedDio})
+      : _dio = (authenticatedDio ?? AuthenticatedDio()).dio;
 
   final Dio _dio;
-  final TokenStorageService _tokenStorageService;
 
   Future<ProgramListResponse> getPrograms({
     String? search,
@@ -92,41 +78,23 @@ class ProgramService {
   Future<Response<dynamic>> _authorizedGet(
     String path, {
     Map<String, dynamic>? queryParameters,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.get<dynamic>(
-      path,
-      queryParameters: queryParameters,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  }) {
+    return _dio.get<dynamic>(path, queryParameters: queryParameters);
   }
 
-  Future<Response<dynamic>> _authorizedPost(String path) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.post<dynamic>(
-      path,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  Future<Response<dynamic>> _authorizedPost(String path) {
+    return _dio.post<dynamic>(path);
   }
 
   Future<Response<dynamic>> _authorizedPatch(
     String path, {
     Map<String, dynamic>? data,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.patch<dynamic>(
-      path,
-      data: data,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  }) {
+    return _dio.patch<dynamic>(path, data: data);
   }
 
-  Future<Response<dynamic>> _authorizedDelete(String path) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.delete<dynamic>(
-      path,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  Future<Response<dynamic>> _authorizedDelete(String path) {
+    return _dio.delete<dynamic>(path);
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

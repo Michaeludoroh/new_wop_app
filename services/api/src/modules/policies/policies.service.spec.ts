@@ -179,6 +179,14 @@ describe('PoliciesService', () => {
       version: 1,
       acceptedAt: new Date(),
     });
+    prismaMock.policyAcceptance.findMany.mockResolvedValue([
+      {
+        userId: 'user-1',
+        policyId: 'policy-1',
+        version: 1,
+        acceptedAt: new Date(),
+      },
+    ]);
 
     const result = await service.acceptPolicy('user-1', { policyId: 'policy-1' });
 

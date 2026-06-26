@@ -78,7 +78,7 @@ class RealtimeNotificationsService {
 
   String _resolveRealtimeUrl() {
     const env = String.fromEnvironment('API_BASE_URL',
-        defaultValue: 'http://10.0.2.2:4000/api/v1');
+        defaultValue: 'http://10.0.2.2:3000/api/v1');
     final trimmed = env.endsWith('/') ? env.substring(0, env.length - 1) : env;
     return trimmed.replaceFirst(RegExp(r'/api/v\d+$'), '/realtime');
   }

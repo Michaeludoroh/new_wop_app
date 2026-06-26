@@ -10,19 +10,37 @@ The API now uses Firebase Admin SDK:
 
 ## Backend Credentials
 
-Supported credential options:
+The API resolves Firebase Admin credentials in this order:
 
-### Option A: Single JSON Secret
+1. `FIREBASE_SERVICE_ACCOUNT_JSON` — inline JSON string
+2. `FIREBASE_SERVICE_ACCOUNT_FILE` — path to a downloaded service account JSON file
+3. `FCM_PROJECT_ID` + `FCM_CLIENT_EMAIL` + `FCM_PRIVATE_KEY` — split credentials
 
-Set:
+On startup (when credentials are configured), the API logs one of:
+
+- `Firebase Admin initialized via JSON env`
+- `Firebase Admin initialized via file`
+- `Firebase Admin initialized via split credentials`
+
+### Option A: Inline JSON (CI / staging / production)
 
 ```env
 FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"...","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"}
 ```
 
-### Option B: Split Secrets
+### Option A2: Service account file (local development)
 
-Set:
+1. Firebase Console → **Project Settings → Service accounts** → **Generate new private key**.
+2. Save the JSON under `services/api/` (do not commit; add to `.gitignore`).
+3. Set in `services/api/.env`:
+
+```env
+FIREBASE_SERVICE_ACCOUNT_FILE=ministry-mobile-firebase-adminsdk-fbsvc-d1b31b3ebf.json
+```
+
+Relative paths resolve from the API process working directory (typically `services/api/`). If the API is started from the monorepo root, paths under `services/api/` are also checked.
+
+### Option B: Split secrets
 
 ```env
 FCM_PROJECT_ID=
@@ -38,6 +56,8 @@ FCM_PRIVATE_KEY=
 - `.env.staging.example`
 - `.env.production.example`
 - `services/api/.env.example`
+
+All include `FIREBASE_SERVICE_ACCOUNT_JSON`, `FIREBASE_SERVICE_ACCOUNT_FILE`, and split `FCM_*` variables.
 
 ## Mobile Packages
 

@@ -5,6 +5,8 @@ import 'auth_state.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
 import '../notifications/services/firebase_messaging_service.dart';
+import '../policies/policy_acceptance_diagnostics.dart';
+import '../policies/policy_acceptance_gate.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({
@@ -24,6 +26,12 @@ class AuthProvider extends ChangeNotifier {
   AuthState get state => _state;
   FirebaseMessagingService get firebaseMessagingService =>
       _firebaseMessagingService;
+
+  Future<void> reloadCurrentUser() async {
+    if (!_state.isAuthenticated) return;
+    final user = await _authService.me();
+    _setState(_state.copyWith(user: user));
+  }
 
   Future<void> bootstrap() async {
     _setState(
@@ -185,6 +193,7 @@ class AuthProvider extends ChangeNotifier {
     await _runBusyAction(() async {
       await _firebaseMessagingService.revokeCurrentToken();
       await _authService.logout();
+      PolicyAcceptanceGate.resetSession();
       _setState(
         _state.copyWith(
           status: AuthStatus.unauthenticated,
@@ -248,6 +257,9 @@ class AuthProvider extends ChangeNotifier {
   void _setAuthenticated(AuthUser user, {bool isBootstrapped = true}) {
     debugPrint('AUTH STATE -> AUTHENTICATED');
     debugPrint('USER -> ${user.email}');
+    PolicyAcceptanceDiagnostics.log(
+      'AuthProvider._setAuthenticated userId=${user.id} bootstrapped=$isBootstrapped',
+    );
     _setState(
       _state.copyWith(
         status: AuthStatus.authenticated,

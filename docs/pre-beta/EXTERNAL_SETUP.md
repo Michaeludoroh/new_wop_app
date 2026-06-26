@@ -139,15 +139,27 @@ flutter run --dart-define=API_BASE_URL=https://staging-api.example.com/api/v1
 
 **Type:** External credential requirement
 
-### Option A — Service account JSON (recommended)
+### Option A — Inline service account JSON (CI / staging / production)
 
 1. Firebase Console → **Project Settings → Service accounts**.
 2. **Generate new private key** → download JSON.
-3. Set in `services/api/.env` (single line or file path pattern your deploy supports):
+3. Set in `services/api/.env` as a single-line JSON string:
 
 ```env
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",...}
 ```
+
+### Option A2 — Service account file (local development)
+
+1. Download the service account JSON from Firebase Console.
+2. Place it in `services/api/` (keep out of git).
+3. Set in `services/api/.env`:
+
+```env
+FIREBASE_SERVICE_ACCOUNT_FILE=ministry-mobile-firebase-adminsdk-fbsvc-d1b31b3ebf.json
+```
+
+Resolution order: `FIREBASE_SERVICE_ACCOUNT_JSON` is checked first, then `FIREBASE_SERVICE_ACCOUNT_FILE`, then split `FCM_*` variables.
 
 ### Option B — Split environment variables
 

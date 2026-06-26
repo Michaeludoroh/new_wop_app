@@ -20,6 +20,11 @@ class _FakeEventService extends EventService {
   Future<EventListResponse> getFeaturedEvents({int limit = 8}) async {
     return const EventListResponse(data: [], total: 0, limit: 8, offset: 0);
   }
+
+  @override
+  Future<EventRsvpListResponse> getMyRsvps() async {
+    return const EventRsvpListResponse(data: []);
+  }
 }
 
 void main() {

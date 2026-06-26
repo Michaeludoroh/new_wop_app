@@ -127,8 +127,15 @@ add(
   'Apple Developer → Keys → APNs .p8 → Firebase Console → Cloud Messaging → Apple app; enable Push Notifications in Xcode (Runner.entitlements includes aps-environment)',
 );
 
+const serviceAccountFile = env.FIREBASE_SERVICE_ACCOUNT_FILE;
+const hasFirebaseAdminFile = Boolean(
+  serviceAccountFile &&
+    (existsSync(resolve(root, 'services/api', serviceAccountFile)) ||
+      existsSync(resolve(root, serviceAccountFile))),
+);
 const hasFirebaseAdmin =
   Boolean(env.FIREBASE_SERVICE_ACCOUNT_JSON) ||
+  hasFirebaseAdminFile ||
   (Boolean(env.FCM_PROJECT_ID) && Boolean(env.FCM_CLIENT_EMAIL) && Boolean(env.FCM_PRIVATE_KEY));
 add(
   'p0-firebase-admin',
@@ -137,7 +144,7 @@ add(
   hasFirebaseAdmin ? 'PASS' : 'FAIL',
   hasFirebaseAdmin
     ? 'Firebase Admin credentials detected'
-    : 'Set FIREBASE_SERVICE_ACCOUNT_JSON or FCM_PROJECT_ID + FCM_CLIENT_EMAIL + FCM_PRIVATE_KEY',
+    : 'Set FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_FILE, or FCM_PROJECT_ID + FCM_CLIENT_EMAIL + FCM_PRIVATE_KEY',
 );
 
 const mobileStagingDoc = existsSync(mobileStagingExample);

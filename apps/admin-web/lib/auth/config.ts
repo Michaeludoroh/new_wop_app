@@ -15,13 +15,3 @@ export const ROLE_HIERARCHY = {
   MODERATOR: 2,
   USER: 1
 } as const;
-
-/** Roles permitted to authenticate into the admin web console. */
-export const ADMIN_CONSOLE_ROLES = ["SUPER_ADMIN", "ADMIN", "MODERATOR"] as const;
-
-export type AdminConsoleRole = (typeof ADMIN_CONSOLE_ROLES)[number];
-
-export function isAdminConsoleRole(role: string | null | undefined): role is AdminConsoleRole {
-  if (!role) return false;
-  return (ADMIN_CONSOLE_ROLES as readonly string[]).includes(role);
-}

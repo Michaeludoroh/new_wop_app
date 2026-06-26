@@ -1,27 +1,13 @@
 import 'package:dio/dio.dart';
 
-import '../auth/auth_service.dart';
-import '../auth/token_storage_service.dart';
+import '../http/authenticated_dio.dart';
 import 'models/event_models.dart';
 
 class EventService {
-  EventService({
-    Dio? dio,
-    TokenStorageService? tokenStorageService,
-  })  : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AuthApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 20),
-                headers: {'Content-Type': 'application/json'},
-              ),
-            ),
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
+  EventService({AuthenticatedDio? authenticatedDio})
+      : _dio = (authenticatedDio ?? AuthenticatedDio()).dio;
 
   final Dio _dio;
-  final TokenStorageService _tokenStorageService;
 
   Future<EventListResponse> getEvents({
     String? search,
@@ -30,7 +16,7 @@ class EventService {
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await _authorizedGet(
+    final response = await _dio.get<dynamic>(
       '/events/public',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
@@ -45,7 +31,7 @@ class EventService {
   }
 
   Future<EventListResponse> getFeaturedEvents({int limit = 8}) async {
-    final response = await _authorizedGet(
+    final response = await _dio.get<dynamic>(
       '/events/public/featured',
       queryParameters: {'limit': limit},
     );
@@ -54,45 +40,28 @@ class EventService {
   }
 
   Future<EventDetailsResponse> getEventDetails(String slugOrId) async {
-    final response = await _authorizedGet('/events/public/$slugOrId');
+    final response = await _dio.get<dynamic>('/events/public/$slugOrId');
     return EventDetailsResponse.fromJson(_asMap(response.data));
   }
 
   Future<EventRsvpResponse> rsvp(String eventId) async {
-    final response = await _authorizedPost('/events/$eventId/rsvp');
+    final response = await _dio.post<dynamic>('/events/$eventId/rsvp');
     return EventRsvpResponse.fromJson(_asMap(response.data));
   }
 
-  Future<void> cancelRsvp(String eventId) async {
-    await _authorizedDelete('/events/$eventId/rsvp');
+  Future<EventCancelRsvpResponse> cancelRsvp(String eventId) async {
+    final response = await _dio.delete<dynamic>('/events/$eventId/rsvp');
+    return EventCancelRsvpResponse.fromJson(_asMap(response.data));
   }
 
-  Future<Response<dynamic>> _authorizedGet(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.get<dynamic>(
-      path,
-      queryParameters: queryParameters,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  Future<EventRsvpStatusItem> getMyRsvp(String slugOrId) async {
+    final response = await _dio.get<dynamic>('/events/me/$slugOrId/rsvp');
+    return EventRsvpStatusItem.fromJson(_asMap(response.data));
   }
 
-  Future<Response<dynamic>> _authorizedPost(String path) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.post<dynamic>(
-      path,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
-  }
-
-  Future<Response<dynamic>> _authorizedDelete(String path) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.delete<dynamic>(
-      path,
-      options: Options(headers: {'Authorization': 'Bearer ${accessToken ?? ''}'}),
-    );
+  Future<EventRsvpListResponse> getMyRsvps() async {
+    final response = await _dio.get<dynamic>('/events/me/rsvps');
+    return EventRsvpListResponse.fromJson(_asMap(response.data));
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

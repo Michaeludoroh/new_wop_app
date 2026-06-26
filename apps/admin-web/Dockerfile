@@ -10,6 +10,10 @@ RUN npm ci
 
 FROM deps AS build
 COPY . .
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:4000/api/v1
+ARG NEXT_PUBLIC_WEBSOCKET_URL=http://localhost:4100
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_WEBSOCKET_URL=$NEXT_PUBLIC_WEBSOCKET_URL
 RUN npm run build
 
 FROM node:20-alpine AS runner
@@ -29,6 +33,6 @@ USER appuser
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=5 \
-  CMD wget -qO- http://127.0.0.1:3001 || exit 1
+  CMD node -e "require('http').get('http://127.0.0.1:3001', (r) => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 CMD ["npm", "run", "start"]

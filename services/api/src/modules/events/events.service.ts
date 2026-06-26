@@ -203,6 +203,47 @@ export class EventsService {
     };
   }
 
+  async getMyRsvp(slugOrId: string, userId: string) {
+    const event = await this.ensurePublicEvent(slugOrId);
+    const attendee = await this.prisma.eventAttendee.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId } },
+    });
+
+    return {
+      data: {
+        eventId: event.id,
+        status: attendee?.status ?? null,
+        registeredAt: attendee?.registeredAt ?? null,
+        cancelledAt: attendee?.cancelledAt ?? null,
+      },
+    };
+  }
+
+  async listMyRsvps(userId: string) {
+    const attendees = await this.prisma.eventAttendee.findMany({
+      where: {
+        userId,
+        event: { published: true },
+      },
+      select: {
+        eventId: true,
+        status: true,
+        registeredAt: true,
+        cancelledAt: true,
+      },
+      orderBy: [{ registeredAt: 'desc' }],
+    });
+
+    return {
+      data: attendees.map((attendee) => ({
+        eventId: attendee.eventId,
+        status: attendee.status,
+        registeredAt: attendee.registeredAt,
+        cancelledAt: attendee.cancelledAt,
+      })),
+    };
+  }
+
   async cancelRsvp(id: string, userId: string) {
     const event = await this.ensurePublicEvent(id);
     const attendee = await this.prisma.eventAttendee.findUnique({
@@ -210,7 +251,13 @@ export class EventsService {
     });
 
     if (!attendee || attendee.status === EventRsvpStatus.CANCELLED) {
-      return { success: true };
+      const current = await this.findEventWithCounts({ id: event.id });
+      return {
+        data: {
+          status: attendee?.status ?? null,
+          event: this.toResponse(current!),
+        },
+      };
     }
 
     await this.prisma.eventAttendee.update({
@@ -221,7 +268,13 @@ export class EventsService {
       },
     });
 
-    return { success: true };
+    const updated = await this.findEventWithCounts({ id: event.id });
+    return {
+      data: {
+        status: EventRsvpStatus.CANCELLED,
+        event: this.toResponse(updated!),
+      },
+    };
   }
 
   private async listEvents(query: EventQueryDto, fixedWhere: Prisma.EventWhereInput) {

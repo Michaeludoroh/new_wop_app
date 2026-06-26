@@ -13,6 +13,11 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+FROM build AS migrate
+WORKDIR /app
+ENV NODE_ENV=production
+CMD ["npx", "prisma", "migrate", "deploy"]
+
 FROM build AS prod-deps
 WORKDIR /app
 RUN npm prune --omit=dev
@@ -32,7 +37,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package*.json ./
 
-RUN chown -R appuser:appgroup /app
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 4000

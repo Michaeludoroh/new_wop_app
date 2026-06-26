@@ -23,7 +23,6 @@ class _ClipsScreenState extends State<ClipsScreen> {
   String? _error;
   ClipListResponse? _clips;
   ClipListResponse? _featured;
-  Set<String> _favorites = {};
   String _category = '';
 
   @override
@@ -52,13 +51,11 @@ class _ClipsScreenState extends State<ClipsScreen> {
           limit: 50,
         ),
         _service.getFeaturedClips(limit: 8),
-        _service.getFavoriteIds(),
       ]);
       if (!mounted) return;
       setState(() {
         _clips = results[0] as ClipListResponse;
         _featured = results[1] as ClipListResponse;
-        _favorites = results[2] as Set<String>;
       });
     } catch (_) {
       if (!mounted) return;
@@ -66,11 +63,6 @@ class _ClipsScreenState extends State<ClipsScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Future<void> _toggleFavorite(ClipItem clip) async {
-    final favorites = await _service.toggleFavorite(clip.id);
-    if (mounted) setState(() => _favorites = favorites);
   }
 
   void _openDetails(ClipItem clip) {
@@ -140,9 +132,7 @@ class _ClipsScreenState extends State<ClipsScreen> {
                             width: 260,
                             child: _ClipCard(
                               clip: featured[index],
-                              favorite: _favorites.contains(featured[index].id),
                               onTap: () => _openDetails(featured[index]),
-                              onFavorite: () => _toggleFavorite(featured[index]),
                             ),
                           ),
                         ),
@@ -158,9 +148,7 @@ class _ClipsScreenState extends State<ClipsScreen> {
                     else
                       ...clips.map((clip) => _ClipCard(
                             clip: clip,
-                            favorite: _favorites.contains(clip.id),
                             onTap: () => _openDetails(clip),
-                            onFavorite: () => _toggleFavorite(clip),
                           )),
                   ],
                 ),
@@ -187,15 +175,11 @@ class _SectionHeader extends StatelessWidget {
 class _ClipCard extends StatelessWidget {
   const _ClipCard({
     required this.clip,
-    required this.favorite,
     required this.onTap,
-    required this.onFavorite,
   });
 
   final ClipItem clip;
-  final bool favorite;
   final VoidCallback onTap;
-  final VoidCallback onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -221,10 +205,6 @@ class _ClipCard extends StatelessWidget {
                 [clip.speaker, clip.category, clip.durationLabel].where((item) => item != null && item.toString().isNotEmpty).join(' • '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-              ),
-              trailing: IconButton(
-                icon: Icon(favorite ? Icons.favorite : Icons.favorite_border),
-                onPressed: onFavorite,
               ),
             ),
           ],

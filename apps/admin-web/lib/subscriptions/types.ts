@@ -18,8 +18,25 @@ export type SubscriptionPlan = {
   id: string;
   code: string;
   name: string;
+  description?: string | null;
   amount: number | string;
+  currency?: string;
   billingInterval: string;
+  trialPeriodDays?: number;
+  isActive?: boolean;
+  recurringEnabled?: boolean;
+};
+
+export type SubscriptionPlanPayload = {
+  code: string;
+  name: string;
+  description?: string;
+  amount: number;
+  currency: string;
+  billingInterval: string;
+  trialPeriodDays?: number;
+  isActive?: boolean;
+  recurringEnabled?: boolean;
 };
 
 export type SubscriberItem = {
@@ -85,4 +102,12 @@ export type LifecycleProcessResult = {
     periodRenewalGrace: number;
     retryDue: number;
   };
+};
+
+export type SubscriptionHistoryItem = {
+  id: string;
+  fromStatus?: SubscriptionStatus | null;
+  toStatus: SubscriptionStatus;
+  reason?: string | null;
+  createdAt: string;
 };

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { usersApi } from "../../../lib/users/api-client";
 import { AdminUser, UserFeedQuery } from "../../../lib/users/types";
 
@@ -47,7 +48,7 @@ export default function UsersPage() {
       const response = await usersApi.getUsers(query);
       setItems(response.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+      setError(normalizeApiError(err, "Failed to load users"));
     } finally {
       setLoading(false);
     }
@@ -64,25 +65,35 @@ export default function UsersPage() {
       const response = await usersApi.getUser(user.id);
       setSelected(response.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load user details");
+      setError(normalizeApiError(err, "Failed to load user details"));
     }
   }
 
   async function onRoleChange(event: FormEvent<HTMLSelectElement>) {
     if (!selected) return;
     const role = event.currentTarget.value as AdminUser["role"];
-    const updated = await usersApi.updateRole(selected.id, role);
-    setSelected(updated.data);
-    setStatusMessage("Role updated.");
-    await refresh();
+    setStatusMessage(null);
+    try {
+      const updated = await usersApi.updateRole(selected.id, role);
+      setSelected(updated.data);
+      setStatusMessage("Role updated.");
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to update user role"));
+    }
   }
 
   async function toggleActive() {
     if (!selected) return;
-    const updated = await usersApi.updateStatus(selected.id, !selected.active);
-    setSelected(updated.data);
-    setStatusMessage(updated.data.active ? "User reactivated." : "User disabled.");
-    await refresh();
+    setStatusMessage(null);
+    try {
+      const updated = await usersApi.updateStatus(selected.id, !selected.active);
+      setSelected(updated.data);
+      setStatusMessage(updated.data.active ? "User reactivated." : "User disabled.");
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to update user status"));
+    }
   }
 
   return (

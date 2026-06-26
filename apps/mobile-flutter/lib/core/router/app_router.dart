@@ -36,32 +36,45 @@ class AppRouter {
     ResetPasswordScreen.routeName,
   };
 
-  static const Map<String, Set<String>> _requiredRolesByRoute = {
-    '/': {'admin', 'member', 'user'},
-    NotificationsScreen.routeName: {'admin', 'member', 'user'},
-    EventsScreen.routeName: {'admin', 'member', 'user'},
-    EventDetailsScreen.routeName: {'admin', 'member', 'user'},
-    ProgramsScreen.routeName: {'admin', 'member', 'user'},
-    ProgramDetailsScreen.routeName: {'admin', 'member', 'user'},
-    MentorshipScreen.routeName: {'admin', 'member', 'user'},
-    MentorshipDetailsScreen.routeName: {'admin', 'member', 'user'},
-    AnnouncementsScreen.routeName: {'admin', 'member', 'user'},
-    AnnouncementDetailsScreen.routeName: {'admin', 'member', 'user'},
-    ProfileScreen.routeName: {'admin', 'member', 'user'},
-    PolicyScreen.routeName: {'admin', 'member', 'user'},
-    TermsOfUseScreen.routeName: {'admin', 'member', 'user'},
-    PrivacyPolicyScreen.routeName: {'admin', 'member', 'user'},
-    CommunityGuidelinesScreen.routeName: {'admin', 'member', 'user'},
-    ContentSharingRulesScreen.routeName: {'admin', 'member', 'user'},
-    EbookScreen.routeName: {'admin', 'member', 'user'},
-    EbookDetailsScreen.routeName: {'admin', 'member', 'user'},
-    ClipsScreen.routeName: {'admin', 'member', 'user'},
-    ClipDetailsScreen.routeName: {'admin', 'member', 'user'},
-    MyLibraryScreen.routeName: {'admin', 'member', 'user'},
-    SubscriptionScreen.routeName: {'admin', 'member', 'user'},
-    AboutScreen.routeName: {'admin', 'member', 'user'},
-    PdfReaderScreen.routeName: {'admin', 'member', 'user'},
+  static const Set<String> _consumerRoles = {
+    'user',
+    'admin',
+    'moderator',
+    'super_admin',
+    'member',
   };
+
+  static const Set<String> _protectedConsumerRoutes = {
+    '/',
+    NotificationsScreen.routeName,
+    EventsScreen.routeName,
+    EventDetailsScreen.routeName,
+    ProgramsScreen.routeName,
+    ProgramDetailsScreen.routeName,
+    MentorshipScreen.routeName,
+    MentorshipDetailsScreen.routeName,
+    AnnouncementsScreen.routeName,
+    AnnouncementDetailsScreen.routeName,
+    ProfileScreen.routeName,
+    PolicyScreen.routeName,
+    TermsOfUseScreen.routeName,
+    PrivacyPolicyScreen.routeName,
+    CommunityGuidelinesScreen.routeName,
+    ContentSharingRulesScreen.routeName,
+    EbookScreen.routeName,
+    EbookDetailsScreen.routeName,
+    ClipsScreen.routeName,
+    ClipDetailsScreen.routeName,
+    MyLibraryScreen.routeName,
+    SubscriptionScreen.routeName,
+    AboutScreen.routeName,
+    PdfReaderScreen.routeName,
+  };
+
+  static bool _canAccessConsumerRoute(String? role) {
+    if (role == null || role.trim().isEmpty) return false;
+    return _consumerRoles.contains(role.trim().toLowerCase());
+  }
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     return MaterialPageRoute<void>(
@@ -90,16 +103,14 @@ class AppRouter {
           return const LoginScreen();
         }
 
-        final requiredRoles = _requiredRolesByRoute[routeName];
-        if (requiredRoles != null && authState.isAuthenticated) {
-          final role = authState.user?.role?.toLowerCase();
-          if (role == null || !requiredRoles.contains(role)) {
-            return const Scaffold(
-              body: Center(
-                child: Text('You do not have permission to access this page.'),
-              ),
-            );
-          }
+        if (_protectedConsumerRoutes.contains(routeName) &&
+            authState.isAuthenticated &&
+            !_canAccessConsumerRoute(authState.user?.role)) {
+          return const Scaffold(
+            body: Center(
+              child: Text('You do not have permission to access this page.'),
+            ),
+          );
         }
 
         switch (routeName) {

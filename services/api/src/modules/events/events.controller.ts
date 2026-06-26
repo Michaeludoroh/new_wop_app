@@ -47,6 +47,20 @@ export class EventsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('USER')
+  @Get('me/rsvps')
+  listMyRsvps(@Req() req: AuthRequest) {
+    return this.service.listMyRsvps(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
+  @Get('me/:slugOrId/rsvp')
+  getMyRsvp(@Param('slugOrId') slugOrId: string, @Req() req: AuthRequest) {
+    return this.service.getMyRsvp(slugOrId, req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('USER')
   @Post(':id/rsvp')
   rsvp(@Param('id') id: string, @Req() req: AuthRequest) {
     return this.service.rsvp(id, req.user.sub);

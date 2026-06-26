@@ -132,7 +132,7 @@ describe('Beta launch smoke integration', () => {
     it('initiates subscription checkout', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/payments/checkout/subscription')
-        .send({ planCode: 'PREMIUM' })
+        .send({ planCode: 'PREMIUM_MONTHLY' })
         .expect(201);
 
       expect(response.body.checkoutUrl).toContain('flutterwave');

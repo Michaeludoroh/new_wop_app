@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { normalizeApiError } from "../http/normalize-error";
 import { notificationsApi } from "./api-client";
 import {
   CreateBroadcastNotificationPayload,
@@ -10,21 +11,6 @@ import {
   NotificationListResponse
 } from "./types";
 import { realtimeSocketClient, RealtimeEventEnvelope } from "../realtime/socket-client";
-
-function normalizeError(err: unknown, fallback: string) {
-  if (typeof err === "object" && err && "response" in err) {
-    const maybe = err as {
-      response?: { data?: { message?: string | string[] } };
-      message?: string;
-    };
-    const msg = maybe.response?.data?.message;
-    if (Array.isArray(msg)) return msg.join(", ");
-    if (typeof msg === "string") return msg;
-    if (typeof maybe.message === "string") return maybe.message;
-  }
-  if (err instanceof Error) return err.message;
-  return fallback;
-}
 
 type UseNotificationsFeedResult = {
   data: NotificationItem[];
@@ -65,7 +51,7 @@ export function useNotificationsFeed(initialQuery?: NotificationListQuery): UseN
       const response = await notificationsApi.fetchNotifications(queryRef.current);
       setState(response);
     } catch (err) {
-      setError(normalizeError(err, "Failed to fetch notifications"));
+      setError(normalizeApiError(err, "Failed to fetch notifications"));
     } finally {
       setLoading(false);
     }
@@ -181,7 +167,7 @@ export function useNotificationsFeed(initialQuery?: NotificationListQuery): UseN
       await notificationsApi.markReadState(id, { isRead });
     } catch (err) {
       setState(previous);
-      setError(normalizeError(err, "Failed to update read state"));
+      setError(normalizeApiError(err, "Failed to update read state"));
       throw err;
     }
   }, [state]);
@@ -228,7 +214,7 @@ export function useCreateNotification(
       onCreatedRef.current?.(created);
       return created;
     } catch (err) {
-      setError(normalizeError(err, "Failed to create broadcast notification"));
+      setError(normalizeApiError(err, "Failed to create broadcast notification"));
       return null;
     } finally {
       setLoading(false);
@@ -245,7 +231,7 @@ export function useCreateNotification(
       onCreatedRef.current?.(created);
       return created;
     } catch (err) {
-      setError(normalizeError(err, "Failed to create targeted notification"));
+      setError(normalizeApiError(err, "Failed to create targeted notification"));
       return null;
     } finally {
       setLoading(false);

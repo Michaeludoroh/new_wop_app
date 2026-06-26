@@ -37,6 +37,7 @@ function createService() {
     },
     eventAttendee: {
       count: jest.fn().mockResolvedValue(3),
+      findMany: jest.fn().mockResolvedValue([]),
       upsert: jest.fn().mockResolvedValue({
         id: 'attendee-1',
         status: EventRsvpStatus.REGISTERED,
@@ -223,17 +224,85 @@ describe('EventsService', () => {
     await expect(service.rsvp('event-1', 'user-1')).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('cancels RSVP idempotently', async () => {
+  it('cancels RSVP idempotently and returns updated event payload', async () => {
     const { service, prisma } = createService();
-    prisma.event.findFirst.mockResolvedValueOnce({ ...event, _count: undefined });
+    prisma.event.findFirst
+      .mockResolvedValueOnce({ ...event, _count: undefined })
+      .mockResolvedValueOnce(event);
 
-    await expect(service.cancelRsvp('event-1', 'user-1')).resolves.toEqual({ success: true });
+    await expect(service.cancelRsvp('event-1', 'user-1')).resolves.toMatchObject({
+      data: expect.objectContaining({
+        status: EventRsvpStatus.CANCELLED,
+        event: expect.objectContaining({
+          id: 'event-1',
+          attendeeCount: 3,
+        }),
+      }),
+    });
     expect(prisma.eventAttendee.update).toHaveBeenCalledWith({
       where: { id: 'attendee-1' },
       data: expect.objectContaining({
         status: EventRsvpStatus.CANCELLED,
         cancelledAt: expect.any(Date),
       }),
+    });
+  });
+
+  it('returns RSVP status for the current user', async () => {
+    const { service, prisma } = createService();
+    prisma.event.findFirst.mockResolvedValueOnce({ ...event, _count: undefined });
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce({
+      eventId: 'event-1',
+      status: EventRsvpStatus.REGISTERED,
+      registeredAt: new Date('2026-06-10T10:00:00.000Z'),
+      cancelledAt: null,
+    });
+
+    await expect(service.getMyRsvp('prayer-night', 'user-1')).resolves.toEqual({
+      data: {
+        eventId: 'event-1',
+        status: EventRsvpStatus.REGISTERED,
+        registeredAt: new Date('2026-06-10T10:00:00.000Z'),
+        cancelledAt: null,
+      },
+    });
+  });
+
+  it('returns null RSVP status when the user has never registered', async () => {
+    const { service, prisma } = createService();
+    prisma.event.findFirst.mockResolvedValueOnce({ ...event, _count: undefined });
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce(null);
+
+    await expect(service.getMyRsvp('event-1', 'user-1')).resolves.toEqual({
+      data: {
+        eventId: 'event-1',
+        status: null,
+        registeredAt: null,
+        cancelledAt: null,
+      },
+    });
+  });
+
+  it('lists RSVP statuses for the current user', async () => {
+    const { service, prisma } = createService();
+    prisma.eventAttendee.findMany.mockResolvedValueOnce([
+      {
+        eventId: 'event-1',
+        status: EventRsvpStatus.REGISTERED,
+        registeredAt: new Date('2026-06-10T10:00:00.000Z'),
+        cancelledAt: null,
+      },
+    ]);
+
+    await expect(service.listMyRsvps('user-1')).resolves.toEqual({
+      data: [
+        {
+          eventId: 'event-1',
+          status: EventRsvpStatus.REGISTERED,
+          registeredAt: new Date('2026-06-10T10:00:00.000Z'),
+          cancelledAt: null,
+        },
+      ],
     });
   });
 });

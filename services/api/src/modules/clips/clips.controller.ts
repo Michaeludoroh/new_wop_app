@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Query, Patch, Delete, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,10 +7,14 @@ import { ClipQueryDto } from './dto/clip-query.dto';
 import { CreateClipDto } from './dto/create-clip.dto';
 import { UpdateClipDto } from './dto/update-clip.dto';
 import { ClipsService } from './clips.service';
+import { ClipsUploadService } from './clips-upload.service';
 
 @Controller('clips')
 export class ClipsController {
-  constructor(private readonly service: ClipsService) {}
+  constructor(
+    private readonly service: ClipsService,
+    private readonly uploadService: ClipsUploadService,
+  ) {}
 
   @Get('public')
   listPublic(@Query() query: ClipQueryDto) {
@@ -66,6 +71,22 @@ export class ClipsController {
   @Patch('admin/:id/unpublish')
   unpublish(@Param('id') id: string) {
     return this.service.unpublish(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/media')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadMedia(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+    return this.uploadService.saveUpload(file, 'media');
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/thumbnail')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadThumbnail(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+    return this.uploadService.saveUpload(file, 'thumbnail');
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

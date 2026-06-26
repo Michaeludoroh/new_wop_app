@@ -26,9 +26,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   late final EventService _service;
 
   bool _loading = true;
-  bool _rsvped = false;
   String? _error;
   EventItem? _event;
+
+  bool get _rsvped => _event?.isRsvped ?? false;
 
   @override
   void initState() {
@@ -45,8 +46,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
     try {
       final details = await _service.getEventDetails(widget.eventId);
+      EventRsvpStatusItem? rsvpStatus;
+      try {
+        rsvpStatus = await _service.getMyRsvp(details.data.id);
+      } catch (_) {
+        rsvpStatus = null;
+      }
+
       if (!mounted) return;
-      setState(() => _event = details.data);
+      setState(() {
+        _event = details.data.copyWith(userRsvpStatus: rsvpStatus?.status);
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Failed to load event.');
@@ -61,11 +71,17 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     setState(() => _error = null);
     try {
       if (_rsvped) {
-        await _service.cancelRsvp(event.id);
-        if (mounted) setState(() => _rsvped = false);
+        final response = await _service.cancelRsvp(event.id);
+        if (mounted) {
+          setState(() {
+            _event = response.event.copyWith(userRsvpStatus: response.status);
+          });
+        }
       } else {
-        await _service.rsvp(event.id);
-        if (mounted) setState(() => _rsvped = true);
+        final response = await _service.rsvp(event.id);
+        if (mounted) {
+          setState(() => _event = response.event);
+        }
       }
     } catch (_) {
       if (mounted) setState(() => _error = 'Failed to update RSVP.');

@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 
 type RequestUser = {
@@ -145,20 +146,21 @@ export class UsersService {
     };
   }
 
-  async updateProfile(id: string, payload: Record<string, unknown>, requester: RequestUser) {
+  async updateProfile(id: string, dto: UpdateUserProfileDto, requester: RequestUser) {
     if (!this.isAdmin(requester) && requester.sub !== id) {
       throw new ForbiddenException('You can only update your own user profile');
     }
 
-    const fullName =
-      typeof payload.fullName === 'string' && payload.fullName.trim().length > 0
-        ? payload.fullName.trim()
-        : undefined;
+    const fullName = dto.fullName?.trim();
+
+    if (!fullName) {
+      throw new BadRequestException('At least one valid profile field is required');
+    }
 
     const user = await this.prisma.user.update({
       where: { id },
       data: {
-        ...(fullName ? { fullName } : {}),
+        fullName,
       },
       select: this.selectSafeUser(),
     });

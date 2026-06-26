@@ -6,6 +6,9 @@ import {
   CheckoutSessionRequest,
   CheckoutSessionResult,
   NormalizedProviderEvent,
+  TokenizedChargeRequest,
+  TokenizedChargeResult,
+  TransactionVerificationResult,
   VerificationResult,
 } from './payment-provider.types';
 
@@ -55,6 +58,24 @@ export class PaystackProviderAdapter implements PaymentProviderAdapter {
         failureMessage,
       },
     };
+  }
+
+  async verifyTransactionByReference(txRef: string): Promise<TransactionVerificationResult> {
+    return {
+      isVerified: false,
+      mappedStatus: PaymentStatus.PENDING,
+      providerReference: txRef,
+      normalizedPayload: {
+        provider: this.provider,
+        error: 'PAYSTACK_NOT_ENABLED',
+        message: 'Paystack transaction verification is not enabled',
+      },
+      failureMessage: 'Paystack transaction verification is not enabled for this deployment',
+    };
+  }
+
+  async chargeTokenizedPayment(_request: TokenizedChargeRequest): Promise<TokenizedChargeResult> {
+    throw new NotImplementedException('Paystack tokenized charges are not enabled for this milestone');
   }
 
   private mapEventType(eventType: string): PaymentStatus {

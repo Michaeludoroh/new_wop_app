@@ -1,0 +1,2 @@
+# Optional init scripts run once on first Postgres container start.
+# Production deployments typically use managed Postgres; this directory supports compose-based dev/staging.

@@ -6,6 +6,9 @@ import {
   CheckoutSessionRequest,
   CheckoutSessionResult,
   NormalizedProviderEvent,
+  TokenizedChargeRequest,
+  TokenizedChargeResult,
+  TransactionVerificationResult,
   VerificationResult,
 } from './payment-provider.types';
 
@@ -55,6 +58,24 @@ export class StripeProviderAdapter implements PaymentProviderAdapter {
         failureMessage,
       },
     };
+  }
+
+  async verifyTransactionByReference(txRef: string): Promise<TransactionVerificationResult> {
+    return {
+      isVerified: false,
+      mappedStatus: PaymentStatus.PENDING,
+      providerReference: txRef,
+      normalizedPayload: {
+        provider: this.provider,
+        error: 'STRIPE_NOT_ENABLED',
+        message: 'Stripe transaction verification is not enabled',
+      },
+      failureMessage: 'Stripe transaction verification is not enabled for this deployment',
+    };
+  }
+
+  async chargeTokenizedPayment(_request: TokenizedChargeRequest): Promise<TokenizedChargeResult> {
+    throw new NotImplementedException('Stripe tokenized charges are not enabled for this milestone');
   }
 
   private mapEventType(eventType: string): PaymentStatus {

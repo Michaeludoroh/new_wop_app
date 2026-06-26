@@ -79,8 +79,14 @@ class PolicyAcceptanceStatus {
   final bool requiresAction;
 
   factory PolicyAcceptanceStatus.fromJson(Map<String, dynamic> json) {
-    final pending = json['pending'];
-    final accepted = json['accepted'];
+    final Map<String, dynamic> payload;
+    if (json['data'] is Map) {
+      payload = (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v));
+    } else {
+      payload = json;
+    }
+    final pending = payload['pending'];
+    final accepted = payload['accepted'];
     return PolicyAcceptanceStatus(
       pending: pending is List
           ? pending
@@ -96,7 +102,7 @@ class PolicyAcceptanceStatus {
               )
               .toList()
           : const [],
-      requiresAction: json['requiresAction'] == true,
+      requiresAction: payload['requiresAction'] == true,
     );
   }
 }

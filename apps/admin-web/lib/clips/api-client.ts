@@ -3,6 +3,8 @@ import { Clip, ClipListQuery, ClipListResponse, ClipPayload } from "./types";
 
 const clipsClient = createAuthenticatedClient();
 
+type UploadResult = { url: string; key: string };
+
 function normalizeListResponse(data: unknown): ClipListResponse {
   if (data && typeof data === "object") {
     const map = data as Partial<ClipListResponse>;
@@ -56,5 +58,23 @@ export const clipsApi = {
 
   async remove(id: string): Promise<void> {
     await clipsClient.delete(`/clips/admin/${id}`);
+  },
+
+  async uploadMedia(file: File): Promise<UploadResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/media", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    return response.data;
+  },
+
+  async uploadThumbnail(file: File): Promise<UploadResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/thumbnail", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    return response.data;
   }
 };

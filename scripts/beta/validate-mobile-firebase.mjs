@@ -66,6 +66,11 @@ check('iOS remote-notification background mode', infoPlist.includes('remote-noti
 
 const apiEnv = readEnv('services/api/.env');
 const hasServiceAccountJson = Boolean(apiEnv.FIREBASE_SERVICE_ACCOUNT_JSON);
+const serviceAccountFile = apiEnv.FIREBASE_SERVICE_ACCOUNT_FILE;
+const hasServiceAccountFile = Boolean(
+  serviceAccountFile &&
+    (fileExists(`services/api/${serviceAccountFile}`) || fileExists(serviceAccountFile)),
+);
 const hasSplitCreds =
   Boolean(apiEnv.FCM_PROJECT_ID) && Boolean(apiEnv.FCM_CLIENT_EMAIL) && Boolean(apiEnv.FCM_PRIVATE_KEY);
 
@@ -75,12 +80,14 @@ const entitlementsHasAps =
 
 check(
   'Firebase Admin credentials',
-  hasServiceAccountJson || hasSplitCreds,
+  hasServiceAccountJson || hasServiceAccountFile || hasSplitCreds,
   hasServiceAccountJson
     ? 'FIREBASE_SERVICE_ACCOUNT_JSON set'
-    : hasSplitCreds
-      ? 'FCM_* vars set'
-      : 'Missing FIREBASE_SERVICE_ACCOUNT_JSON or FCM_* vars',
+    : hasServiceAccountFile
+      ? `FIREBASE_SERVICE_ACCOUNT_FILE set (${serviceAccountFile})`
+      : hasSplitCreds
+        ? 'FCM_* vars set'
+        : 'Missing FIREBASE_SERVICE_ACCOUNT_JSON, FIREBASE_SERVICE_ACCOUNT_FILE, or FCM_* vars',
 );
 check(
   'iOS push entitlements (aps-environment)',

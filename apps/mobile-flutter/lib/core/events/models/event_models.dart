@@ -16,6 +16,7 @@ class EventItem {
     this.venue,
     this.meetingLink,
     this.maxCapacity,
+    this.userRsvpStatus,
   });
 
   final String id;
@@ -34,6 +35,51 @@ class EventItem {
   final int attendeeCount;
   final bool featured;
   final bool published;
+  final String? userRsvpStatus;
+
+  bool get isRsvped => userRsvpStatus == 'REGISTERED';
+
+  EventItem copyWith({
+    String? id,
+    String? title,
+    String? slug,
+    String? description,
+    String? category,
+    String? bannerImageUrl,
+    String? locationType,
+    String? venue,
+    String? meetingLink,
+    DateTime? startDateTime,
+    DateTime? endDateTime,
+    bool? registrationRequired,
+    int? maxCapacity,
+    int? attendeeCount,
+    bool? featured,
+    bool? published,
+    String? userRsvpStatus,
+    bool clearUserRsvpStatus = false,
+  }) {
+    return EventItem(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      slug: slug ?? this.slug,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      bannerImageUrl: bannerImageUrl ?? this.bannerImageUrl,
+      locationType: locationType ?? this.locationType,
+      venue: venue ?? this.venue,
+      meetingLink: meetingLink ?? this.meetingLink,
+      startDateTime: startDateTime ?? this.startDateTime,
+      endDateTime: endDateTime ?? this.endDateTime,
+      registrationRequired: registrationRequired ?? this.registrationRequired,
+      maxCapacity: maxCapacity ?? this.maxCapacity,
+      attendeeCount: attendeeCount ?? this.attendeeCount,
+      featured: featured ?? this.featured,
+      published: published ?? this.published,
+      userRsvpStatus:
+          clearUserRsvpStatus ? null : (userRsvpStatus ?? this.userRsvpStatus),
+    );
+  }
 
   factory EventItem.fromJson(Map<String, dynamic> json) {
     return EventItem(
@@ -55,6 +101,7 @@ class EventItem {
       attendeeCount: _asInt(json['attendeeCount']) ?? 0,
       featured: json['featured'] == true,
       published: json['published'] == true,
+      userRsvpStatus: json['userRsvpStatus']?.toString(),
     );
   }
 
@@ -105,6 +152,22 @@ class EventListResponse {
       offset: EventItem._asInt(json['offset']) ?? 0,
     );
   }
+
+  EventListResponse withRsvpStatuses(Map<String, String?> statusesByEventId) {
+    return EventListResponse(
+      data: data
+          .map(
+            (event) => event.copyWith(
+              userRsvpStatus: statusesByEventId[event.id],
+              clearUserRsvpStatus: !statusesByEventId.containsKey(event.id),
+            ),
+          )
+          .toList(),
+      total: total,
+      limit: limit,
+      offset: offset,
+    );
+  }
 }
 
 class EventDetailsResponse {
@@ -120,6 +183,56 @@ class EventDetailsResponse {
       );
     }
     return EventDetailsResponse(data: EventItem.fromJson(json));
+  }
+}
+
+class EventRsvpStatusItem {
+  const EventRsvpStatusItem({
+    required this.eventId,
+    required this.status,
+    this.registeredAt,
+    this.cancelledAt,
+  });
+
+  final String eventId;
+  final String? status;
+  final DateTime? registeredAt;
+  final DateTime? cancelledAt;
+
+  bool get isRegistered => status == 'REGISTERED';
+
+  factory EventRsvpStatusItem.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map ? json['data'] as Map : json;
+    return EventRsvpStatusItem(
+      eventId: data['eventId']?.toString() ?? '',
+      status: data['status']?.toString(),
+      registeredAt: DateTime.tryParse(data['registeredAt']?.toString() ?? ''),
+      cancelledAt: DateTime.tryParse(data['cancelledAt']?.toString() ?? ''),
+    );
+  }
+}
+
+class EventRsvpListResponse {
+  const EventRsvpListResponse({required this.data});
+
+  final List<EventRsvpStatusItem> data;
+
+  factory EventRsvpListResponse.fromJson(Map<String, dynamic> json) {
+    final items = json['data'] is List ? json['data'] as List : const [];
+    return EventRsvpListResponse(
+      data: items
+          .whereType<Map>()
+          .map(
+            (item) => EventRsvpStatusItem.fromJson(
+              item.map((key, value) => MapEntry(key.toString(), value)),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Map<String, String?> asStatusMap() {
+    return {for (final item in data) item.eventId: item.status};
   }
 }
 
@@ -142,6 +255,30 @@ class EventRsvpResponse {
       status: data['status']?.toString() ?? 'REGISTERED',
       event: event is Map
           ? EventItem.fromJson(event.map((key, value) => MapEntry(key.toString(), value)))
+              .copyWith(userRsvpStatus: data['status']?.toString() ?? 'REGISTERED')
+          : EventItem.fromJson(const {}),
+    );
+  }
+}
+
+class EventCancelRsvpResponse {
+  const EventCancelRsvpResponse({
+    required this.status,
+    required this.event,
+  });
+
+  final String? status;
+  final EventItem event;
+
+  factory EventCancelRsvpResponse.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map ? json['data'] as Map : json;
+    final event = data['event'];
+    final status = data['status']?.toString();
+    return EventCancelRsvpResponse(
+      status: status,
+      event: event is Map
+          ? EventItem.fromJson(event.map((key, value) => MapEntry(key.toString(), value)))
+              .copyWith(userRsvpStatus: status)
           : EventItem.fromJson(const {}),
     );
   }

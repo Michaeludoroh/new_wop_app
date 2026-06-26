@@ -1,31 +1,17 @@
 import 'package:dio/dio.dart';
 
-import '../auth/auth_service.dart';
-import '../auth/token_storage_service.dart';
+import '../http/authenticated_dio.dart';
 import 'subscription_models.dart';
 
 class SubscriptionService {
-  SubscriptionService({
-    Dio? dio,
-    TokenStorageService? tokenStorageService,
-  })  : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: AuthApiConfig.baseUrl,
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 20),
-                sendTimeout: const Duration(seconds: 20),
-                headers: {'Content-Type': 'application/json'},
-              ),
-            ),
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
+  SubscriptionService({AuthenticatedDio? authenticatedDio})
+      : _dio = (authenticatedDio ?? AuthenticatedDio()).dio;
 
   final Dio _dio;
-  final TokenStorageService _tokenStorageService;
   List<SubscriptionPlanModel> _cachedPlans = const [];
 
   Future<SubscriptionStatusModel?> getStatus() async {
-    final response = await _authorizedGet('/subscriptions/status');
+    final response = await _dio.get<dynamic>('/subscriptions/status');
     final map = _asMap(response.data);
     final data = map['data'];
     if (data == null) return null;
@@ -37,8 +23,28 @@ class SubscriptionService {
     return SubscriptionStatusModel.fromJson(map);
   }
 
+  Future<void> validateContentAccess({
+    required String token,
+    required String resourceType,
+    required String resourceId,
+  }) async {
+    final response = await _dio.get<dynamic>(
+      '/subscriptions/content/validate',
+      queryParameters: {
+        'token': token,
+        'resourceType': resourceType,
+        'resourceId': resourceId,
+      },
+    );
+    final map = _asMap(response.data);
+    final valid = map['valid'] == true;
+    if (!valid) {
+      throw Exception(map['reason']?.toString() ?? 'Content access validation failed');
+    }
+  }
+
   Future<List<SubscriptionPlanModel>> getPlans() async {
-    final response = await _authorizedGet('/subscriptions/plans');
+    final response = await _dio.get<dynamic>('/subscriptions/plans');
     final map = _asMap(response.data);
     final data = map['data'];
     if (data is List) {
@@ -59,7 +65,7 @@ class SubscriptionService {
     String billingInterval = 'MONTHLY',
   }) async {
     final planString = await resolvePlanCode(plan, billingInterval: billingInterval);
-    final response = await _authorizedPost(
+    final response = await _dio.post<dynamic>(
       '/payments/checkout/subscription',
       data: {
         'planCode': planString,
@@ -74,7 +80,7 @@ class SubscriptionService {
     required MembershipPlan plan,
     String billingInterval = 'MONTHLY',
   }) async {
-    await _authorizedPost(
+    await _dio.post<dynamic>(
       '/subscriptions/subscribe',
       data: {
         'planCode': await resolvePlanCode(plan, billingInterval: billingInterval),
@@ -84,7 +90,7 @@ class SubscriptionService {
   }
 
   Future<void> cancel({bool immediate = false, String? reason}) async {
-    await _authorizedPost(
+    await _dio.post<dynamic>(
       '/subscriptions/cancel',
       data: {
         'immediate': immediate,
@@ -94,7 +100,7 @@ class SubscriptionService {
   }
 
   Future<PaymentStatusResult> getPaymentStatus(String providerReference) async {
-    final response = await _authorizedGet(
+    final response = await _dio.get<dynamic>(
       '/payments/status',
       queryParameters: {'providerReference': providerReference},
     );
@@ -155,34 +161,6 @@ class SubscriptionService {
       MembershipPlan.partner => 'PARTNER',
       MembershipPlan.unknown => 'FREE',
     };
-  }
-
-  Future<Response<dynamic>> _authorizedGet(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.get<dynamic>(
-      path,
-      queryParameters: queryParameters,
-      options: Options(
-        headers: {'Authorization': 'Bearer ${accessToken ?? ''}'},
-      ),
-    );
-  }
-
-  Future<Response<dynamic>> _authorizedPost(
-    String path, {
-    Object? data,
-  }) async {
-    final accessToken = await _tokenStorageService.getAccessToken();
-    return _dio.post<dynamic>(
-      path,
-      data: data,
-      options: Options(
-        headers: {'Authorization': 'Bearer ${accessToken ?? ''}'},
-      ),
-    );
   }
 
   Map<String, dynamic> _asMap(dynamic value) {

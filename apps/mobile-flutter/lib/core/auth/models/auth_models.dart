@@ -46,10 +46,11 @@ class AuthUser {
   final String? role;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
+    final name = json['name'] ?? json['fullName'];
     return AuthUser(
       id: (json['id'] ?? '').toString(),
       email: (json['email'] ?? '') as String,
-      name: json['name'] as String?,
+      name: name is String && name.trim().isNotEmpty ? name.trim() : null,
       role: json['role'] as String?,
     );
   }

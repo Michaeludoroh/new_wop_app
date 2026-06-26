@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nes
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -35,10 +36,10 @@ export class UsersController {
   @Patch(':id/profile')
   updateProfile(
     @Param('id') id: string,
-    @Body() payload: Record<string, unknown>,
+    @Body() dto: UpdateUserProfileDto,
     @Req() req: AuthRequest,
   ) {
-    return this.usersService.updateProfile(id, payload, req.user);
+    return this.usersService.updateProfile(id, dto, req.user);
   }
 
   @Roles('ADMIN')

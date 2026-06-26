@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import ProtectedModule from "../../../components/protected-module";
 import { eventsApi } from "../../../lib/events/api-client";
 import { EventAttendee, EventItem, EventLocationType, EventPayload } from "../../../lib/events/types";
@@ -55,7 +56,7 @@ export default function EventsPage() {
       setEvents(response.data);
       setTotal(response.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load events");
+      setError(normalizeApiError(err, "Failed to load events"));
     } finally {
       setLoading(false);
     }
@@ -122,7 +123,7 @@ export default function EventsPage() {
       resetForm();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save event");
+      setError(normalizeApiError(err, "Failed to save event"));
     } finally {
       setSaving(false);
     }
@@ -155,7 +156,7 @@ export default function EventsPage() {
       const response = await eventsApi.attendees(event.id);
       setAttendees(response.attendees);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load attendees");
+      setError(normalizeApiError(err, "Failed to load attendees"));
     }
   }
 

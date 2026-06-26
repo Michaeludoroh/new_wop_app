@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { clipsApi } from "../../../lib/clips/api-client";
 import { Clip, ClipPayload } from "../../../lib/clips/types";
 
@@ -29,6 +30,7 @@ export default function ClipsPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
@@ -50,7 +52,7 @@ export default function ClipsPage() {
       setClips(response.data);
       setTotal(response.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load clips");
+      setError(normalizeApiError(err, "Failed to load clips"));
     } finally {
       setLoading(false);
     }
@@ -98,6 +100,34 @@ export default function ClipsPage() {
     };
   }
 
+  async function handleMediaUpload(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await clipsApi.uploadMedia(file);
+      setForm((current) => ({ ...current, videoUrl: result.url }));
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to upload clip media"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleThumbnailUpload(file: File | undefined) {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await clipsApi.uploadThumbnail(file);
+      setForm((current) => ({ ...current, thumbnailUrl: result.url }));
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to upload thumbnail"));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function saveClip(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
@@ -111,7 +141,7 @@ export default function ClipsPage() {
       resetForm();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save clip");
+      setError(normalizeApiError(err, "Failed to save clip"));
     } finally {
       setSaving(false);
     }
@@ -153,7 +183,9 @@ export default function ClipsPage() {
             <input required placeholder="Title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
             <textarea placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
             <input required placeholder="Video URL" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
+            <input type="file" accept="video/*" disabled={uploading} onChange={(event) => void handleMediaUpload(event.target.files?.[0])} />
             <input placeholder="Thumbnail URL" value={form.thumbnailUrl} onChange={(event) => setForm({ ...form, thumbnailUrl: event.target.value })} />
+            <input type="file" accept="image/*" disabled={uploading} onChange={(event) => void handleThumbnailUpload(event.target.files?.[0])} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
               <input placeholder="Category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
               <input placeholder="Speaker / presenter" value={form.speaker} onChange={(event) => setForm({ ...form, speaker: event.target.value })} />

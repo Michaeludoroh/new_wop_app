@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { subscriptionsApi } from "../../../lib/subscriptions/api-client";
-import { SubscriberItem, SubscriptionAnalytics } from "../../../lib/subscriptions/types";
+import { SubscriberItem, SubscriptionAnalytics, SubscriptionHistoryItem, SubscriptionPlan } from "../../../lib/subscriptions/types";
 
 const STATUS_OPTIONS = ["", "ACTIVE", "GRACE", "PENDING", "CANCELLED", "EXPIRED"];
 
@@ -17,6 +18,16 @@ export default function SubscriptionsPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [selected, setSelected] = useState<SubscriberItem | null>(null);
+  const [history, setHistory] = useState<SubscriptionHistoryItem[]>([]);
+  const [planForm, setPlanForm] = useState({
+    code: "",
+    name: "",
+    amount: "0",
+    currency: "USD",
+    billingInterval: "MONTHLY"
+  });
 
   const query = useMemo(
     () => ({
@@ -33,15 +44,17 @@ export default function SubscriptionsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [listResponse, analyticsResponse] = await Promise.all([
+      const [listResponse, analyticsResponse, plansResponse] = await Promise.all([
         subscriptionsApi.list(query),
-        subscriptionsApi.analytics()
+        subscriptionsApi.analytics(),
+        subscriptionsApi.listPlans()
       ]);
       setSubscribers(listResponse.data);
       setTotal(listResponse.total);
       setAnalytics(analyticsResponse);
+      setPlans(plansResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load subscriptions");
+      setError(normalizeApiError(err, "Failed to load subscriptions"));
     } finally {
       setLoading(false);
     }
@@ -57,21 +70,69 @@ export default function SubscriptionsPage() {
       await subscriptionsApi.processLifecycle();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Lifecycle processing failed");
+      setError(normalizeApiError(err, "Lifecycle processing failed"));
     } finally {
       setProcessing(false);
     }
   }
 
   async function setSubscriberStatus(subscriber: SubscriberItem, nextStatus: SubscriberItem["status"]) {
-    await subscriptionsApi.updateStatus(subscriber.id, nextStatus, `Updated from admin dashboard`);
-    await refresh();
+    try {
+      await subscriptionsApi.updateStatus(subscriber.id, nextStatus, `Updated from admin dashboard`);
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to update subscriber status"));
+    }
   }
 
   async function cancelSubscriber(subscriber: SubscriberItem) {
     if (!window.confirm(`Cancel subscription for ${subscriber.user?.email ?? subscriber.userId}?`)) return;
-    await subscriptionsApi.cancel(subscriber.id, true, "Cancelled by administrator");
-    await refresh();
+    try {
+      await subscriptionsApi.cancel(subscriber.id, true, "Cancelled by administrator");
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to cancel subscription"));
+    }
+  }
+
+  async function openSubscriber(subscriber: SubscriberItem) {
+    try {
+      const [detail, statusHistory] = await Promise.all([
+        subscriptionsApi.getById(subscriber.id),
+        subscriptionsApi.getHistory(subscriber.id)
+      ]);
+      setSelected(detail);
+      setHistory(statusHistory);
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to load subscriber details"));
+    }
+  }
+
+  async function createPlan() {
+    try {
+      await subscriptionsApi.createPlan({
+        code: planForm.code.trim().toUpperCase(),
+        name: planForm.name.trim(),
+        amount: Number(planForm.amount),
+        currency: planForm.currency.trim().toUpperCase(),
+        billingInterval: planForm.billingInterval,
+        isActive: true,
+        recurringEnabled: true
+      });
+      setPlanForm({ code: "", name: "", amount: "0", currency: "USD", billingInterval: "MONTHLY" });
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to create subscription plan"));
+    }
+  }
+
+  async function deactivatePlan(plan: SubscriptionPlan) {
+    try {
+      await subscriptionsApi.updatePlan(plan.id, { isActive: false });
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to deactivate plan"));
+    }
   }
 
   return (
@@ -114,6 +175,75 @@ export default function SubscriptionsPage() {
             </div>
           </section>
         ) : null}
+
+        <section>
+          <h2>Subscription plans</h2>
+          <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                placeholder="Plan code"
+                value={planForm.code}
+                onChange={(e) => setPlanForm((current) => ({ ...current, code: e.target.value }))}
+              />
+              <input
+                placeholder="Plan name"
+                value={planForm.name}
+                onChange={(e) => setPlanForm((current) => ({ ...current, name: e.target.value }))}
+              />
+              <input
+                placeholder="Amount"
+                value={planForm.amount}
+                onChange={(e) => setPlanForm((current) => ({ ...current, amount: e.target.value }))}
+              />
+              <input
+                placeholder="Currency"
+                value={planForm.currency}
+                onChange={(e) => setPlanForm((current) => ({ ...current, currency: e.target.value }))}
+              />
+              <select
+                value={planForm.billingInterval}
+                onChange={(e) => setPlanForm((current) => ({ ...current, billingInterval: e.target.value }))}
+              >
+                <option value="MONTHLY">Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+                <option value="YEARLY">Yearly</option>
+              </select>
+              <button type="button" onClick={() => void createPlan()}>Create plan</button>
+            </div>
+            {plans.length === 0 ? (
+              <p>No subscription plans configured.</p>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr>
+                    <th align="left">Code</th>
+                    <th align="left">Name</th>
+                    <th align="left">Amount</th>
+                    <th align="left">Interval</th>
+                    <th align="left">Active</th>
+                    <th align="left">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {plans.map((plan) => (
+                    <tr key={plan.id}>
+                      <td>{plan.code}</td>
+                      <td>{plan.name}</td>
+                      <td>{plan.amount}</td>
+                      <td>{plan.billingInterval}</td>
+                      <td>{plan.isActive === false ? "No" : "Yes"}</td>
+                      <td>
+                        {plan.isActive !== false ? (
+                          <button type="button" onClick={() => void deactivatePlan(plan)}>Deactivate</button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
 
         <section>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -161,6 +291,7 @@ export default function SubscriptionsPage() {
                     <td>{subscriber.currentPeriodEnd ? new Date(subscriber.currentPeriodEnd).toLocaleString() : "—"}</td>
                     <td>{subscriber.graceEndsAt ? new Date(subscriber.graceEndsAt).toLocaleString() : "—"}</td>
                     <td>
+                      <button type="button" onClick={() => void openSubscriber(subscriber)}>View</button>{" "}
                       {subscriber.status !== "ACTIVE" ? (
                         <button type="button" onClick={() => void setSubscriberStatus(subscriber, "ACTIVE")}>Activate</button>
                       ) : null}{" "}
@@ -175,6 +306,29 @@ export default function SubscriptionsPage() {
             </table>
           )}
         </section>
+
+        {selected ? (
+          <section>
+            <h2>Subscriber detail</h2>
+            <p><strong>User:</strong> {selected.user?.fullName ?? selected.user?.email ?? selected.userId}</p>
+            <p><strong>Status:</strong> {selected.status}</p>
+            <p><strong>Plan:</strong> {selected.plan?.name ?? selected.plan?.code ?? "—"}</p>
+            <p><strong>Period:</strong> {selected.currentPeriodStart ? new Date(selected.currentPeriodStart).toLocaleString() : "—"} → {selected.currentPeriodEnd ? new Date(selected.currentPeriodEnd).toLocaleString() : "—"}</p>
+            <h3>Status history</h3>
+            {history.length === 0 ? (
+              <p>No status transitions recorded.</p>
+            ) : (
+              <ul>
+                {history.map((entry) => (
+                  <li key={entry.id}>
+                    {entry.fromStatus ?? "NEW"} → {entry.toStatus}
+                    {entry.reason ? ` (${entry.reason})` : ""} — {new Date(entry.createdAt).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
       </div>
     </ProtectedModule>
   );

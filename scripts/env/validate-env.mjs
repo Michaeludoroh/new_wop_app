@@ -18,8 +18,8 @@ const TARGETS = {
       'JWT_REFRESH_EXPIRES_IN',
     ],
     requiredByMode: {
-      production: ['CORS_ORIGIN'],
-      staging: ['CORS_ORIGIN'],
+      production: ['CORS_ORIGIN', 'CONTENT_ACCESS_SECRET', 'METRICS_AUTH_TOKEN', 'API_PUBLIC_URL'],
+      staging: ['CORS_ORIGIN', 'CONTENT_ACCESS_SECRET', 'METRICS_AUTH_TOKEN', 'API_PUBLIC_URL'],
     },
     optionalBoolean: ['REDIS_ADAPTER_ENABLED', 'WEBSOCKET_ONLY_MODE'],
     obsolete: ['JWT_SECRET', 'JWT_EXPIRES_IN'],

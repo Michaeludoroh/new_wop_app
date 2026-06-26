@@ -1,14 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EmailHealthController } from './email-health.controller';
+import { EmailReadinessService } from './email-readiness.service';
 import { EmailService } from './email.service';
 import { EmailTemplateService } from './email-template.service';
 import { MockSmtpProvider } from './mock-smtp.provider';
 import { SmtpEmailProvider } from './smtp-email.provider';
 
 @Module({
+  controllers: [EmailHealthController],
   providers: [
     EmailService,
     EmailTemplateService,
+    EmailReadinessService,
     MockSmtpProvider,
     SmtpEmailProvider,
     {
@@ -24,6 +28,6 @@ import { SmtpEmailProvider } from './smtp-email.provider';
       },
     },
   ],
-  exports: [EmailService, EmailTemplateService],
+  exports: [EmailService, EmailTemplateService, EmailReadinessService],
 })
 export class EmailModule {}

@@ -47,7 +47,7 @@ class _EventsScreenState extends State<EventsScreen> {
     });
 
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<EventListResponse>([
         _service.getEvents(
           search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
           category: _category.isEmpty ? null : _category,
@@ -55,10 +55,19 @@ class _EventsScreenState extends State<EventsScreen> {
         ),
         _service.getFeaturedEvents(limit: 8),
       ]);
+
+      Map<String, String?> rsvpStatuses = {};
+      try {
+        final myRsvps = await _service.getMyRsvps();
+        rsvpStatuses = myRsvps.asStatusMap();
+      } catch (_) {
+        rsvpStatuses = {};
+      }
+
       if (!mounted) return;
       setState(() {
-        _events = results[0];
-        _featured = results[1];
+        _events = results[0].withRsvpStatuses(rsvpStatuses);
+        _featured = results[1].withRsvpStatuses(rsvpStatuses);
       });
     } catch (_) {
       if (!mounted) return;
@@ -68,8 +77,13 @@ class _EventsScreenState extends State<EventsScreen> {
     }
   }
 
-  void _openDetails(EventItem event) {
-    Navigator.of(context).pushNamed(EventDetailsScreen.routeName, arguments: event.slug.isEmpty ? event.id : event.slug);
+  Future<void> _openDetails(EventItem event) async {
+    await Navigator.of(context).pushNamed(
+      EventDetailsScreen.routeName,
+      arguments: event.slug.isEmpty ? event.id : event.slug,
+    );
+    if (!mounted) return;
+    await _load();
   }
 
   @override
@@ -209,7 +223,11 @@ class _EventCard extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              trailing: event.featured ? const Icon(Icons.star) : null,
+              trailing: event.isRsvped
+                  ? const Icon(Icons.event_available, color: AppColors.success)
+                  : event.featured
+                      ? const Icon(Icons.star)
+                      : null,
             ),
           ],
         ),
