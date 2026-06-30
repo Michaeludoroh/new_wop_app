@@ -33,6 +33,14 @@ import { SubscriberQueryDto } from './dto/subscriber-query.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
+import {
+  buildSubscriptionSummary,
+  DEFAULT_PREMIUM_PLAN_CODE,
+  hasPremiumAccess,
+  isTrialActive,
+  REGISTRATION_TRIAL_DAYS,
+  trialDaysRemaining,
+} from './subscription-access.util';
 
 
 
@@ -534,13 +542,129 @@ export class SubscriptionsService {
 
     if (!subscription) {
 
-      return { data: null };
+      return {
+
+        data: null,
+
+        summary: buildSubscriptionSummary(null),
+
+      };
 
     }
 
 
 
-    return { data: this.toSubscriptionResponse(subscription) };
+    const response = this.toSubscriptionResponse(subscription);
+
+    return {
+
+      data: response,
+
+      summary: buildSubscriptionSummary(subscription),
+
+    };
+
+  }
+
+
+
+  async initializeRegistrationTrial(userId: string) {
+
+    const existing = await this.prisma.userSubscription.findFirst({
+
+      where: { userId },
+
+      select: { id: true },
+
+    });
+
+    if (existing) {
+
+      return null;
+
+    }
+
+
+
+    const plan = await this.prisma.subscriptionPlan.findUnique({
+
+      where: { code: DEFAULT_PREMIUM_PLAN_CODE },
+
+    });
+
+    if (!plan || !plan.isActive) {
+
+      return null;
+
+    }
+
+
+
+    const now = new Date();
+
+    const trialEndsAt = new Date(
+
+      now.getTime() + REGISTRATION_TRIAL_DAYS * 24 * 60 * 60 * 1000,
+
+    );
+
+
+
+    const created = await this.prisma.$transaction(async (tx) => {
+
+      const subscription = await tx.userSubscription.create({
+
+        data: {
+
+          userId,
+
+          planId: plan.id,
+
+          status: SubscriptionStatus.PENDING,
+
+          trialStartedAt: now,
+
+          trialEndsAt,
+
+          metadata: {
+
+            isRegistrationTrial: true,
+
+            purpose: 'REGISTRATION_TRIAL',
+
+            planCode: plan.code,
+
+          },
+
+        },
+
+      });
+
+
+
+      await this.lifecycleService.recordStatusChange(tx, {
+
+        subscriptionId: subscription.id,
+
+        userId,
+
+        fromStatus: null,
+
+        toStatus: SubscriptionStatus.PENDING,
+
+        reason: '7-day registration trial started',
+
+      });
+
+
+
+      return subscription;
+
+    });
+
+
+
+    return created;
 
   }
 
@@ -882,13 +1006,7 @@ export class SubscriptionsService {
 
     const subscription = await this.prisma.userSubscription.findFirst({
 
-      where: {
-
-        userId,
-
-        status: { in: PREMIUM_ACCESS_STATUSES },
-
-      },
+      where: { userId },
 
       orderBy: [{ createdAt: 'desc' }],
 
@@ -896,31 +1014,7 @@ export class SubscriptionsService {
 
 
 
-    if (!subscription) {
-
-      return false;
-
-    }
-
-
-
-    if (
-
-      subscription.status === SubscriptionStatus.GRACE &&
-
-      subscription.graceEndsAt &&
-
-      subscription.graceEndsAt.getTime() < Date.now()
-
-    ) {
-
-      return false;
-
-    }
-
-
-
-    return true;
+    return hasPremiumAccess(subscription);
 
   }
 
@@ -992,9 +1086,13 @@ export class SubscriptionsService {
 
   ) {
 
-    const hasPremiumAccess = PREMIUM_ACCESS_STATUSES.includes(subscription.status);
+    const hasPremiumAccessFlag = hasPremiumAccess(subscription);
 
     const isGracePeriod = subscription.status === SubscriptionStatus.GRACE;
+
+    const trialActive = isTrialActive(subscription);
+
+    const daysRemaining = trialDaysRemaining(subscription);
 
     const daysRemainingInGrace =
 
@@ -1032,7 +1130,17 @@ export class SubscriptionsService {
 
       access: {
 
-        hasPremiumAccess,
+        hasPremiumAccess: hasPremiumAccessFlag,
+
+        isTrial: trialActive,
+
+        trialEndsAt: subscription.trialEndsAt,
+
+        daysRemaining,
+
+        isSubscribed: PREMIUM_ACCESS_STATUSES.includes(subscription.status),
+
+        subscriptionRequired: !hasPremiumAccessFlag,
 
         isGracePeriod,
 

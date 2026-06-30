@@ -29,6 +29,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 
 import { ContentAccessService } from '../subscriptions/content-access.service';
+import { hasPremiumAccess } from '../subscriptions/subscription-access.util';
 
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -800,11 +801,7 @@ export class EbooksService {
 
     if (!purchase && !activeSubscription) {
 
-      throw new ForbiddenException(
-
-        'Subscribe or purchase this eBook to gain access.',
-
-      );
+      throw new ForbiddenException({ message: 'Subscription required' });
 
     }
 
@@ -1422,13 +1419,7 @@ export class EbooksService {
 
     const subscription = await this.prisma.userSubscription.findFirst({
 
-      where: {
-
-        userId,
-
-        status: { in: [SubscriptionStatus.ACTIVE, SubscriptionStatus.GRACE] },
-
-      },
+      where: { userId },
 
       orderBy: [{ createdAt: 'desc' }],
 
@@ -1436,23 +1427,7 @@ export class EbooksService {
 
 
 
-    if (!subscription) {
-
-      return null;
-
-    }
-
-
-
-    if (
-
-      subscription.status === SubscriptionStatus.GRACE &&
-
-      subscription.graceEndsAt &&
-
-      subscription.graceEndsAt.getTime() < Date.now()
-
-    ) {
+    if (!hasPremiumAccess(subscription)) {
 
       return null;
 

@@ -1,4 +1,4 @@
-# Store Listing Metadata — WOP
+# Store Listing Metadata — WOPP
 
 Prepared for Google Play Store and Apple App Store submission.
 
@@ -6,7 +6,7 @@ Prepared for Google Play Store and Apple App Store submission.
 
 ## App Name
 
-**WOP**
+**WOPP**
 
 ---
 
@@ -30,11 +30,11 @@ Faith community & empowerment
 
 ## Full Description
 
-**WOP** is the official mobile app for **Men and Women of Passion and Purpose** — a vibrant faith-based community built to connect, equip, and empower believers to live with passion and purpose every day.
+**WOPP** is the official mobile app for **Men and Women of Passion and Purpose** — a vibrant faith-based community built to connect, equip, and empower believers to live with passion and purpose every day.
 
-Stay connected to your ministry wherever you are. WOP brings announcements, events, programs, mentorship, and digital resources together in one beautifully designed experience.
+Stay connected to your ministry wherever you are. WOPP brings announcements, events, programs, mentorship, and digital resources together in one beautifully designed experience.
 
-### What you can do with WOP
+### What you can do with WOPP
 
 **Stay Informed**
 - Receive timely announcements and ministry updates
@@ -70,9 +70,9 @@ Stay connected to your ministry wherever you are. WOP brings announcements, even
 - Understand content sharing rules before participating
 
 **Built for Community**
-WOP is designed for members, leaders, and administrators who want a secure, modern platform for ministry engagement — not just another social app, but a purpose-driven community hub.
+WOPP is designed for members, leaders, and administrators who want a secure, modern platform for ministry engagement — not just another social app, but a purpose-driven community hub.
 
-Join **Men and Women of Passion and Purpose** on WOP and stay connected to what God is doing in your community.
+Join **Men and Women of Passion and Purpose** on WOPP and stay connected to what God is doing in your community.
 
 ---
 
@@ -114,7 +114,7 @@ faith,church,ministry,community,Christian,mentorship,events,sermons,devotional,b
 - church mobile app
 - ministry platform
 - men and women of passion and purpose
-- WOP ministry
+- WOPP ministry
 - church announcements
 - Christian events
 - mentorship program
@@ -147,7 +147,7 @@ Connect with Men and Women of Passion and Purpose. Get announcements, join event
 
 ## What's New (Template)
 
-Welcome to WOP! This release includes announcements, events, programs, mentorship, clips, digital library access, subscriptions, and push notifications — your complete ministry community hub.
+Welcome to WOPP! This release includes announcements, events, programs, mentorship, clips, digital library access, subscriptions, and push notifications — your complete ministry community hub.
 
 ---
 

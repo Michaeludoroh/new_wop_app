@@ -37,9 +37,14 @@ function createLifecycleService(overrides?: {
     }),
   };
 
+  const trialNotificationService = {
+    processTrialReminders: jest.fn().mockResolvedValue({ sent: 0 }),
+  };
+
   const service = new SubscriptionLifecycleService(
     prismaMock as never,
     paymentProviderRegistry as never,
+    trialNotificationService as never,
   );
   return { service, prisma: prismaMock, paymentProviderRegistry };
 }
@@ -61,6 +66,56 @@ describe('SubscriptionLifecycleService', () => {
         data: expect.objectContaining({
           subscriptionId: 'sub_1',
           toStatus: SubscriptionStatus.GRACE,
+        }),
+      }),
+    );
+  });
+
+  it('expires registration trials without payment', async () => {
+    const expiredTrial = {
+      id: 'sub_trial_1',
+      userId: 'user_1',
+      status: SubscriptionStatus.PENDING,
+      trialEndsAt: new Date(Date.now() - 60_000),
+      metadata: { isRegistrationTrial: true },
+    };
+
+    const prismaMock: any = {
+      userSubscription: {
+        findMany: jest.fn(async (args: { where?: { status?: SubscriptionStatus; trialEndsAt?: unknown; nextRetryAt?: unknown } }) => {
+          if (args?.where?.status === SubscriptionStatus.PENDING && args?.where?.trialEndsAt) {
+            return [expiredTrial];
+          }
+          if (args?.where?.nextRetryAt) {
+            return [];
+          }
+          return [];
+        }),
+        update: jest.fn(),
+      },
+      subscriptionStatusHistory: {
+        create: jest.fn(),
+      },
+    };
+    prismaMock.$transaction = jest.fn(async (callback: any) => callback(prismaMock));
+
+    const trialNotificationService = {
+      processTrialReminders: jest.fn().mockResolvedValue({ sent: 0 }),
+    };
+
+    const service = new SubscriptionLifecycleService(
+      prismaMock as never,
+      { resolve: jest.fn() } as never,
+      trialNotificationService as never,
+    );
+
+    const result = await service.processDueLifecycleEvents();
+
+    expect(result.processed).toBe(1);
+    expect(prismaMock.userSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: SubscriptionStatus.EXPIRED,
         }),
       }),
     );

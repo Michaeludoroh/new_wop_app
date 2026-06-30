@@ -18,6 +18,7 @@ import { memoryStorage } from 'multer';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { RequirePremium } from '../subscriptions/decorators/require-premium.decorator';
 import { CreateEbookDto } from './dto/create-ebook.dto';
 import { EbookQueryDto } from './dto/ebook-query.dto';
 import { ReadingProgressDto } from './dto/reading-progress.dto';
@@ -53,6 +54,7 @@ export class EbooksController {
   }
 
   @Roles('ADMIN', 'USER', 'MODERATOR')
+  @RequirePremium()
   @Get('library')
   library(@Req() req: AuthRequest) {
     return this.service.listUserLibrary(req.user.sub);

@@ -205,6 +205,27 @@ export default function UsersPage() {
                     {selected.subscription?.status ?? "NONE"}
                   </div>
                 </div>
+                {selected.subscription ? (
+                  <>
+                    <div>
+                      <div style={{ fontSize: 13, color: "#667085" }}>Trial</div>
+                      <div>
+                        {selected.subscription.trialActive ? "Active" : "Inactive"}
+                        {selected.subscription.trialEndsAt
+                          ? ` · ends ${selected.subscription.trialEndsAt}`
+                          : ""}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, color: "#667085" }}>Subscription expiry</div>
+                      <div>{selected.subscription.subscriptionEndsAt ?? "Not set"}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, color: "#667085" }}>Last payment</div>
+                      <div>{selected.subscription.lastPaymentAt ?? "None"}</div>
+                    </div>
+                  </>
+                ) : null}
                 <div>
                   <div style={{ fontSize: 13, color: "#667085" }}>Last login</div>
                   <div>{selected.lastLoginAt ?? "Never"}</div>

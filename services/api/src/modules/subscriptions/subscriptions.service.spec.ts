@@ -85,4 +85,54 @@ describe('SubscriptionsService premium access helper', () => {
 
     await expect(service.userHasPremiumAccess('user_1')).resolves.toBe(false);
   });
+
+  it('grants premium access during an active registration trial', async () => {
+    const { service, prisma } = createService();
+    prisma.userSubscription.findFirst.mockResolvedValue({
+      status: SubscriptionStatus.PENDING,
+      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      metadata: { isRegistrationTrial: true },
+    });
+
+    await expect(service.userHasPremiumAccess('user_1')).resolves.toBe(true);
+  });
+
+  it('initializes a 7-day registration trial for new users', async () => {
+    const { service, prisma } = createService();
+    prisma.userSubscription.findFirst.mockResolvedValueOnce(null);
+    prisma.subscriptionPlan.findUnique.mockResolvedValue({
+      id: 'plan_premium',
+      code: 'PREMIUM',
+      isActive: true,
+    });
+    prisma.userSubscription.create.mockResolvedValue({
+      id: 'sub_trial',
+      userId: 'user_new',
+      status: SubscriptionStatus.PENDING,
+    });
+
+    const result = await service.initializeRegistrationTrial('user_new');
+
+    expect(result).toEqual(expect.objectContaining({ id: 'sub_trial' }));
+    expect(prisma.userSubscription.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 'user_new',
+          status: SubscriptionStatus.PENDING,
+          trialStartedAt: expect.any(Date),
+          trialEndsAt: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it('does not create duplicate registration trials', async () => {
+    const { service, prisma } = createService();
+    prisma.userSubscription.findFirst.mockResolvedValue({ id: 'existing_sub' });
+
+    const result = await service.initializeRegistrationTrial('user_existing');
+
+    expect(result).toBeNull();
+    expect(prisma.userSubscription.create).not.toHaveBeenCalled();
+  });
 });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_constants.dart';
 import 'about_screen.dart';
 import 'announcements_screen.dart';
 import 'mentorship_screen.dart';
@@ -66,7 +67,7 @@ class MoreScreen extends StatelessWidget {
   /// App information and credits.
   static const List<MoreMenuItem> appItems = [
     MoreMenuItem(
-      title: 'About WOP',
+      title: AppConstants.aboutTitle,
       subtitle: 'App info, credits, and version',
       icon: Icons.info_outline,
       routeName: AboutScreen.routeName,

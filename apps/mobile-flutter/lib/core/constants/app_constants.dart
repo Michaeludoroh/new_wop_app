@@ -2,7 +2,17 @@
 ///
 /// Keep [appVersion] and [buildNumber] in sync with `pubspec.yaml` (`version: x.y.z+build`).
 abstract final class AppConstants {
-  static const appName = 'WOP';
+  static const appName = 'WOPP';
+
+  /// Full product name used when referring to the mobile app on web and marketing copy.
+  static const appProductName = 'WOPP App';
+
+  /// Mobile app acronym expansion (ministry website name remains [organizationName]).
+  static const appAcronymExpansion = 'Women of Passion and Purpose';
+
+  static const aboutTitle = 'About $appName';
+
+  static const logoSemanticLabel = '$appName logo';
 
   static const organizationName = 'Men and Women of Passion and Purpose';
 

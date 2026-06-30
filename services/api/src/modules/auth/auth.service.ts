@@ -6,6 +6,7 @@ import { AppRole } from './auth.types';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     private readonly emailTemplateService: EmailTemplateService,
+    private readonly subscriptionsService: SubscriptionsService,
   ) {}
 
   async register(dto: RegisterDto, metadata?: SessionMetadata) {
@@ -51,6 +53,8 @@ export class AuthService {
         role: Role.USER,
       },
     });
+
+    await this.subscriptionsService.initializeRegistrationTrial(user.id).catch(() => undefined);
 
     const tokens = await this.issueTokens(user);
     await this.storeRefreshToken(user.id, tokens.refreshToken, metadata);

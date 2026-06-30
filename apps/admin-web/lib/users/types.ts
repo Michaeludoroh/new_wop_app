@@ -13,6 +13,10 @@ export type AdminUser = {
     status: string;
     planCode: string | null;
     planName: string | null;
+    trialActive?: boolean;
+    trialEndsAt?: string | null;
+    subscriptionEndsAt?: string | null;
+    lastPaymentAt?: string | null;
   } | null;
 };
 

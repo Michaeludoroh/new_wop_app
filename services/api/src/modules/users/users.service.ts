@@ -48,9 +48,18 @@ export class UsersService {
     },
     subscription?: {
       status: SubscriptionStatus;
+      trialStartedAt?: Date | null;
+      trialEndsAt?: Date | null;
+      currentPeriodEnd?: Date | null;
+      lastPaymentAt?: Date | null;
       plan?: { code: string; name: string } | null;
     } | null,
   ) {
+    const trialActive =
+      subscription?.trialEndsAt != null &&
+      subscription.trialEndsAt.getTime() > Date.now() &&
+      subscription.status === SubscriptionStatus.PENDING;
+
     return {
       id: user.id,
       email: user.email,
@@ -65,6 +74,10 @@ export class UsersService {
             status: subscription.status,
             planCode: subscription.plan?.code ?? null,
             planName: subscription.plan?.name ?? null,
+            trialActive,
+            trialEndsAt: subscription.trialEndsAt,
+            subscriptionEndsAt: subscription.currentPeriodEnd,
+            lastPaymentAt: subscription.lastPaymentAt ?? null,
           }
         : null,
     };

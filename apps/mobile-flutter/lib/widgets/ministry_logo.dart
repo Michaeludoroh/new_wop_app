@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_assets.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 
 /// Visual treatment for different logo placements.
@@ -21,7 +22,7 @@ class MinistryLogo extends StatelessWidget {
     super.key,
     this.height = 72,
     this.variant = MinistryLogoVariant.standard,
-    this.semanticLabel = 'WOP logo',
+    this.semanticLabel = AppConstants.logoSemanticLabel,
   });
 
   /// Logo height in logical pixels. Width scales with aspect ratio.

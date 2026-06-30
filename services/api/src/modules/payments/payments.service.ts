@@ -70,7 +70,12 @@ export class PaymentsService {
     });
 
     const created = await this.prisma.$transaction(async (tx) => {
-      if (active?.status === SubscriptionStatus.PENDING) {
+      const activeTrial =
+        active?.status === SubscriptionStatus.PENDING &&
+        active.trialEndsAt &&
+        active.trialEndsAt.getTime() > now.getTime();
+
+      if (active?.status === SubscriptionStatus.PENDING && !activeTrial) {
         await tx.userSubscription.update({
           where: { id: active.id },
           data: {
@@ -81,23 +86,41 @@ export class PaymentsService {
         });
       }
 
-      const subscription = await tx.userSubscription.create({
-        data: {
-          userId,
-          planId: plan.id,
-          status: SubscriptionStatus.PENDING,
-          startedAt: null,
-          currentPeriodStart: null,
-          currentPeriodEnd: null,
-          cancelAtPeriodEnd: dto.autoRenew === false,
-          upgradeFromId: active?.status === SubscriptionStatus.ACTIVE || active?.status === SubscriptionStatus.GRACE ? active.id : undefined,
-          metadata: {
-            purpose: 'SUBSCRIPTION',
-            planCode: plan.code,
-            provider: PaymentProvider.FLUTTERWAVE,
-          },
-        },
-      });
+      const subscription =
+        activeTrial && active
+          ? await tx.userSubscription.update({
+              where: { id: active.id },
+              data: {
+                planId: plan.id,
+                metadata: {
+                  ...(this.asRecord(active.metadata) as Record<string, unknown>),
+                  purpose: 'SUBSCRIPTION',
+                  planCode: plan.code,
+                  provider: PaymentProvider.FLUTTERWAVE,
+                } as Prisma.InputJsonValue,
+              },
+            })
+          : await tx.userSubscription.create({
+              data: {
+                userId,
+                planId: plan.id,
+                status: SubscriptionStatus.PENDING,
+                startedAt: null,
+                currentPeriodStart: null,
+                currentPeriodEnd: null,
+                cancelAtPeriodEnd: dto.autoRenew === false,
+                upgradeFromId:
+                  active?.status === SubscriptionStatus.ACTIVE ||
+                  active?.status === SubscriptionStatus.GRACE
+                    ? active.id
+                    : undefined,
+                metadata: {
+                  purpose: 'SUBSCRIPTION',
+                  planCode: plan.code,
+                  provider: PaymentProvider.FLUTTERWAVE,
+                },
+              },
+            });
 
       const transaction = await tx.paymentTransaction.create({
         data: {
@@ -852,6 +875,7 @@ export class PaymentsService {
             currentPeriodEnd: periodEnd,
             graceEndsAt: null,
             lastPaymentAttemptAt: now,
+            lastPaymentAt: now,
             metadata: verification.flutterwaveToken
               ? ({
                   ...this.asRecord(existingSubscription?.metadata),

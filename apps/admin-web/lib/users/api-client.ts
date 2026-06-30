@@ -21,7 +21,16 @@ function normalizeUser(raw: unknown): AdminUser {
           planCode:
             typeof subscription.planCode === "string" ? subscription.planCode : null,
           planName:
-            typeof subscription.planName === "string" ? subscription.planName : null
+            typeof subscription.planName === "string" ? subscription.planName : null,
+          trialActive: subscription.trialActive === true,
+          trialEndsAt:
+            typeof subscription.trialEndsAt === "string" ? subscription.trialEndsAt : null,
+          subscriptionEndsAt:
+            typeof subscription.subscriptionEndsAt === "string"
+              ? subscription.subscriptionEndsAt
+              : null,
+          lastPaymentAt:
+            typeof subscription.lastPaymentAt === "string" ? subscription.lastPaymentAt : null
         }
       : null
   };

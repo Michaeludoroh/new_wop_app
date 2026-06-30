@@ -17,6 +17,8 @@ import 'more_screen.dart';
 import 'profile_screen.dart';
 import '../core/policies/policy_acceptance_diagnostics.dart';
 import '../core/policies/policy_acceptance_gate.dart';
+import '../core/subscriptions/subscription_provider.dart';
+import '../widgets/trial_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
@@ -132,6 +134,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _notificationsProvider.refresh();
+      SubscriptionScope.maybeOf(context)?.refresh();
     }
   }
 
@@ -276,15 +279,23 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: KeyedSubtree(
-            key: ValueKey<int>(_selectedIndex),
-            child: _buildTabContent(
-              context: context,
-              userDisplayName: userDisplayName,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const TrialBanner(),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: KeyedSubtree(
+                  key: ValueKey<int>(_selectedIndex),
+                  child: _buildTabContent(
+                    context: context,
+                    userDisplayName: userDisplayName,
+                  ),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
       bottomNavigationBar: NavigationBar(

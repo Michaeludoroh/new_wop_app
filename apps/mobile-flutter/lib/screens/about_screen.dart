@@ -16,7 +16,7 @@ class AboutScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const MinistryAppBarTitle(title: 'About WOP'),
+        title: MinistryAppBarTitle(title: AppConstants.aboutTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),

@@ -101,6 +101,7 @@ model UserSubscription {
   upgradeFromId        String?
   downgradedFromId     String?
   lastPaymentAttemptAt DateTime?
+  lastPaymentAt        DateTime?
   nextRetryAt          DateTime?
   retryCount           Int                         @default(0)
   maxRetryCount        Int                         @default(3)

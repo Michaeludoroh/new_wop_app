@@ -13,6 +13,11 @@ class SubscriptionAccessModel {
     this.daysRemainingInGrace,
     required this.renewalDue,
     required this.cancelAtPeriodEnd,
+    this.isTrial = false,
+    this.trialEndsAt,
+    this.daysRemaining,
+    this.isSubscribed = false,
+    this.subscriptionRequired = false,
   });
 
   final bool hasPremiumAccess;
@@ -21,6 +26,11 @@ class SubscriptionAccessModel {
   final int? daysRemainingInGrace;
   final bool renewalDue;
   final bool cancelAtPeriodEnd;
+  final bool isTrial;
+  final DateTime? trialEndsAt;
+  final int? daysRemaining;
+  final bool isSubscribed;
+  final bool subscriptionRequired;
 
   factory SubscriptionAccessModel.fromJson(Map<String, dynamic>? json) {
     if (json == null) {
@@ -29,6 +39,7 @@ class SubscriptionAccessModel {
         isGracePeriod: false,
         renewalDue: false,
         cancelAtPeriodEnd: false,
+        subscriptionRequired: true,
       );
     }
     return SubscriptionAccessModel(
@@ -38,6 +49,11 @@ class SubscriptionAccessModel {
       daysRemainingInGrace: json['daysRemainingInGrace'] as int?,
       renewalDue: (json['renewalDue'] ?? false) as bool,
       cancelAtPeriodEnd: (json['cancelAtPeriodEnd'] ?? false) as bool,
+      isTrial: (json['isTrial'] ?? false) as bool,
+      trialEndsAt: _parseDate(json['trialEndsAt']),
+      daysRemaining: json['daysRemaining'] as int?,
+      isSubscribed: (json['isSubscribed'] ?? false) as bool,
+      subscriptionRequired: (json['subscriptionRequired'] ?? false) as bool,
     );
   }
 
@@ -72,6 +88,14 @@ class SubscriptionStatusModel {
   bool get isGracePeriod => access?.isGracePeriod ?? status.toUpperCase() == 'GRACE';
 
   bool get hasPremiumAccess => access?.hasPremiumAccess ?? isActive;
+
+  bool get isTrial => access?.isTrial ?? false;
+
+  bool get isSubscribed => access?.isSubscribed ?? isActive;
+
+  bool get subscriptionRequired => access?.subscriptionRequired ?? !hasPremiumAccess;
+
+  int? get trialDaysRemaining => access?.daysRemaining;
 
   factory SubscriptionStatusModel.fromJson(Map<String, dynamic> json) {
     final planValue = json['plan'];

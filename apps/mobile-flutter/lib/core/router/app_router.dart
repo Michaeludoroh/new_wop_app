@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_scope.dart';
 import '../auth/auth_state.dart';
+import '../../widgets/subscription_gate.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../screens/login_screen.dart';
 import '../../screens/forgot_password_screen.dart';
@@ -183,7 +184,7 @@ class AppRouter {
           case ContentSharingRulesScreen.routeName:
             return const ContentSharingRulesScreen();
           case EbookScreen.routeName:
-            return const EbookScreen();
+            return const SubscriptionGate(child: EbookScreen());
           case EbookDetailsScreen.routeName:
             final ebookId = settings.arguments as String?;
             if (ebookId == null || ebookId.isEmpty) {
@@ -191,9 +192,11 @@ class AppRouter {
                 body: Center(child: Text('Missing eBook ID')),
               );
             }
-            return EbookDetailsScreen(ebookId: ebookId);
+            return SubscriptionGate(
+              child: EbookDetailsScreen(ebookId: ebookId),
+            );
           case ClipsScreen.routeName:
-            return const ClipsScreen();
+            return const SubscriptionGate(child: ClipsScreen());
           case ClipDetailsScreen.routeName:
             final clipId = settings.arguments as String?;
             if (clipId == null || clipId.isEmpty) {
@@ -201,9 +204,11 @@ class AppRouter {
                 body: Center(child: Text('Missing clip ID')),
               );
             }
-            return ClipDetailsScreen(clipId: clipId);
+            return SubscriptionGate(
+              child: ClipDetailsScreen(clipId: clipId),
+            );
           case MyLibraryScreen.routeName:
-            return const MyLibraryScreen();
+            return const SubscriptionGate(child: MyLibraryScreen());
           case SubscriptionScreen.routeName:
             return const SubscriptionScreen();
           case AboutScreen.routeName:

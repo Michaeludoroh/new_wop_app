@@ -61,11 +61,12 @@ async function main() {
     },
     {
       code: 'PREMIUM',
-      name: 'Premium Monthly',
-      description: 'Full premium ministry access',
-      amount: '9.99',
-      currency: 'USD',
+      name: 'Premium Membership',
+      description: 'Full premium ministry access — ₦500/month after free trial',
+      amount: '500',
+      currency: 'NGN',
       billingInterval: 'MONTHLY',
+      trialPeriodDays: 7,
       isActive: true,
     },
     {
@@ -98,6 +99,7 @@ async function main() {
         currency: plan.currency,
         billingInterval: plan.billingInterval,
         isActive: plan.isActive,
+        ...('trialPeriodDays' in plan ? { trialPeriodDays: plan.trialPeriodDays } : {}),
       },
       create: {
         code: plan.code,
@@ -107,6 +109,7 @@ async function main() {
         currency: plan.currency,
         billingInterval: plan.billingInterval,
         isActive: plan.isActive,
+        ...('trialPeriodDays' in plan ? { trialPeriodDays: plan.trialPeriodDays } : {}),
       },
     });
   }

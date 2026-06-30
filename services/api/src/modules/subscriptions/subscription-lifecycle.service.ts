@@ -9,6 +9,7 @@ import {
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentProviderRegistry } from '../payments/providers/payment-provider.registry';
+import { TrialNotificationService } from './trial-notification.service';
 
 const DEFAULT_GRACE_DAYS = 7;
 const RETRY_WINDOW_MINUTES = 30;
@@ -19,6 +20,8 @@ export class SubscriptionLifecycleService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => PaymentProviderRegistry))
     private readonly paymentProviderRegistry: PaymentProviderRegistry,
+    @Inject(forwardRef(() => TrialNotificationService))
+    private readonly trialNotificationService: TrialNotificationService,
   ) {}
 
   async recordStatusChange(
@@ -81,12 +84,27 @@ export class SubscriptionLifecycleService {
     let processed = 0;
 
     for (const subscription of trialActivations) {
-      await this.transitionSubscription(subscription, SubscriptionStatus.ACTIVE, {
-        reason: 'Trial period completed',
-        startedAt: now,
-        currentPeriodStart: now,
-        currentPeriodEnd: this.calculatePeriodEnd(now, subscription.metadata),
-      });
+      const isRegistrationTrial =
+        subscription.metadata &&
+        typeof subscription.metadata === 'object' &&
+        !Array.isArray(subscription.metadata) &&
+        (subscription.metadata as Record<string, unknown>).isRegistrationTrial === true;
+
+      if (isRegistrationTrial) {
+        await this.transitionSubscription(subscription, SubscriptionStatus.EXPIRED, {
+          reason: 'Registration trial expired without payment',
+          cancelledAt: now,
+          graceEndsAt: null,
+          nextRetryAt: null,
+        });
+      } else {
+        await this.transitionSubscription(subscription, SubscriptionStatus.ACTIVE, {
+          reason: 'Trial period completed',
+          startedAt: now,
+          currentPeriodStart: now,
+          currentPeriodEnd: this.calculatePeriodEnd(now, subscription.metadata),
+        });
+      }
       processed += 1;
     }
 
@@ -290,8 +308,11 @@ export class SubscriptionLifecycleService {
       processed += 1;
     }
 
+    const trialNotifications = await this.trialNotificationService.processTrialReminders(now);
+
     return {
       processed,
+      trialNotifications,
       breakdown: {
         trialActivations: trialActivations.length,
         periodEndCancellations: periodEndCancellations.length,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ministry_mobile/core/constants/app_constants.dart';
 import 'package:ministry_mobile/screens/about_screen.dart';
 import 'package:ministry_mobile/screens/announcements_screen.dart';
 import 'package:ministry_mobile/screens/mentorship_screen.dart';
@@ -19,7 +20,7 @@ void main() {
     expect(find.text('Programs'), findsOneWidget);
     expect(find.text('Mentorship'), findsOneWidget);
     expect(find.text('Subscription'), findsOneWidget);
-    expect(find.text('About WOP'), findsOneWidget);
+    expect(find.text(AppConstants.aboutTitle), findsOneWidget);
   });
 
   testWidgets('MoreScreen navigates to about', (tester) async {
@@ -34,7 +35,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('About WOP'));
+    await tester.tap(find.text(AppConstants.aboutTitle));
     await tester.pumpAndSettle();
 
     expect(find.text('About Screen'), findsOneWidget);
