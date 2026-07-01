@@ -46,6 +46,10 @@ function createAuthService(overrides?: {
     }),
   };
 
+  const subscriptionsService = {
+    initializeRegistrationTrial: jest.fn().mockResolvedValue(null),
+  };
+
   const service = new AuthService(
     prisma as never,
     jwtService as never,
@@ -56,6 +60,7 @@ function createAuthService(overrides?: {
       passwordResetEmail: jest.fn(),
       buildPasswordResetUrl: jest.fn(),
     } as never,
+    subscriptionsService as never,
   );
 
   return { service, prisma };

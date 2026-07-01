@@ -42,15 +42,22 @@ describe('TrialNotificationService', () => {
   const now = new Date('2026-06-04T12:00:00.000Z');
 
   it('sends a 3-day trial reminder once', async () => {
-    const { service, prisma, pushService } = createService([
-      {
-        id: 'sub_1',
-        userId: 'user_1',
-        status: SubscriptionStatus.PENDING,
-        trialEndsAt: new Date('2026-06-07T12:00:00.000Z'),
-        metadata: { isRegistrationTrial: true },
-      },
-    ]);
+    const subscription = {
+      id: 'sub_1',
+      userId: 'user_1',
+      status: SubscriptionStatus.PENDING,
+      trialEndsAt: new Date('2026-06-07T12:00:00.000Z'),
+      metadata: { isRegistrationTrial: true },
+    };
+
+    const { service, prisma, pushService } = createService([subscription]);
+
+    prisma.userSubscription.update.mockImplementation(async ({ data }: { data: { metadata: Record<string, unknown> } }) => {
+      subscription.metadata = {
+        ...subscription.metadata,
+        ...data.metadata,
+      };
+    });
 
     const first = await service.processTrialReminders(now);
     const second = await service.processTrialReminders(now);
