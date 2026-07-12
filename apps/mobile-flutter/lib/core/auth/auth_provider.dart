@@ -5,6 +5,7 @@ import 'auth_state.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
 import '../notifications/services/firebase_messaging_service.dart';
+import '../logging/app_log.dart';
 import '../policies/policy_acceptance_diagnostics.dart';
 import '../policies/policy_acceptance_gate.dart';
 
@@ -267,7 +268,7 @@ class AuthProvider extends ChangeNotifier {
       await action();
       _setState(_state.copyWith(isBusy: false, clearError: true));
     } catch (e) {
-      debugPrint('AUTH_PROVIDER ERROR: $e');
+      AppLog.debug('AUTH_PROVIDER ERROR: $e');
 
       _setState(
         _state.copyWith(
@@ -280,8 +281,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _setAuthenticated(AuthUser user, {bool isBootstrapped = true}) {
-    debugPrint('AUTH STATE -> AUTHENTICATED');
-    debugPrint('USER -> ${user.email}');
+    AppLog.debug('AUTH STATE -> AUTHENTICATED');
+    AppLog.debug('USER -> ${user.email}');
     PolicyAcceptanceDiagnostics.log(
       'AuthProvider._setAuthenticated userId=${user.id} bootstrapped=$isBootstrapped',
     );
@@ -298,7 +299,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
  void _setState(AuthState newState) {
-  debugPrint(
+  AppLog.debug(
     'STATE CHANGE => '
     '${newState.status} '
     'bootstrapped=${newState.isBootstrapped} '

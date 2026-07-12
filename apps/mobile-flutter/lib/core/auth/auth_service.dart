@@ -1,13 +1,12 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+
+import '../config/api_config.dart';
+import '../logging/app_log.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
 
 class AuthApiConfig {
-  static const String baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3000/api/v1',
-  );
+  static String get baseUrl => ApiConfig.apiBaseUrl;
 
   static const String loginPath = '/auth/login';
   static const String registerPath = '/auth/register';
@@ -51,14 +50,14 @@ class AuthService {
   }
 
   Future<AuthSession> register(RegisterRequest request) async {
-    debugPrint('REGISTER REQUEST: ${request.toJson()}');
+    AppLog.debug('REGISTER REQUEST: ${request.toJson()}');
 
     final response = await _dio.post<dynamic>(
       AuthApiConfig.registerPath,
       data: request.toJson(),
     );
 
-    debugPrint('REGISTER RESPONSE: ${response.data}');
+    AppLog.debug('REGISTER RESPONSE: ${response.data}');
 
     final session = _parseSession(response.data);
     await _persistTokens(session.tokens);

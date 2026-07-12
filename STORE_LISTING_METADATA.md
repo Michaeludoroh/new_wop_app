@@ -157,9 +157,9 @@ Welcome to WOPP! This release includes announcements, events, programs, mentorsh
 
 | Field | Placeholder |
 |-------|-------------|
-| Privacy Policy URL | `https://your-domain.com/privacy` |
-| Terms of Use URL | `https://your-domain.com/terms` |
-| Support Email | `support@your-domain.com` |
+| Privacy Policy URL | `https://api.example.com/api/v1/policies/public/current/PRIVACY_POLICY` |
+| Terms of Use URL | `https://api.example.com/api/v1/policies/public/current/TERMS_OF_USE` |
+| Support Email | `support@wopp.org` |
 | Marketing URL | `https://your-domain.com` |
 
 ---

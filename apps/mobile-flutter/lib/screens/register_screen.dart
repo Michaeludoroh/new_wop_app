@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/auth/auth_scope.dart';
 import '../core/auth/models/auth_models.dart';
 import '../core/constants/app_constants.dart';
+import '../core/logging/app_log.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_logo.dart';
@@ -54,7 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('REGISTER ERROR: $e');
+      AppLog.debug('REGISTER ERROR: $e');
 
       if (!mounted) return;
 

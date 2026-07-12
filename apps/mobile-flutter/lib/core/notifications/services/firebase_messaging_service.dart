@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../logging/app_log.dart';
 import '../../auth/auth_service.dart';
 import '../../auth/token_storage_service.dart';
 import '../../firebase/firebase_bootstrap.dart';
@@ -79,13 +80,13 @@ class FirebaseMessagingService {
 
     await FirebaseBootstrap.initialize();
     if (!FirebaseBootstrap.isConfigured) {
-      debugPrint('FCM initialization skipped: Firebase is not configured.');
+      AppLog.debug('FCM initialization skipped: Firebase is not configured.');
       return;
     }
 
     final messaging = _messaging;
     if (messaging == null) {
-      debugPrint('FCM initialization skipped: messaging unavailable.');
+      AppLog.debug('FCM initialization skipped: messaging unavailable.');
       return;
     }
 
@@ -119,7 +120,7 @@ class FirebaseMessagingService {
       if (token == null || token.isEmpty) return;
       await _registerToken(token);
     } catch (error) {
-      debugPrint('FCM token registration skipped: $error');
+      AppLog.debug('FCM token registration skipped: $error');
     }
   }
 
@@ -130,7 +131,7 @@ class FirebaseMessagingService {
       await _authorizedPost('/push/device-token/revoke', {'token': token});
       _registeredToken = null;
     } catch (error) {
-      debugPrint('FCM token revocation failed: $error');
+      AppLog.debug('FCM token revocation failed: $error');
     }
   }
 

@@ -4,6 +4,7 @@ import '../core/auth/auth_scope.dart';
 import '../core/policies/models/policy_models.dart';
 import '../core/users/users_service.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/store_legal_links.dart';
 import 'policy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -139,6 +140,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Legal & Support',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Card(
+            child: const StoreLegalLinks(),
           ),
         ],
       ),

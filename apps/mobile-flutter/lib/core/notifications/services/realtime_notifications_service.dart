@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+import '../../config/api_config.dart';
 import '../../auth/token_storage_service.dart';
 
 typedef RealtimeNotificationHandler = void Function(
@@ -76,12 +77,7 @@ class RealtimeNotificationsService {
     _socket = null;
   }
 
-  String _resolveRealtimeUrl() {
-    const env = String.fromEnvironment('API_BASE_URL',
-        defaultValue: 'http://10.0.2.2:3000/api/v1');
-    final trimmed = env.endsWith('/') ? env.substring(0, env.length - 1) : env;
-    return trimmed.replaceFirst(RegExp(r'/api/v\d+$'), '/realtime');
-  }
+  String _resolveRealtimeUrl() => ApiConfig.realtimeBaseUrl;
 
   Map<String, dynamic> parseEnvelope(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;

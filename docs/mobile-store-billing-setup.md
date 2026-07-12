@@ -27,7 +27,7 @@ Add these to the API `.env` (see root `.env.example`):
 
 ```env
 # Google Play
-GOOGLE_PLAY_PACKAGE_NAME=com.wopp.app
+GOOGLE_PLAY_PACKAGE_NAME=com.ministrymobile.app
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 MOBILE_ANDROID_PREMIUM_PRODUCT_ID=wopp_premium_monthly
 

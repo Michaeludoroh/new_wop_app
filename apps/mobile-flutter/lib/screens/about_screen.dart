@@ -4,6 +4,7 @@ import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_logo.dart';
+import '../widgets/store_legal_links.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -104,6 +105,23 @@ class AboutScreen extends StatelessWidget {
                   label: 'Build',
                   value: AppConstants.buildNumber,
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _BrandingCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Legal & Support',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: AppColors.primaryPurple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const StoreLegalLinks(),
               ],
             ),
           ),

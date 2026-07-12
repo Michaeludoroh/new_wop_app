@@ -20,7 +20,7 @@ describe('GooglePlayVerificationService', () => {
 
   it('maps an active Google subscription from API payload', async () => {
     const service = createService({
-      GOOGLE_PLAY_PACKAGE_NAME: 'com.wopp.app',
+      GOOGLE_PLAY_PACKAGE_NAME: 'com.ministrymobile.app',
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: JSON.stringify({
         client_email: 'play@example.iam.gserviceaccount.com',
         private_key: 'test-key',
@@ -57,7 +57,7 @@ describe('GooglePlayVerificationService', () => {
 
   it('throws when Google API verification fails', async () => {
     const service = createService({
-      GOOGLE_PLAY_PACKAGE_NAME: 'com.wopp.app',
+      GOOGLE_PLAY_PACKAGE_NAME: 'com.ministrymobile.app',
       GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: JSON.stringify({
         client_email: 'play@example.iam.gserviceaccount.com',
         private_key: 'test-key',

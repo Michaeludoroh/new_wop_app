@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 
+import '../logging/app_log.dart';
 import '../../firebase_options.dart';
 
 class FirebaseBootstrap {
@@ -22,9 +22,9 @@ class FirebaseBootstrap {
       );
 
       _initialized = true;
-      debugPrint('Firebase initialized successfully.');
+      AppLog.debug('Firebase initialized successfully.');
     } catch (error) {
-      debugPrint('Firebase bootstrap failed: $error');
+      AppLog.debug('Firebase bootstrap failed: $error');
     }
   }
 }

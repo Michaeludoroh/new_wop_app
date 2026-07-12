@@ -28,6 +28,8 @@ class PolicyAcceptanceDiagnostics {
   }
 
   static void log(String message) {
-    debugPrint('[POLICY_DIAG] $message');
+    if (kDebugMode) {
+      debugPrint('[POLICY_DIAG] $message');
+    }
   }
 }
