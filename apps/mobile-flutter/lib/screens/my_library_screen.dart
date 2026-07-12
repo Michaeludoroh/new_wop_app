@@ -129,7 +129,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const Text(
-                                'Your library is empty. Purchase an eBook or browse free titles to get started.',
+                                'Your library is empty. Subscribe to Premium or browse titles to get started.',
                               ),
                               const SizedBox(height: 12),
                               FilledButton(
@@ -157,9 +157,9 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               item: p,
                               onTap: () => _continueReading(p),
                             )),
-                      _Header('Purchased eBooks'),
+                      _Header('Your eBooks'),
                       if (library.purchased.isEmpty)
-                        const _EmptyLine('No purchased eBooks yet.')
+                        const _EmptyLine('No eBooks in your library yet.')
                       else
                         ...library.purchased.map((e) => _EbookTile(
                               title: e.title,

@@ -85,8 +85,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const AppBar(
-        title: MinistryAppBarTitle(title: 'Verify Email'),
+      appBar: AppBar(
+        title: const MinistryAppBarTitle(title: 'Verify Email'),
       ),
       body: Center(
         child: ConstrainedBox(

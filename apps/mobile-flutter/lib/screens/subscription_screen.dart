@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/subscriptions/mobile_billing_service.dart';
 import '../core/subscriptions/subscription_models.dart';
@@ -36,7 +35,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _loading = true;
   bool _submitting = false;
   String? _error;
-  String? _pendingProviderReference;
   SubscriptionStatusModel? _status;
   MobileStoreSubscriptionModel? _storeStatus;
   List<SubscriptionPlanModel> _plans = const [];
@@ -168,31 +166,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         return;
       }
 
-      if (_usesNativeBilling) {
-        await _mobileBilling.purchasePremium();
+      if (!_usesNativeBilling) {
+        setState(() {
+          _error =
+              'Premium subscriptions are available through the App Store or Google Play on a mobile device.';
+        });
         return;
       }
 
-      final checkout = await _service.initiateCheckout(plan: plan);
-      if (!mounted) return;
-      _pendingProviderReference = checkout.providerReference;
-      final launched = await launchUrl(
-        Uri.parse(checkout.checkoutUrl),
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched) {
-        throw Exception('Unable to open checkout');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Complete checkout, then refresh payment status.')),
-      );
+      await _mobileBilling.purchasePremium();
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _error = 'Subscription update failed. Please try again.';
       });
     } finally {
-      if (mounted && !_usesNativeBilling) {
+      if (mounted && (!_usesNativeBilling || plan == MembershipPlan.free)) {
         setState(() => _submitting = false);
       }
     }
@@ -243,45 +232,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Unable to cancel subscription.');
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  Future<void> _refreshPaymentStatus() async {
-    final reference = _pendingProviderReference;
-    if (reference == null || reference.isEmpty) return;
-
-    setState(() {
-      _submitting = true;
-      _error = null;
-    });
-
-    try {
-      final status = await _service.getPaymentStatus(reference);
-      if (!mounted) return;
-      if (status.isSuccessful) {
-        await _loadStatus();
-        SubscriptionScope.maybeOf(context)?.refresh();
-        if (!mounted) return;
-        setState(() => _pendingProviderReference = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment verified. Subscription activated.')),
-        );
-      } else if (status.isFailed) {
-        setState(() {
-          _error = status.failureMessage ?? 'Payment failed. You can try checkout again.';
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment is still pending.')),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Unable to refresh payment status.';
-      });
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -340,19 +290,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Text(_error!),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (!_usesNativeBilling && _pendingProviderReference != null) ...[
-                      Card(
-                        child: ListTile(
-                          title: const Text('Checkout pending'),
-                          subtitle: Text(_pendingProviderReference!),
-                          trailing: FilledButton(
-                            onPressed: _submitting ? null : _refreshPaymentStatus,
-                            child: const Text('Refresh status'),
-                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -491,14 +428,21 @@ class _PremiumMembershipCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 Platform.isIOS
-                    ? 'Billed through the App Store.'
-                    : 'Billed through Google Play.',
+                    ? 'Billed through the App Store. Includes the complete eBook library.'
+                    : 'Billed through Google Play. Includes the complete eBook library.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Text(
+                'Premium unlocks the complete eBook library. Purchase on iOS or Android.',
                 style: theme.textTheme.bodySmall,
               ),
             ],
             const SizedBox(height: 16),
             Text('Benefits', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
+            const _BenefitLine(text: 'Complete eBook library'),
             const _BenefitLine(text: 'Daily devotionals'),
             const _BenefitLine(text: 'Premium messages'),
             const _BenefitLine(text: 'Video library'),

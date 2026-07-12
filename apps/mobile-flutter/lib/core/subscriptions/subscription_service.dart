@@ -60,22 +60,6 @@ class SubscriptionService {
     return const [];
   }
 
-  Future<PaymentCheckoutResult> initiateCheckout({
-    required MembershipPlan plan,
-    String billingInterval = 'MONTHLY',
-  }) async {
-    final planString = await resolvePlanCode(plan, billingInterval: billingInterval);
-    final response = await _dio.post<dynamic>(
-      '/payments/checkout/subscription',
-      data: {
-        'planCode': planString,
-        'autoRenew': true,
-      },
-    );
-
-    return PaymentCheckoutResult.fromJson(_asMap(response.data));
-  }
-
   Future<void> subscribe({
     required MembershipPlan plan,
     String billingInterval = 'MONTHLY',
@@ -97,15 +81,6 @@ class SubscriptionService {
         if (reason != null) 'reason': reason,
       },
     );
-  }
-
-  Future<PaymentStatusResult> getPaymentStatus(String providerReference) async {
-    final response = await _dio.get<dynamic>(
-      '/payments/status',
-      queryParameters: {'providerReference': providerReference},
-    );
-
-    return PaymentStatusResult.fromJson(_asMap(response.data));
   }
 
   Future<MobileSubscriptionVerifyResult> verifyGooglePurchase({

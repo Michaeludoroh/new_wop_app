@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
+import '../core/subscriptions/trial_manager.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/trial_banner.dart';
 import 'pdf_reader_screen.dart';
+import 'subscription_screen.dart';
 
 class EbookDetailsScreen extends StatefulWidget {
   const EbookDetailsScreen({super.key, required this.ebookId});
@@ -23,8 +25,12 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   bool _loading = true;
   bool _submitting = false;
   String? _error;
-  String? _pendingProviderReference;
   EbookItem? _ebook;
+
+  bool get _hasPremiumAccess {
+    final status = SubscriptionScope.maybeOf(context)?.status;
+    return TrialManager.hasPremiumAccess(status);
+  }
 
   @override
   void initState() {
@@ -54,82 +60,34 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
     }
   }
 
-  Future<void> _buyNow() async {
-    setState(() => _submitting = true);
-    try {
-      final checkout = await _service.initiateEbookCheckout(ebookId: widget.ebookId);
-      if (!mounted) return;
-      _pendingProviderReference = checkout.providerReference;
-      final launched = await launchUrl(
-        Uri.parse(checkout.checkoutUrl),
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched) {
-        throw Exception('Unable to open Flutterwave checkout');
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Complete checkout, then refresh payment status.')),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Purchase failed')),
-      );
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  Future<void> _refreshPaymentStatus() async {
-    final reference = _pendingProviderReference;
-    if (reference == null || reference.isEmpty) return;
-
-    setState(() => _submitting = true);
-    try {
-      final status = await _service.getPaymentStatus(reference);
-      if (!mounted) return;
-      if (status.isSuccessful) {
-        await _service.purchaseEbook(
-          ebookId: widget.ebookId,
-          paymentReference: reference,
-        );
-        if (!mounted) return;
-        setState(() => _pendingProviderReference = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment verified. eBook added to your library.')),
-        );
-      } else if (status.isFailed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(status.failureMessage ?? 'Payment failed. Please try again.')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payment is still pending.')),
-        );
-      }
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to refresh payment status.')),
-      );
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
+  Future<void> _openSubscription() async {
+    await Navigator.of(context).pushNamed(SubscriptionScreen.routeName);
+    if (!mounted) return;
+    SubscriptionScope.maybeOf(context)?.refresh();
   }
 
   Future<void> _readNow() async {
+    if (!_hasPremiumAccess && (_ebook?.isPremium ?? true)) {
+      await _openSubscription();
+      return;
+    }
+
     setState(() => _submitting = true);
     try {
       final access = await _service.getAccess(widget.ebookId);
       final progress = await _service.getReadingProgress(widget.ebookId);
       if (!mounted) return;
+
       if (!access.authorized) {
-        throw Exception('Access denied');
+        await _openSubscription();
+        return;
       }
+
       final contentUrl = access.contentUrl;
       if (contentUrl.isEmpty) {
         throw Exception('Missing PDF stream URL');
       }
+
       await Navigator.of(context).pushNamed(
         PdfReaderScreen.routeName,
         arguments: PdfReaderArgs(
@@ -145,7 +103,7 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Subscribe or purchase this eBook to gain access.'),
+          content: Text('Unable to open this eBook. Please try again.'),
         ),
       );
     } finally {
@@ -156,6 +114,8 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final ebook = _ebook;
+    final premium = _hasPremiumAccess;
+
     return Scaffold(
       appBar: AppBar(title: const MinistryAppBarTitle(title: 'eBook Details')),
       body: SafeArea(
@@ -168,8 +128,10 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                     children: [
                       const Icon(Icons.menu_book, size: 72),
                       const SizedBox(height: 16),
-                      Text(ebook.title,
-                          style: Theme.of(context).textTheme.headlineSmall),
+                      Text(
+                        ebook.title,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
                       const SizedBox(height: 8),
                       Text('By ${ebook.author}'),
                       const SizedBox(height: 8),
@@ -178,33 +140,36 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                       Text(ebook.description),
                       const SizedBox(height: 16),
                       Text(
-                        ebook.isPremium
-                            ? 'Price: \$${ebook.price.toStringAsFixed(2)}'
-                            : 'Free',
+                        premium
+                            ? 'Included with Premium'
+                            : 'Requires Premium subscription',
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 16),
-                      if (_pendingProviderReference != null) ...[
-                        Card(
-                          child: ListTile(
-                            title: const Text('Checkout pending'),
-                            subtitle: Text(_pendingProviderReference!),
-                            trailing: FilledButton(
-                              onPressed: _submitting ? null : _refreshPaymentStatus,
-                              child: const Text('Refresh status'),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
                       FilledButton(
                         onPressed: _submitting ? null : _readNow,
-                        child: const Text('Read Now'),
+                        child: Text(
+                          _submitting
+                              ? 'Opening...'
+                              : premium
+                                  ? 'Read Now'
+                                  : 'Subscribe to Read',
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _submitting ? null : _buyNow,
-                        child: const Text('Purchase'),
-                      ),
+                      if (!premium) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: _submitting ? null : _openSubscription,
+                          child: const Text('Subscribe'),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'A Premium subscription unlocks the complete eBook library.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
                     ],
                   ),
       ),

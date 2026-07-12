@@ -157,52 +157,6 @@ class SubscriptionPlanModel {
   }
 }
 
-class PaymentCheckoutResult {
-  const PaymentCheckoutResult({
-    required this.checkoutUrl,
-    required this.providerReference,
-  });
-
-  final String checkoutUrl;
-  final String providerReference;
-
-  factory PaymentCheckoutResult.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] is Map
-        ? (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
-        : json;
-    return PaymentCheckoutResult(
-      checkoutUrl: (data['checkoutUrl'] ?? '').toString(),
-      providerReference: (data['providerReference'] ?? '').toString(),
-    );
-  }
-}
-
-class PaymentStatusResult {
-  const PaymentStatusResult({
-    required this.providerReference,
-    required this.status,
-    this.failureMessage,
-  });
-
-  final String providerReference;
-  final String status;
-  final String? failureMessage;
-
-  bool get isSuccessful => status.toUpperCase() == 'SUCCESS';
-  bool get isFailed => status.toUpperCase() == 'FAILED';
-
-  factory PaymentStatusResult.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] is Map
-        ? (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
-        : json;
-    return PaymentStatusResult(
-      providerReference: (data['providerReference'] ?? '').toString(),
-      status: (data['status'] ?? 'PENDING').toString(),
-      failureMessage: data['failureMessage']?.toString(),
-    );
-  }
-}
-
 class MobileStoreSubscriptionModel {
   const MobileStoreSubscriptionModel({
     required this.platform,
