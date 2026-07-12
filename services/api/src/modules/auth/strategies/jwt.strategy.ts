@@ -1,16 +1,11 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { Role } from '@prisma/client';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { AppRole } from '../auth.types';
-
-type JwtPayload = {
-  sub: string;
-  email: string;
-  role: AppRole;
-};
+import { AppRole, AuthUserPayload } from '../auth.types';
+import { readJwtAccessSecret } from '../jwt-config.util';
+import { normalizeAppRole } from '../role.util';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -18,19 +13,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    const jwtAccessSecret = configService.get<string>('JWT_ACCESS_SECRET');
-    if (!jwtAccessSecret) {
-      throw new UnauthorizedException('JWT_ACCESS_SECRET is required');
-    }
+    const jwtAccessSecret = readJwtAccessSecret(configService);
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: jwtAccessSecret,
+      algorithms: ['HS256'],
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: AuthUserPayload) {
     if (process.env.NODE_ENV !== 'production') {
       console.info('[jwt.strategy.validate] payload', {
         sub: payload?.sub,
@@ -38,16 +31,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       });
     }
 
-    if (!payload?.sub || !payload.role) {
+    const subject = typeof payload?.sub === 'string' ? payload.sub.trim() : '';
+    const tokenRole = normalizeAppRole(payload?.role);
+
+    if (!subject || !tokenRole) {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    if (!Object.values(Role).includes(payload.role as Role)) {
-      throw new UnauthorizedException('Invalid token role');
-    }
-
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: subject },
       select: {
         id: true,
         email: true,
@@ -60,14 +52,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User is no longer active');
     }
 
-    if (user.role !== payload.role) {
+    const currentRole = normalizeAppRole(user.role);
+    if (!currentRole || currentRole !== tokenRole) {
       throw new UnauthorizedException('Token role is no longer current');
     }
 
     return {
       sub: user.id,
       email: user.email,
-      role: user.role as AppRole,
+      role: currentRole as AppRole,
     };
   }
 }

@@ -1,26 +1,32 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
 import {
-  buildNodemailerTransportOptions,
   maskSmtpUser,
-  resolveSmtpConfig,
-  resolveSmtpProviderMode,
-  type SmtpProviderMode,
-} from './smtp-config.util';
+  resolveEmailConfig,
+  validateEmailConfigForStartup,
+  type EmailProviderId,
+} from './email-config.util';
+import {
+  EMAIL_PROVIDER_TOKEN,
+  EmailProvider,
+} from './email.provider.interface';
 
-export type SmtpConnectionTestResult = 'skipped' | 'passed' | 'failed';
+export type EmailConnectionTestResult = 'skipped' | 'passed' | 'failed';
 
 export type EmailReadinessSnapshot = {
   ready: boolean;
-  provider: SmtpProviderMode;
+  provider: EmailProviderId;
+  providerLabel: string;
   configured: boolean;
-  connectionTest: SmtpConnectionTestResult;
+  connectionTest: EmailConnectionTestResult;
   connectionError: string | null;
+  connectionMessage: string | null;
   missingVariables: string[];
   host: string | null;
   port: number;
   secure: boolean;
+  requireTls: boolean;
+  pooled: boolean;
   from: string;
   smtpUser: string | null;
 };
@@ -30,7 +36,10 @@ export class EmailReadinessService implements OnModuleInit {
   private readonly logger = new Logger(EmailReadinessService.name);
   private snapshot: EmailReadinessSnapshot;
 
-  constructor(private readonly configService: ConfigService) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(EMAIL_PROVIDER_TOKEN) private readonly emailProvider: EmailProvider,
+  ) {
     this.snapshot = this.buildSnapshot('skipped', null);
   }
 
@@ -43,30 +52,31 @@ export class EmailReadinessService implements OnModuleInit {
   }
 
   async refreshConnectionTest(): Promise<EmailReadinessSnapshot> {
-    const env = this.readEnv();
-    const provider = resolveSmtpProviderMode(env);
-    const config = resolveSmtpConfig(env);
+    const config = resolveEmailConfig(this.readEnv());
 
-    if (provider === 'MOCK_SMTP') {
+    if (config.provider === 'mock') {
       this.snapshot = this.buildSnapshot('skipped', null);
       return this.getSnapshot();
     }
 
-    const transportOptions = buildNodemailerTransportOptions(env);
-    if (!transportOptions) {
-      this.snapshot = this.buildSnapshot('failed', 'SMTP transport options incomplete');
+    if (!config.configured) {
+      this.snapshot = this.buildSnapshot(
+        'failed',
+        `Missing required variables: ${config.missingVariables.join(', ')}`,
+      );
       return this.getSnapshot();
     }
 
     try {
-      const transporter = nodemailer.createTransport(transportOptions);
-      await transporter.verify();
+      if (this.emailProvider.verifyConnection) {
+        await this.emailProvider.verifyConnection();
+      }
       this.snapshot = this.buildSnapshot('passed', null);
-      this.logger.log('SMTP connection test passed');
+      this.logger.log(`${config.displayName} SMTP connection test passed`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown SMTP connection error';
       this.snapshot = this.buildSnapshot('failed', message);
-      this.logger.warn(`SMTP connection test failed: ${message}`);
+      this.logger.warn(`${config.displayName} SMTP connection test failed: ${message}`);
     }
 
     return this.getSnapshot();
@@ -74,60 +84,92 @@ export class EmailReadinessService implements OnModuleInit {
 
   private async runStartupDiagnostics() {
     const env = this.readEnv();
-    const provider = resolveSmtpProviderMode(env);
-    const config = resolveSmtpConfig(env);
+    const config = resolveEmailConfig(env);
+    const productionLike = ['production', 'staging'].includes(
+      String(env.NODE_ENV ?? 'development'),
+    );
 
-    if (provider === 'MOCK_SMTP') {
+    try {
+      validateEmailConfigForStartup(env, { productionLike });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(message);
+      if (productionLike) {
+        throw error;
+      }
+    }
+
+    if (config.provider === 'mock') {
       this.snapshot = this.buildSnapshot('skipped', null);
       this.logger.warn(
-        `SMTP not configured — email provider: MOCK_SMTP (missing: ${config.missingVariables.join(', ') || 'SMTP_HOST'})`,
+        `Email provider: mock (set EMAIL_PROVIDER=brevo and SMTP credentials for production delivery)`,
       );
       return;
     }
 
     this.logger.log(
-      `SMTP configured — email provider: SMTP host=${config.host} port=${config.port} secure=${config.secure} user=${maskSmtpUser(config.user)} from=${config.from}`,
+      `Email provider configured — provider=${config.provider} label=${config.displayName} host=${config.host} port=${config.port} secure=${config.secure} requireTls=${config.requireTls} pooled=true user=${maskSmtpUser(config.username)} from=${config.from}`,
     );
 
     await this.refreshConnectionTest();
   }
 
   private buildSnapshot(
-    connectionTest: SmtpConnectionTestResult,
+    connectionTest: EmailConnectionTestResult,
     connectionError: string | null,
   ): EmailReadinessSnapshot {
-    const env = this.readEnv();
-    const provider = resolveSmtpProviderMode(env);
-    const config = resolveSmtpConfig(env);
+    const config = resolveEmailConfig(this.readEnv());
 
     const ready =
-      provider === 'MOCK_SMTP'
-        ? false
-        : config.configured && connectionTest === 'passed';
+      config.provider !== 'mock' && config.configured && connectionTest === 'passed';
+
+    const connectionMessage =
+      connectionTest === 'passed'
+        ? `${config.displayName} Connected`
+        : connectionTest === 'skipped'
+          ? `${config.displayName} (mock mode)`
+          : connectionError;
 
     return {
       ready,
-      provider,
+      provider: config.provider,
+      providerLabel: config.displayName,
       configured: config.configured,
       connectionTest,
       connectionError,
+      connectionMessage,
       missingVariables: config.missingVariables,
       host: config.host,
       port: config.port,
       secure: config.secure,
+      requireTls: config.requireTls,
+      pooled: config.usesSmtpTransport,
       from: config.from,
-      smtpUser: maskSmtpUser(config.user),
+      smtpUser: maskSmtpUser(config.username),
     };
   }
 
   private readEnv(): Record<string, string | undefined> {
     return {
+      NODE_ENV: this.configService.get<string>('NODE_ENV'),
+      EMAIL_PROVIDER: this.configService.get<string>('EMAIL_PROVIDER'),
+      APP_NAME: this.configService.get<string>('APP_NAME'),
       SMTP_HOST: this.configService.get<string>('SMTP_HOST'),
       SMTP_PORT: this.configService.get<string>('SMTP_PORT'),
       SMTP_SECURE: this.configService.get<string>('SMTP_SECURE'),
+      SMTP_USERNAME: this.configService.get<string>('SMTP_USERNAME'),
+      SMTP_PASSWORD: this.configService.get<string>('SMTP_PASSWORD'),
       SMTP_USER: this.configService.get<string>('SMTP_USER'),
       SMTP_PASS: this.configService.get<string>('SMTP_PASS'),
+      SMTP_FROM_EMAIL: this.configService.get<string>('SMTP_FROM_EMAIL'),
+      SMTP_FROM_NAME: this.configService.get<string>('SMTP_FROM_NAME'),
       SMTP_FROM: this.configService.get<string>('SMTP_FROM'),
+      SMTP_CONNECTION_TIMEOUT_MS: this.configService.get<string>('SMTP_CONNECTION_TIMEOUT_MS'),
+      SMTP_GREETING_TIMEOUT_MS: this.configService.get<string>('SMTP_GREETING_TIMEOUT_MS'),
+      SMTP_SOCKET_TIMEOUT_MS: this.configService.get<string>('SMTP_SOCKET_TIMEOUT_MS'),
+      SMTP_POOL_MAX_CONNECTIONS: this.configService.get<string>('SMTP_POOL_MAX_CONNECTIONS'),
+      SMTP_MAX_RETRIES: this.configService.get<string>('SMTP_MAX_RETRIES'),
+      SMTP_RETRY_DELAY_MS: this.configService.get<string>('SMTP_RETRY_DELAY_MS'),
     };
   }
 }

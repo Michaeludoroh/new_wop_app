@@ -13,6 +13,8 @@ import * as Sentry from '@sentry/node';
 import { ObservabilityService } from '../../observability/observability.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SubscriptionLifecycleService } from '../subscriptions/subscription-lifecycle.service';
+import { EmailService } from '../email/email.service';
+import { EmailTemplateService } from '../email/email-template.service';
 import { InitiateEbookCheckoutDto } from './dto/initiate-ebook-checkout.dto';
 import { InitiateSubscriptionCheckoutDto } from './dto/initiate-subscription-checkout.dto';
 import { PaymentHistoryQueryDto } from './dto/payment-history-query.dto';
@@ -37,6 +39,8 @@ export class PaymentsService {
     private readonly observability: ObservabilityService,
     private readonly configService: ConfigService,
     private readonly lifecycleService: SubscriptionLifecycleService,
+    private readonly emailService: EmailService,
+    private readonly emailTemplateService: EmailTemplateService,
   ) {}
 
   async initiateSubscriptionCheckout(userId: string, dto: InitiateSubscriptionCheckoutDto) {
@@ -847,8 +851,17 @@ export class PaymentsService {
   ) {
     const now = new Date();
     const providerReference = transaction.providerReference;
+    let confirmationContext:
+      | {
+          userId: string;
+          planName: string;
+          amountLabel: string;
+          periodEnd: Date;
+          providerReference: string;
+        }
+      | null = null;
 
-    return this.prisma.$transaction(async (tx) => {
+    const updatedTx = await this.prisma.$transaction(async (tx) => {
       const updatedTx = await tx.paymentTransaction.update({
         where: { id: transaction.id },
         data: {
@@ -895,6 +908,17 @@ export class PaymentsService {
             metadata: { providerReference },
           });
         }
+
+        const plan = updatedTx.userSubscription?.plan;
+        if (plan) {
+          confirmationContext = {
+            userId: transaction.userId,
+            planName: plan.name,
+            amountLabel: `${plan.currency} ${Number(plan.amount).toFixed(2)}`,
+            periodEnd,
+            providerReference,
+          };
+        }
       }
 
       const metadata = this.asMetadata(transaction.metadata);
@@ -921,6 +945,49 @@ export class PaymentsService {
 
       return updatedTx;
     });
+
+    if (confirmationContext) {
+      void this.sendSubscriptionConfirmationEmail(confirmationContext);
+    }
+
+    return updatedTx;
+  }
+
+  private async sendSubscriptionConfirmationEmail(input: {
+    userId: string;
+    planName: string;
+    amountLabel: string;
+    periodEnd: Date;
+    providerReference: string;
+  }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { email: true, fullName: true },
+    });
+
+    if (!user?.email) {
+      return;
+    }
+
+    const content = this.emailTemplateService.subscriptionConfirmationEmail({
+      fullName: user.fullName,
+      planName: input.planName,
+      amountLabel: input.amountLabel,
+      expiresAt: input.periodEnd,
+      providerLabel: 'Flutterwave',
+    });
+
+    await this.emailService
+      .send([
+        {
+          to: user.email,
+          subject: content.subject,
+          body: content.body,
+          html: content.html,
+          dedupeKey: `subscription-confirmation:${input.providerReference}`,
+        },
+      ])
+      .catch(() => undefined);
   }
 
   private async reconcileFailedVerification(

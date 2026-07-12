@@ -15,6 +15,11 @@ class AuthScope extends InheritedNotifier<AuthProvider> {
     return scope!.notifier!;
   }
 
+  static AuthProvider? maybeOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AuthScope>();
+    return scope?.notifier;
+  }
+
   static AuthProvider read(BuildContext context) {
     final element =
         context.getElementForInheritedWidgetOfExactType<AuthScope>();

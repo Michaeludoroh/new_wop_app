@@ -202,3 +202,164 @@ class PaymentStatusResult {
     );
   }
 }
+
+class MobileStoreSubscriptionModel {
+  const MobileStoreSubscriptionModel({
+    required this.platform,
+    required this.provider,
+    required this.productId,
+    required this.status,
+    this.transactionId,
+    this.originalTransactionId,
+    this.purchaseDate,
+    this.expiryDate,
+    this.renewalStatus,
+    this.autoRenewStatus = true,
+  });
+
+  final String platform;
+  final String provider;
+  final String productId;
+  final String status;
+  final String? transactionId;
+  final String? originalTransactionId;
+  final DateTime? purchaseDate;
+  final DateTime? expiryDate;
+  final String? renewalStatus;
+  final bool autoRenewStatus;
+
+  factory MobileStoreSubscriptionModel.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return const MobileStoreSubscriptionModel(
+        platform: '',
+        provider: '',
+        productId: '',
+        status: 'INACTIVE',
+      );
+    }
+
+    return MobileStoreSubscriptionModel(
+      platform: (json['platform'] ?? '').toString(),
+      provider: (json['provider'] ?? '').toString(),
+      productId: (json['productId'] ?? '').toString(),
+      status: (json['status'] ?? 'INACTIVE').toString(),
+      transactionId: json['transactionId']?.toString(),
+      originalTransactionId: json['originalTransactionId']?.toString(),
+      purchaseDate: _parseStoreDate(json['purchaseDate']),
+      expiryDate: _parseStoreDate(json['expiryDate']),
+      renewalStatus: json['renewalStatus']?.toString(),
+      autoRenewStatus: (json['autoRenewStatus'] ?? true) as bool,
+    );
+  }
+}
+
+class MobileSubscriptionStatusResult {
+  const MobileSubscriptionStatusResult({
+    this.store,
+    this.subscription,
+    this.summary,
+  });
+
+  final MobileStoreSubscriptionModel? store;
+  final SubscriptionStatusModel? subscription;
+  final Map<String, dynamic>? summary;
+
+  bool get hasPremiumAccess =>
+      (summary?['hasPremiumAccess'] ?? subscription?.hasPremiumAccess ?? false) as bool;
+
+  factory MobileSubscriptionStatusResult.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map
+        ? (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
+        : json;
+
+    final storeRaw = data['store'];
+    final subscriptionRaw = data['subscription'];
+
+    return MobileSubscriptionStatusResult(
+      store: storeRaw is Map
+          ? MobileStoreSubscriptionModel.fromJson(
+              storeRaw.map((k, v) => MapEntry(k.toString(), v)),
+            )
+          : null,
+      subscription: subscriptionRaw is Map
+          ? SubscriptionStatusModel.fromJson(
+              subscriptionRaw.map((k, v) => MapEntry(k.toString(), v)),
+            )
+          : null,
+      summary: json['summary'] is Map
+          ? (json['summary'] as Map).map((k, v) => MapEntry(k.toString(), v))
+          : null,
+    );
+  }
+}
+
+class MobileSubscriptionVerifyResult {
+  const MobileSubscriptionVerifyResult({
+    required this.message,
+    this.idempotent = false,
+    this.store,
+    this.subscription,
+    this.summary,
+  });
+
+  final String message;
+  final bool idempotent;
+  final MobileStoreSubscriptionModel? store;
+  final SubscriptionStatusModel? subscription;
+  final Map<String, dynamic>? summary;
+
+  factory MobileSubscriptionVerifyResult.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] is Map
+        ? (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
+        : json;
+
+    final storeRaw = data['store'];
+    final subscriptionRaw = data['subscription'];
+
+    return MobileSubscriptionVerifyResult(
+      message: (json['message'] ?? 'Purchase verified').toString(),
+      idempotent: (json['idempotent'] ?? false) as bool,
+      store: storeRaw is Map
+          ? MobileStoreSubscriptionModel.fromJson(
+              storeRaw.map((k, v) => MapEntry(k.toString(), v)),
+            )
+          : null,
+      subscription: subscriptionRaw is Map
+          ? SubscriptionStatusModel.fromJson(
+              subscriptionRaw.map((k, v) => MapEntry(k.toString(), v)),
+            )
+          : null,
+      summary: json['summary'] is Map
+          ? (json['summary'] as Map).map((k, v) => MapEntry(k.toString(), v))
+          : null,
+    );
+  }
+}
+
+class MobileRestorePurchaseItem {
+  const MobileRestorePurchaseItem({
+    required this.productId,
+    this.purchaseToken,
+    this.receiptData,
+    this.transactionId,
+  });
+
+  final String productId;
+  final String? purchaseToken;
+  final String? receiptData;
+  final String? transactionId;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'productId': productId,
+      if (purchaseToken != null) 'purchaseToken': purchaseToken,
+      if (receiptData != null) 'receiptData': receiptData,
+      if (transactionId != null) 'transactionId': transactionId,
+    };
+  }
+}
+
+DateTime? _parseStoreDate(dynamic value) {
+  if (value is String) return DateTime.tryParse(value)?.toLocal();
+  return null;
+}

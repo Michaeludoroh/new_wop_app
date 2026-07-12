@@ -5,7 +5,7 @@ export const AUTH_STORAGE_KEYS = {
 } as const;
 
 export const API_CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000/api/v1",
+  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000/api/v1",
   timeoutMs: 15000
 } as const;
 

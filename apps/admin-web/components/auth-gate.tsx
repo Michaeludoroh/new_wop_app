@@ -2,6 +2,7 @@
 
 import { ReactNode } from "react";
 import { useAuth } from "../providers/auth-provider";
+import { ROLE_HIERARCHY } from "../lib/auth/config";
 import { UserRole } from "../lib/auth/types";
 
 type AuthGateProps = {
@@ -9,6 +10,21 @@ type AuthGateProps = {
   roles?: UserRole[];
   fallback?: ReactNode;
 };
+
+function normalizeRole(role: string | undefined | null): UserRole | null {
+  if (!role) return null;
+  const normalized = role.toUpperCase().replace(/[-\s]/g, "_");
+  if (normalized === "SUPERADMIN" || normalized === "SUPER_ADMIN") return "SUPER_ADMIN";
+  if (normalized === "ADMIN") return "ADMIN";
+  if (normalized === "MODERATOR") return "MODERATOR";
+  if (normalized === "USER") return "USER";
+  return null;
+}
+
+function hasRequiredRole(userRole: UserRole, requiredRoles: UserRole[]): boolean {
+  const userLevel = ROLE_HIERARCHY[userRole];
+  return requiredRoles.some((requiredRole) => userLevel >= ROLE_HIERARCHY[requiredRole]);
+}
 
 export default function AuthGate({ children, roles, fallback }: AuthGateProps) {
   const { isInitializing, isAuthenticated, user } = useAuth();
@@ -26,17 +42,6 @@ export default function AuthGate({ children, roles, fallback }: AuthGateProps) {
     return fallback ?? null;
   }
 
-  const normalizeRole = (role: string | undefined | null): UserRole | null => {
-    if (!role) return null;
-    const normalized = role.toUpperCase().replace(/[-\s]/g, "_");
-    if (normalized === "SUPERADMIN") return "SUPER_ADMIN";
-    if (normalized === "SUPER_ADMIN") return "SUPER_ADMIN";
-    if (normalized === "ADMIN") return "ADMIN";
-    if (normalized === "MODERATOR") return "MODERATOR";
-    if (normalized === "USER") return "USER";
-    return null;
-  };
-
   const userRole = normalizeRole(user.role);
 
   if (debugAuthGate) {
@@ -47,7 +52,7 @@ export default function AuthGate({ children, roles, fallback }: AuthGateProps) {
     });
   }
 
-  if (roles && roles.length > 0 && (!userRole || !roles.includes(userRole))) {
+  if (roles && roles.length > 0 && (!userRole || !hasRequiredRole(userRole, roles))) {
     return (
       <div style={{ padding: 24 }}>
         <h2 style={{ marginTop: 0, color: "#101828" }}>Unauthorized</h2>

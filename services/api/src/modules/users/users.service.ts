@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Role, SubscriptionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EmailVerificationService } from '../auth/email-verification.service';
 import { UpdateUserProfileDto } from './dto/update-user-profile.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 
@@ -16,7 +17,10 @@ type RequestUser = {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailVerificationService: EmailVerificationService,
+  ) {}
 
   private isAdmin(user: RequestUser) {
     return user.role === Role.ADMIN || user.role === Role.SUPER_ADMIN;
@@ -32,6 +36,8 @@ export class UsersService {
       createdAt: true,
       updatedAt: true,
       deletedAt: true,
+      emailVerified: true,
+      emailVerifiedAt: true,
     } as const;
   }
 
@@ -45,6 +51,8 @@ export class UsersService {
       createdAt: Date;
       updatedAt: Date;
       deletedAt: Date | null;
+      emailVerified: boolean;
+      emailVerifiedAt: Date | null;
     },
     subscription?: {
       status: SubscriptionStatus;
@@ -69,6 +77,8 @@ export class UsersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       active: user.deletedAt === null,
+      emailVerified: user.emailVerified,
+      emailVerifiedAt: user.emailVerifiedAt,
       subscription: subscription
         ? {
             status: subscription.status,
@@ -87,6 +97,8 @@ export class UsersService {
     const where: Prisma.UserWhereInput = {
       ...(query.status === 'ACTIVE' ? { deletedAt: null } : {}),
       ...(query.status === 'DISABLED' ? { deletedAt: { not: null } } : {}),
+      ...(query.emailVerification === 'VERIFIED' ? { emailVerified: true } : {}),
+      ...(query.emailVerification === 'UNVERIFIED' ? { emailVerified: false } : {}),
       ...(query.role ? { role: query.role } : {}),
       ...(query.search
         ? {
@@ -234,5 +246,49 @@ export class UsersService {
     }
 
     return { data: this.toUserResponse(user) };
+  }
+
+  async verifyEmail(id: string, requester: RequestUser) {
+    if (!this.isAdmin(requester)) {
+      throw new ForbiddenException('Only administrators can verify user emails');
+    }
+
+    const existing = await this.prisma.user.findFirst({ where: { id } });
+    if (!existing) throw new NotFoundException('User not found');
+
+    await this.emailVerificationService.adminVerifyEmail(id, requester.sub);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id },
+      select: this.selectSafeUser(),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const subscription = await this.prisma.userSubscription.findFirst({
+      where: { userId: id },
+      orderBy: { updatedAt: 'desc' },
+      include: { plan: { select: { code: true, name: true } } },
+    });
+
+    return { data: this.toUserResponse(user, subscription) };
+  }
+
+  async resendVerificationEmail(id: string, requester: RequestUser) {
+    if (!this.isAdmin(requester)) {
+      throw new ForbiddenException('Only administrators can resend verification emails');
+    }
+
+    const existing = await this.prisma.user.findFirst({ where: { id } });
+    if (!existing) throw new NotFoundException('User not found');
+
+    const result = await this.emailVerificationService.adminResendVerificationEmail(
+      id,
+      requester.sub,
+    );
+
+    return result;
   }
 }

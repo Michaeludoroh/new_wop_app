@@ -38,12 +38,19 @@ class AuthUser {
     required this.email,
     this.name,
     this.role,
+    this.emailVerified = true,
+    this.requireEmailVerification = false,
   });
 
   final String id;
   final String email;
   final String? name;
   final String? role;
+  final bool emailVerified;
+  final bool requireEmailVerification;
+
+  bool get needsEmailVerification =>
+      requireEmailVerification && !emailVerified;
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
     final name = json['name'] ?? json['fullName'];
@@ -52,6 +59,8 @@ class AuthUser {
       email: (json['email'] ?? '') as String,
       name: name is String && name.trim().isNotEmpty ? name.trim() : null,
       role: json['role'] as String?,
+      emailVerified: json['emailVerified'] == true,
+      requireEmailVerification: json['requireEmailVerification'] == true,
     );
   }
 
@@ -61,7 +70,28 @@ class AuthUser {
       'email': email,
       if (name != null) 'name': name,
       if (role != null) 'role': role,
+      'emailVerified': emailVerified,
+      'requireEmailVerification': requireEmailVerification,
     };
+  }
+
+  AuthUser copyWith({
+    String? id,
+    String? email,
+    String? name,
+    String? role,
+    bool? emailVerified,
+    bool? requireEmailVerification,
+  }) {
+    return AuthUser(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      role: role ?? this.role,
+      emailVerified: emailVerified ?? this.emailVerified,
+      requireEmailVerification:
+          requireEmailVerification ?? this.requireEmailVerification,
+    );
   }
 }
 

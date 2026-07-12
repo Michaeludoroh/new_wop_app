@@ -15,6 +15,8 @@ function normalizeUser(raw: unknown): AdminUser {
     createdAt: String(item.createdAt ?? ""),
     updatedAt: String(item.updatedAt ?? ""),
     active: item.active !== false,
+    emailVerified: item.emailVerified === true,
+    emailVerifiedAt: item.emailVerifiedAt ? String(item.emailVerifiedAt) : null,
     subscription: subscription
       ? {
           status: String(subscription.status ?? "NONE"),
@@ -44,7 +46,9 @@ export const usersApi = {
         params: {
           ...query,
           role: query?.role || undefined,
-          status: query?.status === "ALL" ? undefined : query?.status
+          status: query?.status === "ALL" ? undefined : query?.status,
+          emailVerification:
+            query?.emailVerification === "ALL" ? undefined : query?.emailVerification
         }
       }
     );
@@ -69,5 +73,17 @@ export const usersApi = {
       active
     });
     return { data: normalizeUser(response.data.data ?? response.data) };
+  },
+
+  async verifyEmail(id: string): Promise<{ data: AdminUser }> {
+    const response = await usersClient.patch<{ data: unknown }>(`/users/${id}/verify-email`);
+    return { data: normalizeUser(response.data.data ?? response.data) };
+  },
+
+  async resendVerificationEmail(id: string): Promise<{ message: string }> {
+    const response = await usersClient.post<{ message: string }>(
+      `/users/${id}/resend-verification`
+    );
+    return { message: response.data.message ?? "Verification email sent." };
   }
 };

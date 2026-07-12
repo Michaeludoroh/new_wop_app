@@ -1,13 +1,32 @@
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PremiumAccessGuard } from './premium-access.guard';
 import { SubscriptionsService } from '../subscriptions.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 describe('PremiumAccessGuard', () => {
   const subscriptionsService = {
     userHasPremiumAccess: jest.fn(),
   } as unknown as SubscriptionsService;
 
-  const guard = new PremiumAccessGuard(subscriptionsService);
+  const prisma = {
+    user: {
+      findUnique: jest.fn(),
+    },
+  } as unknown as PrismaService;
+
+  const configService = {
+    get: jest.fn((key: string) => {
+      if (key === 'REQUIRE_EMAIL_VERIFICATION') return 'true';
+      return undefined;
+    }),
+  } as unknown as ConfigService;
+
+  const guard = new PremiumAccessGuard(
+    subscriptionsService,
+    prisma,
+    configService,
+  );
 
   function createContext(user?: { sub: string; role: string }) {
     return {
@@ -19,6 +38,7 @@ describe('PremiumAccessGuard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ emailVerified: true });
   });
 
   it('returns 403 when user is missing', async () => {
@@ -50,5 +70,16 @@ describe('PremiumAccessGuard', () => {
     ).rejects.toMatchObject({
       response: { message: 'Subscription required' },
     });
+  });
+
+  it('blocks unverified users when email verification is required', async () => {
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ emailVerified: false });
+
+    await expect(
+      guard.canActivate(createContext({ sub: 'user_1', role: 'USER' })),
+    ).rejects.toMatchObject({
+      response: { message: 'Email verification required', code: 'EMAIL_NOT_VERIFIED' },
+    });
+    expect(subscriptionsService.userHasPremiumAccess).not.toHaveBeenCalled();
   });
 });

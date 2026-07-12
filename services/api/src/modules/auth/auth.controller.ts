@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
@@ -8,6 +8,7 @@ import { LogoutDto } from './dto/logout.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailQueryDto } from './dto/verify-email-query.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 type RequestWithUser = {
@@ -91,5 +92,25 @@ export class AuthController {
     }
 
     return this.authService.me(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('send-verification-email')
+  sendVerificationEmail(@Req() req: RequestWithUser) {
+    return this.authService.sendVerificationEmail(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @Post('resend-verification')
+  resendVerificationEmail(@Req() req: RequestWithUser) {
+    return this.authService.resendVerificationEmail(req.user.sub);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Get('verify-email')
+  verifyEmail(@Query() query: VerifyEmailQueryDto) {
+    return this.authService.verifyEmail(query.token);
   }
 }

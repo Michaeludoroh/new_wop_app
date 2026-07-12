@@ -34,7 +34,7 @@ const defaultState: AuthState = {
   error: null
 };
 
-const PUBLIC_ROUTES = new Set(["/login"]);
+const PUBLIC_ROUTES = new Set(["/login", "/sermon"]);
 const SESSION_INVALIDATED_EVENT = "auth:session-invalidated";
 const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH_GATE === "true";
 const ADMIN_PORTAL_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "MODERATOR"];
@@ -81,16 +81,16 @@ function normalizeRole(role: string | null | undefined): UserRole | null {
   return null;
 }
 
-function normalizeAuthUser(user: AuthUser): AuthUser {
-  const role = normalizeRole(user.role);
-  return role ? { ...user, role } : user;
-}
-
 function assertAdminPortalAccess(user: AuthUser) {
   const role = normalizeRole(user.role);
   if (!role || !ADMIN_PORTAL_ROLES.includes(role)) {
     throw new Error("This account does not have admin portal access.");
   }
+}
+
+function normalizeAuthUser(user: AuthUser): AuthUser {
+  const role = normalizeRole(user.role);
+  return role ? { ...user, role } : user;
 }
 
 function normalizeError(error: unknown): string {

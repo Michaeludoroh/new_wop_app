@@ -108,6 +108,58 @@ class SubscriptionService {
     return PaymentStatusResult.fromJson(_asMap(response.data));
   }
 
+  Future<MobileSubscriptionVerifyResult> verifyGooglePurchase({
+    required String productId,
+    required String purchaseToken,
+  }) async {
+    final response = await _dio.post<dynamic>(
+      '/mobile/subscriptions/google/verify',
+      data: {
+        'productId': productId,
+        'purchaseToken': purchaseToken,
+      },
+    );
+
+    return MobileSubscriptionVerifyResult.fromJson(_asMap(response.data));
+  }
+
+  Future<MobileSubscriptionVerifyResult> verifyApplePurchase({
+    required String receiptData,
+    String? productId,
+    String? transactionId,
+  }) async {
+    final response = await _dio.post<dynamic>(
+      '/mobile/subscriptions/apple/verify',
+      data: {
+        'receiptData': receiptData,
+        if (productId != null) 'productId': productId,
+        if (transactionId != null) 'transactionId': transactionId,
+      },
+    );
+
+    return MobileSubscriptionVerifyResult.fromJson(_asMap(response.data));
+  }
+
+  Future<MobileSubscriptionStatusResult> getMobileStatus() async {
+    final response = await _dio.get<dynamic>('/mobile/subscriptions/status');
+    return MobileSubscriptionStatusResult.fromJson(_asMap(response.data));
+  }
+
+  Future<MobileSubscriptionVerifyResult> restoreMobilePurchases({
+    required String platform,
+    required List<MobileRestorePurchaseItem> purchases,
+  }) async {
+    final response = await _dio.post<dynamic>(
+      '/mobile/subscriptions/restore',
+      data: {
+        'platform': platform,
+        'purchases': purchases.map((item) => item.toJson()).toList(),
+      },
+    );
+
+    return MobileSubscriptionVerifyResult.fromJson(_asMap(response.data));
+  }
+
   Future<String> resolvePlanCode(
     MembershipPlan plan, {
     String billingInterval = 'MONTHLY',

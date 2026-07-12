@@ -1,3 +1,5 @@
+import type { EmailProviderId } from './email-config.util';
+
 export type EmailMessage = {
   to: string;
   subject: string;
@@ -16,7 +18,7 @@ export type EmailDeliveryAttempt = {
   retryable: boolean;
 };
 
-export type EmailProviderName = 'MOCK_SMTP' | 'SMTP';
+export type EmailProviderName = EmailProviderId;
 
 export type EmailDeliveryResult = {
   provider: EmailProviderName;
@@ -25,5 +27,9 @@ export type EmailDeliveryResult = {
 
 export interface EmailProvider {
   readonly providerName: EmailProviderName;
+  readonly displayName: string;
   send(messages: EmailMessage[]): Promise<EmailDeliveryResult>;
+  verifyConnection?(): Promise<void>;
 }
+
+export const EMAIL_PROVIDER_TOKEN = 'EMAIL_PROVIDER';

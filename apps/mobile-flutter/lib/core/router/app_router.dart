@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_scope.dart';
 import '../auth/auth_state.dart';
+import '../../screens/verify_email_screen.dart';
 import '../../widgets/subscription_gate.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../screens/login_screen.dart';
@@ -35,6 +36,7 @@ class AppRouter {
     RegisterScreen.routeName,
     ForgotPasswordScreen.routeName,
     ResetPasswordScreen.routeName,
+    VerifyEmailScreen.routeName,
   };
 
   static const Set<String> _consumerRoles = {
@@ -91,10 +93,14 @@ class AppRouter {
         }
 
         if (_authRoutes.contains(routeName) && authState.isAuthenticated) {
-          return DashboardScreen(
-            authStatusLabel: 'Authenticated',
-            authError: authState.errorMessage,
-          );
+          if (routeName == VerifyEmailScreen.routeName) {
+            // Allow authenticated users to stay on the verification screen.
+          } else {
+            return DashboardScreen(
+              authStatusLabel: 'Authenticated',
+              authError: authState.errorMessage,
+            );
+          }
         }
 
         if (!_authRoutes.contains(routeName) && !authState.isAuthenticated) {
@@ -123,6 +129,10 @@ class AppRouter {
             return const ForgotPasswordScreen();
           case ResetPasswordScreen.routeName:
             return const ResetPasswordScreen();
+          case VerifyEmailScreen.routeName:
+            return VerifyEmailScreen(
+              email: settings.arguments as String?,
+            );
           case NotificationsScreen.routeName:
             return const NotificationsScreen();
           case EventsScreen.routeName:

@@ -22,6 +22,8 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { PushModule } from './modules/push/push.module';
 import { LibraryModule } from './modules/library/library.module';
+import { MobileSubscriptionsModule } from './modules/mobile-subscriptions/mobile-subscriptions.module';
+import { ContactModule } from './modules/contact/contact.module';
 import { validateSecurityConfig } from './config/security-config.validation';
 import { ObservabilityModule } from './observability/observability.module';
 
@@ -59,6 +61,8 @@ import { ObservabilityModule } from './observability/observability.module';
     RealtimeModule,
     PushModule,
     LibraryModule,
+    MobileSubscriptionsModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [

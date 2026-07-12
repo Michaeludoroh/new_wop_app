@@ -6,6 +6,7 @@ import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_logo.dart';
+import 'verify_email_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -69,6 +70,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() {
       _submitting = false;
     });
+
+    final user = AuthScope.of(context).state.user;
+    if (user != null && user.needsEmailVerification) {
+      Navigator.of(context).pushReplacementNamed(
+        VerifyEmailScreen.routeName,
+        arguments: user.email,
+      );
+    }
   }
 
   String? _validateName(String? value) {

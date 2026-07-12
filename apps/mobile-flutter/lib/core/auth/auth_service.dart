@@ -16,6 +16,8 @@ class AuthApiConfig {
   static const String mePath = '/auth/me';
   static const String forgotPasswordPath = '/auth/forgot-password';
   static const String resetPasswordPath = '/auth/reset-password';
+  static const String sendVerificationEmailPath = '/auth/send-verification-email';
+  static const String resendVerificationPath = '/auth/resend-verification';
 }
 
 class AuthService {
@@ -129,6 +131,34 @@ class AuthService {
     await _dio.post<dynamic>(
       AuthApiConfig.resetPasswordPath,
       data: request.toJson(),
+    );
+  }
+
+  Future<void> resendVerificationEmail() async {
+    final accessToken = await _tokenStorageService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      throw StateError('No access token available');
+    }
+
+    await _dio.post<dynamic>(
+      AuthApiConfig.resendVerificationPath,
+      options: Options(
+        headers: {'Authorization': 'Bearer $accessToken'},
+      ),
+    );
+  }
+
+  Future<void> sendVerificationEmail() async {
+    final accessToken = await _tokenStorageService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      throw StateError('No access token available');
+    }
+
+    await _dio.post<dynamic>(
+      AuthApiConfig.sendVerificationEmailPath,
+      options: Options(
+        headers: {'Authorization': 'Bearer $accessToken'},
+      ),
     );
   }
 

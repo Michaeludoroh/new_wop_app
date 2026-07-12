@@ -14,6 +14,12 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthTokens, AuthUserPayload, AuthUserResponse } from './auth.types';
+import {
+  readJwtAccessSecret,
+  readJwtRefreshSecret,
+} from './jwt-config.util';
+import { normalizeAppRole } from './role.util';
+import { EmailVerificationService } from './email-verification.service';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
 
@@ -32,6 +38,7 @@ export class AuthService {
     private readonly emailService: EmailService,
     private readonly emailTemplateService: EmailTemplateService,
     private readonly subscriptionsService: SubscriptionsService,
+    private readonly emailVerificationService: EmailVerificationService,
   ) {}
 
   async register(dto: RegisterDto, metadata?: SessionMetadata) {
@@ -45,35 +52,61 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
+    const requireVerification = this.emailVerificationService.isVerificationRequired();
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email.toLowerCase(),
         fullName: dto.fullName,
         passwordHash,
         role: Role.USER,
+        ...(requireVerification
+          ? {}
+          : {
+              emailVerified: true,
+              emailVerifiedAt: new Date(),
+            }),
       },
     });
 
-    await this.subscriptionsService.initializeRegistrationTrial(user.id).catch(() => undefined);
+    if (requireVerification) {
+      await this.emailVerificationService
+        .issueAndSendVerificationEmail(user)
+        .catch(() => undefined);
+    } else {
+      await this.subscriptionsService.initializeRegistrationTrial(user.id).catch(() => undefined);
+
+      const welcome = this.emailTemplateService.welcomeEmail(user.fullName);
+      await this.emailService.send([
+        {
+          to: user.email,
+          subject: welcome.subject,
+          body: welcome.body,
+          html: welcome.html,
+          dedupeKey: `welcome:${user.id}`,
+        },
+      ]).catch(() => undefined);
+    }
 
     const tokens = await this.issueTokens(user);
     await this.storeRefreshToken(user.id, tokens.refreshToken, metadata);
-
-    const welcome = this.emailTemplateService.welcomeEmail(user.fullName);
-    await this.emailService.send([
-      {
-        to: user.email,
-        subject: welcome.subject,
-        body: welcome.body,
-        html: welcome.html,
-        dedupeKey: `welcome:${user.id}`,
-      },
-    ]).catch(() => undefined);
 
     return {
       user: this.toAuthUser(user),
       ...tokens,
     };
+  }
+
+  async sendVerificationEmail(userId: string) {
+    return this.emailVerificationService.sendVerificationEmailForUserId(userId);
+  }
+
+  async resendVerificationEmail(userId: string) {
+    return this.emailVerificationService.sendVerificationEmailForUserId(userId);
+  }
+
+  async verifyEmail(token: string) {
+    return this.emailVerificationService.verifyEmailToken(token);
   }
 
   async login(dto: LoginDto, metadata?: SessionMetadata) {
@@ -251,6 +284,19 @@ export class AuthService {
       }),
     ]);
 
+    const successEmail = this.emailTemplateService.passwordResetSuccessEmail(user.fullName);
+    await this.emailService
+      .send([
+        {
+          to: user.email,
+          subject: successEmail.subject,
+          body: successEmail.body,
+          html: successEmail.html,
+          dedupeKey: `password-reset-success:${user.id}:${Date.now().toString().slice(0, 10)}`,
+        },
+      ])
+      .catch(() => undefined);
+
     return { message: 'Password reset successful' };
   }
 
@@ -271,10 +317,15 @@ export class AuthService {
   }
 
   private async issueTokens(user: User): Promise<AuthTokens> {
+    const role = normalizeAppRole(user.role);
+    if (!role) {
+      throw new UnauthorizedException('User role is invalid');
+    }
+
     const payload: AuthUserPayload = {
       sub: user.id,
       email: user.email,
-      role: user.role as AppRole,
+      role,
     };
 
     const accessTokenExpiresIn =
@@ -283,8 +334,9 @@ export class AuthService {
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d';
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      secret: this.configService.get<string>('JWT_ACCESS_SECRET'),
+      secret: readJwtAccessSecret(this.configService),
       expiresIn: accessTokenExpiresIn as never,
+      algorithm: 'HS256',
     });
 
     const refreshToken = await this.jwtService.signAsync(
@@ -293,8 +345,9 @@ export class AuthService {
         jti: randomUUID(),
       },
       {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: readJwtRefreshSecret(this.configService),
         expiresIn: refreshTokenExpiresIn as never,
+        algorithm: 'HS256',
       },
     );
 
@@ -410,11 +463,19 @@ export class AuthService {
   }
 
   private toAuthUser(user: User): AuthUserResponse {
+    const role = normalizeAppRole(user.role);
+    if (!role) {
+      throw new UnauthorizedException('User role is invalid');
+    }
+
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      role: user.role as AppRole,
+      role,
+      emailVerified: user.emailVerified,
+      emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+      requireEmailVerification: this.emailVerificationService.isVerificationRequired(),
     };
   }
 }

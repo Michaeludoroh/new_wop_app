@@ -105,6 +105,31 @@ class AuthProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> resendVerificationEmail() async {
+    await _runBusyAction(() async {
+      await _authService.resendVerificationEmail();
+      _setState(_state.copyWith(isBusy: false, clearError: true));
+    });
+  }
+
+  Future<bool> refreshProfileAfterVerification() async {
+    if (!_state.isAuthenticated) return false;
+
+    try {
+      final user = await _authService.me();
+      _setAuthenticated(user);
+      return user.emailVerified;
+    } catch (e) {
+      _setState(
+        _state.copyWith(
+          errorMessage: e.toString(),
+          isBusy: false,
+        ),
+      );
+      return false;
+    }
+  }
+
   Future<void> forgotPassword(ForgotPasswordRequest request) async {
     await _runBusyAction(() async {
       await _authService.forgotPassword(request);

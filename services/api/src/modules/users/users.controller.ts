@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -60,5 +60,17 @@ export class UsersController {
     @Req() req: AuthRequest,
   ) {
     return this.usersService.updateStatus(id, dto.active, req.user);
+  }
+
+  @Roles('ADMIN')
+  @Patch(':id/verify-email')
+  verifyEmail(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.usersService.verifyEmail(id, req.user);
+  }
+
+  @Roles('ADMIN')
+  @Post(':id/resend-verification')
+  resendVerificationEmail(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.usersService.resendVerificationEmail(id, req.user);
   }
 }

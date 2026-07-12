@@ -1,19 +1,28 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/subscriptions/mobile_billing_service.dart';
 import '../core/subscriptions/subscription_models.dart';
-import '../core/subscriptions/subscription_provider.dart';
 import '../core/subscriptions/subscription_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/membership_status_card.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/trial_banner.dart';
+
 class SubscriptionScreen extends StatefulWidget {
-  const SubscriptionScreen({super.key, this.service});
+  const SubscriptionScreen({
+    super.key,
+    this.service,
+    this.mobileBillingService,
+  });
 
   static const routeName = '/subscriptions';
 
   final SubscriptionService? service;
+  final MobileBillingService? mobileBillingService;
 
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
@@ -21,17 +30,47 @@ class SubscriptionScreen extends StatefulWidget {
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
   late final SubscriptionService _service = widget.service ?? SubscriptionService();
+  late final MobileBillingService _mobileBilling =
+      widget.mobileBillingService ?? MobileBillingService(subscriptionService: _service);
+
   bool _loading = true;
   bool _submitting = false;
   String? _error;
   String? _pendingProviderReference;
   SubscriptionStatusModel? _status;
+  MobileStoreSubscriptionModel? _storeStatus;
   List<SubscriptionPlanModel> _plans = const [];
+  ProductDetails? _storeProduct;
+
+  bool get _usesNativeBilling => _mobileBilling.isSupported;
 
   @override
   void initState() {
     super.initState();
-    _loadStatus();
+    _initialize();
+  }
+
+  @override
+  void dispose() {
+    _mobileBilling.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initialize() async {
+    if (_usesNativeBilling) {
+      await _mobileBilling.initialize(
+        onPurchaseUpdated: _handlePurchaseUpdated,
+        onError: (error) {
+          if (!mounted) return;
+          setState(() {
+            _error = 'Store purchase failed. Please try again.';
+          });
+        },
+      );
+      _storeProduct = _mobileBilling.premiumProduct;
+    }
+
+    await _loadStatus();
   }
 
   Future<void> _loadStatus() async {
@@ -44,11 +83,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       final results = await Future.wait([
         _service.getStatus(),
         _service.getPlans(),
+        if (_usesNativeBilling) _service.getMobileStatus(),
       ]);
+
       if (!mounted) return;
+
       setState(() {
         _status = results[0] as SubscriptionStatusModel?;
         _plans = results[1] as List<SubscriptionPlanModel>;
+        if (_usesNativeBilling && results.length > 2) {
+          final mobileStatus = results[2] as MobileSubscriptionStatusResult;
+          _storeStatus = mobileStatus.store;
+          if (mobileStatus.subscription != null) {
+            _status = mobileStatus.subscription;
+          }
+        }
       });
     } catch (_) {
       if (!mounted) return;
@@ -58,6 +107,45 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     } finally {
       if (mounted) {
         setState(() => _loading = false);
+      }
+    }
+  }
+
+  Future<void> _handlePurchaseUpdated(PurchaseDetails purchase) async {
+    if (purchase.status == PurchaseStatus.pending) {
+      if (!mounted) return;
+      setState(() => _submitting = true);
+      return;
+    }
+
+    if (purchase.status == PurchaseStatus.error) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = purchase.error?.message ?? 'Purchase failed.';
+      });
+      return;
+    }
+
+    if (purchase.status == PurchaseStatus.purchased ||
+        purchase.status == PurchaseStatus.restored) {
+      try {
+        await _mobileBilling.verifyPurchase(purchase);
+        await _mobileBilling.completePurchase(purchase);
+        if (!mounted) return;
+        await _loadStatus();
+        SubscriptionScope.maybeOf(context)?.refresh();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subscription activated successfully.')),
+        );
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _error = 'Purchase verification failed. Please try again or restore purchases.';
+        });
+      } finally {
+        if (mounted) setState(() => _submitting = false);
       }
     }
   }
@@ -80,6 +168,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         return;
       }
 
+      if (_usesNativeBilling) {
+        await _mobileBilling.purchasePremium();
+        return;
+      }
+
       final checkout = await _service.initiateCheckout(plan: plan);
       if (!mounted) return;
       _pendingProviderReference = checkout.providerReference;
@@ -88,7 +181,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         mode: LaunchMode.externalApplication,
       );
       if (!launched) {
-        throw Exception('Unable to open Flutterwave checkout');
+        throw Exception('Unable to open checkout');
       }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Complete checkout, then refresh payment status.')),
@@ -97,6 +190,35 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (!mounted) return;
       setState(() {
         _error = 'Subscription update failed. Please try again.';
+      });
+    } finally {
+      if (mounted && !_usesNativeBilling) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  Future<void> _restorePurchases() async {
+    if (!_usesNativeBilling) return;
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      await _mobileBilling.restorePurchases();
+      if (!mounted) return;
+      await _loadStatus();
+      SubscriptionScope.maybeOf(context)?.refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchases restored successfully.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Unable to restore purchases.';
       });
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -110,7 +232,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (!mounted) return;
       await _loadStatus();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Subscription will cancel at period end.')),
+        SnackBar(
+          content: Text(
+            _usesNativeBilling
+                ? 'Cancellation must be managed in ${Platform.isIOS ? 'App Store' : 'Google Play'} settings.'
+                : 'Subscription will cancel at period end.',
+          ),
+        ),
       );
     } catch (_) {
       if (!mounted) return;
@@ -159,14 +287,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
+  String? _formatStoreExpiry() {
+    final expiry = _storeStatus?.expiryDate ?? _status?.endDate;
+    if (expiry == null) return null;
+    return '${expiry.day}/${expiry.month}/${expiry.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _status;
     final canRenew = status?.isGracePeriod == true || status?.access?.renewalDue == true;
+    final storePrice = _storeProduct?.price;
+    final expiryLabel = _formatStoreExpiry();
 
     return Scaffold(
       appBar: AppBar(
         title: const MinistryAppBarTitle(title: 'Subscription'),
+        actions: [
+          if (_usesNativeBilling)
+            TextButton(
+              onPressed: _submitting ? null : _restorePurchases,
+              child: const Text('Restore'),
+            ),
+        ],
       ),
       body: SafeArea(
         child: _loading
@@ -177,6 +320,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     MembershipStatusCard(status: status),
+                    if (expiryLabel != null) ...[
+                      const SizedBox(height: 12),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(Icons.event_available_outlined),
+                          title: const Text('Subscription expiry'),
+                          subtitle: Text(expiryLabel),
+                          trailing: _storeStatus?.autoRenewStatus == true
+                              ? const Text('Auto-renewing')
+                              : const Text('Cancelled'),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     if (_error != null) ...[
                       Card(
@@ -188,7 +344,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    if (_pendingProviderReference != null) ...[
+                    if (!_usesNativeBilling && _pendingProviderReference != null) ...[
                       Card(
                         child: ListTile(
                           title: const Text('Checkout pending'),
@@ -204,7 +360,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     if (status?.hasPremiumAccess ?? false) ...[
                       OutlinedButton(
                         onPressed: _submitting ? null : _cancelSubscription,
-                        child: const Text('Cancel at period end'),
+                        child: Text(
+                          _usesNativeBilling
+                              ? 'Manage subscription in store'
+                              : 'Cancel at period end',
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -219,6 +379,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       submitting: _submitting,
                       onSubscribe: () => _subscribe(MembershipPlan.premium),
                       plan: _premiumPlan,
+                      storePrice: storePrice,
+                      usesNativeBilling: _usesNativeBilling,
                     ),
                     if (_plans.any((plan) => plan.code.toUpperCase() == 'FREE')) ...[
                       const SizedBox(height: 16),
@@ -247,7 +409,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       const SizedBox(height: 12),
                       _PlanTile(
                         title: 'Premium Membership',
-                        subtitle: '₦500 / Month',
+                        subtitle: storePrice ?? '₦500 / Month',
                         onTap: _submitting ? null : () => _subscribe(MembershipPlan.premium),
                       ),
                     ],
@@ -287,18 +449,23 @@ class _PremiumMembershipCard extends StatelessWidget {
   const _PremiumMembershipCard({
     required this.submitting,
     required this.onSubscribe,
+    required this.usesNativeBilling,
     this.plan,
+    this.storePrice,
   });
 
   final bool submitting;
   final VoidCallback onSubscribe;
+  final bool usesNativeBilling;
   final SubscriptionPlanModel? plan;
+  final String? storePrice;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final amount = plan?.amount ?? 500;
     final currencySymbol = plan == null || plan!.amount >= 100 ? '₦' : '\$';
+    final priceLabel = storePrice ?? '$currencySymbol${amount.toStringAsFixed(0)} / Month';
 
     return Card(
       child: Padding(
@@ -315,11 +482,20 @@ class _PremiumMembershipCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '$currencySymbol${amount.toStringAsFixed(0)} / Month',
+              priceLabel,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
+            if (usesNativeBilling) ...[
+              const SizedBox(height: 8),
+              Text(
+                Platform.isIOS
+                    ? 'Billed through the App Store.'
+                    : 'Billed through Google Play.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
             const SizedBox(height: 16),
             Text('Benefits', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
@@ -333,7 +509,7 @@ class _PremiumMembershipCard extends StatelessWidget {
               width: double.infinity,
               child: FilledButton(
                 onPressed: submitting ? null : onSubscribe,
-                child: const Text('Subscribe Now'),
+                child: Text(submitting ? 'Processing...' : 'Subscribe Now'),
               ),
             ),
           ],

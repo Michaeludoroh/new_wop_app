@@ -9,6 +9,8 @@ export type AdminUser = {
   createdAt: string;
   updatedAt: string;
   active: boolean;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
   subscription: {
     status: string;
     planCode: string | null;
@@ -24,6 +26,7 @@ export type UserFeedQuery = {
   search?: string;
   role?: UserRole | "";
   status?: "ACTIVE" | "DISABLED" | "ALL";
+  emailVerification?: "VERIFIED" | "UNVERIFIED" | "ALL";
   limit?: number;
   offset?: number;
 };

@@ -7,24 +7,13 @@ import {
 import { Reflector } from '@nestjs/core';
 import { AppRole } from '../auth.types';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { hasRequiredRole, normalizeAppRole } from '../role.util';
 
 type RequestUser = {
   sub: string;
   email: string;
-  role: AppRole;
+  role: AppRole | string;
 };
-
-const ROLE_HIERARCHY: Record<AppRole, number> = {
-  USER: 1,
-  MODERATOR: 2,
-  ADMIN: 3,
-  SUPER_ADMIN: 4,
-};
-
-function hasRequiredRole(userRole: AppRole, requiredRoles: AppRole[]): boolean {
-  const userLevel = ROLE_HIERARCHY[userRole];
-  return requiredRoles.some((requiredRole) => userLevel >= ROLE_HIERARCHY[requiredRole]);
-}
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -32,7 +21,7 @@ export class RolesGuard implements CanActivate {
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles =
-      this.reflector.getAllAndOverride<Array<RequestUser['role']>>(ROLES_KEY, [
+      this.reflector.getAllAndOverride<Array<AppRole>>(ROLES_KEY, [
         context.getHandler(),
         context.getClass(),
       ]) ?? [];
@@ -42,13 +31,13 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<{ user?: RequestUser }>();
-    const user = request.user;
+    const userRole = normalizeAppRole(request.user?.role);
 
-    if (!user?.role) {
+    if (!userRole) {
       throw new ForbiddenException('Role information missing');
     }
 
-    if (!hasRequiredRole(user.role, requiredRoles)) {
+    if (!hasRequiredRole(userRole, requiredRoles)) {
       throw new ForbiddenException('Insufficient role permissions');
     }
 

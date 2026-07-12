@@ -1,0 +1,128 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 40%, #f3e5ab33 100%);
+  color: #212121;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.header {
+  background: linear-gradient(135deg, #4a148c 0%, #6a1b9a 55%, #6a1b9a 100%);
+  color: #ffffff;
+  padding: 1.5rem 1.25rem 2rem;
+  border-bottom: 4px solid #d4af37;
+}
+
+.headerInner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #f3e5ab;
+}
+
+.orgName {
+  margin: 0;
+  font-size: clamp(1.35rem, 4vw, 2rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 3rem;
+}
+
+.sermonCard {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(74, 20, 140, 0.08);
+  overflow: hidden;
+}
+
+.videoWrapper {
+  width: 100%;
+  background: #212121;
+  line-height: 0;
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000000;
+}
+
+.content {
+  padding: 1.5rem 1.25rem 1.75rem;
+  border-top: 3px solid #d4af37;
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  color: #4a148c;
+  font-size: clamp(1.35rem, 3.5vw, 1.85rem);
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 0 0 1rem;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.95rem;
+  color: #616161;
+}
+
+.dateBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: #e1bee7;
+  color: #4a148c;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #424242;
+}
+
+.footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.25rem 2rem;
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.85rem;
+  color: #616161;
+}
+
+@media (min-width: 768px) {
+  .header {
+    padding: 2rem 2rem 2.5rem;
+  }
+
+  .main {
+    padding: 2rem 2rem 3.5rem;
+  }
+
+  .content {
+    padding: 1.75rem 2rem 2rem;
+  }
+}

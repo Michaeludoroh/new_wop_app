@@ -3,16 +3,17 @@ import {
   EmailDeliveryResult,
   EmailMessage,
   EmailProvider,
-} from './email.provider.interface';
+} from '../email.provider.interface';
 
 @Injectable()
-export class MockSmtpProvider implements EmailProvider {
-  readonly providerName = 'MOCK_SMTP' as const;
-  private readonly logger = new Logger(MockSmtpProvider.name);
+export class MockEmailProvider implements EmailProvider {
+  readonly providerName = 'mock' as const;
+  readonly displayName = 'Mock';
+  private readonly logger = new Logger(MockEmailProvider.name);
 
   async send(messages: EmailMessage[]): Promise<EmailDeliveryResult> {
     const attempts = messages.map((message) => {
-      const providerMessageId = `mock-smtp:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+      const providerMessageId = `mock:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
 
       this.logger.log(
         JSON.stringify({

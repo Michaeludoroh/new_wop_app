@@ -50,6 +50,13 @@ function createAuthService(overrides?: {
     initializeRegistrationTrial: jest.fn().mockResolvedValue(null),
   };
 
+  const emailVerificationService = {
+    isVerificationRequired: jest.fn(() => false),
+    issueAndSendVerificationEmail: jest.fn(),
+    sendVerificationEmailForUserId: jest.fn(),
+    verifyEmailToken: jest.fn(),
+  };
+
   const service = new AuthService(
     prisma as never,
     jwtService as never,
@@ -61,6 +68,7 @@ function createAuthService(overrides?: {
       buildPasswordResetUrl: jest.fn(),
     } as never,
     subscriptionsService as never,
+    emailVerificationService as never,
   );
 
   return { service, prisma };
@@ -97,6 +105,8 @@ describe('AuthService login disabled-user protection', () => {
         passwordHash: 'hash',
         role: Role.USER,
         deletedAt: null,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
       },
     });
 

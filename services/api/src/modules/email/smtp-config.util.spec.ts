@@ -1,46 +1,38 @@
 import {
+  buildNodemailerTransportOptions,
   maskSmtpUser,
   resolveSmtpConfig,
   resolveSmtpProviderMode,
 } from './smtp-config.util';
 
-describe('smtp-config.util', () => {
-  it('uses MOCK_SMTP when SMTP_HOST is unset', () => {
+describe('smtp-config.util compatibility layer', () => {
+  it('uses MOCK_SMTP when provider is mock', () => {
     expect(resolveSmtpProviderMode({})).toBe('MOCK_SMTP');
-    expect(resolveSmtpConfig({}).configured).toBe(false);
-    expect(resolveSmtpConfig({}).missingVariables).toEqual([
-      'SMTP_HOST',
-      'SMTP_USER',
-      'SMTP_PASS',
-    ]);
+    expect(resolveSmtpConfig({}).configured).toBe(true);
   });
 
-  it('uses SMTP when host is set and reports missing auth vars', () => {
+  it('uses SMTP when brevo provider is configured', () => {
     const config = resolveSmtpConfig({
-      SMTP_HOST: 'smtp.example.com',
-      SMTP_PORT: '465',
-      SMTP_SECURE: 'true',
+      EMAIL_PROVIDER: 'brevo',
+      SMTP_USERNAME: 'api@example.com',
+      SMTP_PASSWORD: 'secret',
+      SMTP_FROM_EMAIL: 'noreply@example.com',
     });
 
-    expect(resolveSmtpProviderMode({ SMTP_HOST: 'smtp.example.com' })).toBe('SMTP');
-    expect(config.host).toBe('smtp.example.com');
-    expect(config.port).toBe(465);
-    expect(config.secure).toBe(true);
-    expect(config.configured).toBe(false);
-    expect(config.missingVariables).toEqual(['SMTP_USER', 'SMTP_PASS']);
-  });
-
-  it('marks config complete when required vars are present', () => {
-    const config = resolveSmtpConfig({
-      SMTP_HOST: 'smtp.example.com',
-      SMTP_USER: 'api@example.com',
-      SMTP_PASS: 'secret',
-      SMTP_FROM: 'noreply@example.com',
-    });
-
+    expect(resolveSmtpProviderMode({ EMAIL_PROVIDER: 'brevo' })).toBe('SMTP');
+    expect(config.host).toBe('smtp-relay.brevo.com');
+    expect(config.requireTls).toBe(true);
     expect(config.configured).toBe(true);
-    expect(config.missingVariables).toEqual([]);
-    expect(config.from).toBe('noreply@example.com');
+
+    const transport = buildNodemailerTransportOptions({
+      EMAIL_PROVIDER: 'brevo',
+      SMTP_USERNAME: 'api@example.com',
+      SMTP_PASSWORD: 'secret',
+      SMTP_FROM_EMAIL: 'noreply@example.com',
+    });
+
+    expect(transport?.pool).toBe(true);
+    expect(transport?.requireTLS).toBe(true);
   });
 
   it('masks smtp user for diagnostics', () => {

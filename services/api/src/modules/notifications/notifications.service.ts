@@ -13,6 +13,7 @@ import { PushService } from '../push/push.service';
 import { PushMessage } from '../push/push.providers/push-provider.interface';
 import { buildPushData, PushDeepLinkInput, PushEntityType } from '../push/push-deep-link.util';
 import { EmailService } from '../email/email.service';
+import { EmailTemplateService } from '../email/email-template.service';
 import { CreateBroadcastNotificationDto } from './dto/create-broadcast-notification.dto';
 import { CreateTargetedNotificationDto } from './dto/create-targeted-notification.dto';
 import { ListNotificationsQueryDto } from './dto/list-notifications-query.dto';
@@ -27,6 +28,7 @@ export class NotificationsService {
     private readonly realtimeService: RealtimeService,
     private readonly pushService: PushService,
     private readonly emailService: EmailService,
+    private readonly emailTemplateService: EmailTemplateService,
     private readonly observability: ObservabilityService,
   ) {}
 
@@ -121,11 +123,17 @@ export class NotificationsService {
           return;
         }
 
+        const content = this.emailTemplateService.adminNotificationEmail(
+          notification.title,
+          notification.body,
+        );
+
         await this.emailService.send([
           {
             to: recipient.email,
-            subject: notification.title,
-            body: notification.body,
+            subject: content.subject,
+            body: content.body,
+            html: content.html,
             dedupeKey: `notification.created:${notification.id}:email:${recipient.email}`,
             metadata: {
               notificationId: notification.id,
@@ -143,12 +151,18 @@ export class NotificationsService {
         take: 200,
       });
 
+      const content = this.emailTemplateService.adminNotificationEmail(
+        notification.title,
+        notification.body,
+      );
+
       const messages = recipients
         .filter((recipient) => Boolean(recipient.email))
         .map((recipient) => ({
           to: recipient.email!,
-          subject: notification.title,
-          body: notification.body,
+          subject: content.subject,
+          body: content.body,
+          html: content.html,
           dedupeKey: `notification.created:${notification.id}:email:${recipient.email}`,
           metadata: {
             notificationId: notification.id,

@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const { isAuthenticated, isInitializing, user, logout } = useAuth();
 
-  if (pathname === "/login") {
+  if (pathname === "/login" || pathname === "/sermon") {
     return <>{children}</>;
   }
 

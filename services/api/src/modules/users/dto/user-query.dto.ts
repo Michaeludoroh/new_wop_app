@@ -16,6 +16,10 @@ export class UserQueryDto {
   status?: 'ACTIVE' | 'DISABLED' | 'ALL';
 
   @IsOptional()
+  @IsIn(['VERIFIED', 'UNVERIFIED', 'ALL'])
+  emailVerification?: 'VERIFIED' | 'UNVERIFIED' | 'ALL';
+
+  @IsOptional()
   @Transform(({ value }) => (value === undefined ? 50 : Number(value)))
   @IsInt()
   @Min(1)

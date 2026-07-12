@@ -26,6 +26,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserFeedQuery["role"]>("");
   const [statusFilter, setStatusFilter] = useState<UserFeedQuery["status"]>("ALL");
+  const [verificationFilter, setVerificationFilter] =
+    useState<UserFeedQuery["emailVerification"]>("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -35,10 +37,11 @@ export default function UsersPage() {
       search: search.trim() || undefined,
       role: roleFilter || undefined,
       status: statusFilter,
+      emailVerification: verificationFilter,
       limit: 50,
       offset: 0
     }),
-    [roleFilter, search, statusFilter]
+    [roleFilter, search, statusFilter, verificationFilter]
   );
 
   async function refresh() {
@@ -96,6 +99,30 @@ export default function UsersPage() {
     }
   }
 
+  async function markVerified() {
+    if (!selected) return;
+    setStatusMessage(null);
+    try {
+      const updated = await usersApi.verifyEmail(selected.id);
+      setSelected(updated.data);
+      setStatusMessage("Email marked as verified.");
+      await refresh();
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to verify user email"));
+    }
+  }
+
+  async function resendVerification() {
+    if (!selected) return;
+    setStatusMessage(null);
+    try {
+      const result = await usersApi.resendVerificationEmail(selected.id);
+      setStatusMessage(result.message);
+    } catch (err) {
+      setError(normalizeApiError(err, "Failed to resend verification email"));
+    }
+  }
+
   return (
     <ProtectedModule allowedRoles={["SUPER_ADMIN", "ADMIN"]}>
       <div style={{ display: "grid", gap: 20 }}>
@@ -115,7 +142,7 @@ export default function UsersPage() {
                 placeholder="Search by name or email"
                 style={inputStyle}
               />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
                 <select
                   value={roleFilter}
                   onChange={(event) =>
@@ -139,6 +166,19 @@ export default function UsersPage() {
                   <option value="ALL">All statuses</option>
                   <option value="ACTIVE">Active</option>
                   <option value="DISABLED">Disabled</option>
+                </select>
+                <select
+                  value={verificationFilter}
+                  onChange={(event) =>
+                    setVerificationFilter(
+                      event.target.value as UserFeedQuery["emailVerification"]
+                    )
+                  }
+                  style={inputStyle}
+                >
+                  <option value="ALL">All verification</option>
+                  <option value="VERIFIED">Verified</option>
+                  <option value="UNVERIFIED">Unverified</option>
                 </select>
               </div>
             </div>
@@ -168,7 +208,8 @@ export default function UsersPage() {
                   <strong>{user.fullName}</strong>
                   <div style={{ color: "#667085", fontSize: 13 }}>{user.email}</div>
                   <div style={{ color: "#667085", fontSize: 13, marginTop: 4 }}>
-                    {user.role} · {user.active ? "Active" : "Disabled"}
+                    {user.role} · {user.active ? "Active" : "Disabled"} ·{" "}
+                    {user.emailVerified ? "Verified" : "Unverified"}
                   </div>
                 </button>
               ))}
@@ -197,6 +238,13 @@ export default function UsersPage() {
                     <option value="ADMIN">Admin</option>
                     <option value="SUPER_ADMIN">Super Admin</option>
                   </select>
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, color: "#667085" }}>Email verification</div>
+                  <div>
+                    {selected.emailVerified ? "Verified" : "Unverified"}
+                    {selected.emailVerifiedAt ? ` · ${selected.emailVerifiedAt}` : ""}
+                  </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: "#667085" }}>Subscription</div>
@@ -233,6 +281,16 @@ export default function UsersPage() {
                 <button type="button" onClick={() => void toggleActive()}>
                   {selected.active ? "Disable user" : "Reactivate user"}
                 </button>
+                {!selected.emailVerified ? (
+                  <>
+                    <button type="button" onClick={() => void markVerified()}>
+                      Mark email verified
+                    </button>
+                    <button type="button" onClick={() => void resendVerification()}>
+                      Resend verification email
+                    </button>
+                  </>
+                ) : null}
                 {statusMessage ? <p style={{ color: "#027a48" }}>{statusMessage}</p> : null}
               </div>
             )}

@@ -8,7 +8,9 @@ import { EmailModule } from '../email/email.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { EmailVerificationService } from './email-verification.service';
 import { RolesGuard } from './guards/roles.guard';
+import { readJwtAccessSecret } from './jwt-config.util';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -19,10 +21,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        const jwtAccessSecret = configService.get<string>('JWT_ACCESS_SECRET');
-        if (!jwtAccessSecret) {
-          throw new Error('JWT_ACCESS_SECRET is required');
-        }
+        const jwtAccessSecret = readJwtAccessSecret(configService);
 
         const expiresIn =
           (configService.get<string>('JWT_ACCESS_EXPIRES_IN') ??
@@ -32,13 +31,14 @@ import { JwtStrategy } from './strategies/jwt.strategy';
           secret: jwtAccessSecret,
           signOptions: {
             expiresIn,
+            algorithm: 'HS256',
           },
         };
       },
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, Reflector, RolesGuard],
-  exports: [AuthService, RolesGuard],
+  providers: [AuthService, EmailVerificationService, JwtStrategy, Reflector, RolesGuard],
+  exports: [AuthService, EmailVerificationService, RolesGuard],
 })
 export class AuthModule {}

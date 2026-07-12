@@ -17,4 +17,7 @@ export type AuthUserResponse = {
   email: string;
   fullName: string;
   role: AppRole;
+  emailVerified: boolean;
+  emailVerifiedAt: string | null;
+  requireEmailVerification: boolean;
 };

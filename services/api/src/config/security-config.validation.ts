@@ -102,14 +102,17 @@ export function validateSecurityConfig(
   env: Record<string, unknown>,
 ): Record<string, unknown> {
   for (const key of REQUIRED_ENV_VARS) {
-    assertNonEmptyString(env, key);
+    const value = assertNonEmptyString(env, key);
+    env[key] = value;
   }
 
-  const accessSecret = assertNonEmptyString(env, 'JWT_ACCESS_SECRET');
-  const refreshSecret = assertNonEmptyString(env, 'JWT_REFRESH_SECRET');
+  const accessSecret = String(env.JWT_ACCESS_SECRET);
+  const refreshSecret = String(env.JWT_REFRESH_SECRET);
 
   assertSecretStrength('JWT_ACCESS_SECRET', accessSecret, MIN_SECRET_LENGTH);
   assertSecretStrength('JWT_REFRESH_SECRET', refreshSecret, MIN_SECRET_LENGTH);
+  env.JWT_ACCESS_SECRET = accessSecret;
+  env.JWT_REFRESH_SECRET = refreshSecret;
 
   if (accessSecret === refreshSecret) {
     throw new Error(
@@ -117,8 +120,8 @@ export function validateSecurityConfig(
     );
   }
 
-  const accessExpiresIn = assertNonEmptyString(env, 'JWT_ACCESS_EXPIRES_IN');
-  const refreshExpiresIn = assertNonEmptyString(env, 'JWT_REFRESH_EXPIRES_IN');
+  const accessExpiresIn = String(env.JWT_ACCESS_EXPIRES_IN);
+  const refreshExpiresIn = String(env.JWT_REFRESH_EXPIRES_IN);
 
   const accessSeconds = parseDurationToSeconds(accessExpiresIn);
   if (

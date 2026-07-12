@@ -20,6 +20,18 @@ const successfulWebhookDto = {
   },
 };
 
+const emailService = {
+  send: jest.fn().mockResolvedValue({ provider: 'MOCK_SMTP', attempts: [] }),
+};
+
+const emailTemplateService = {
+  subscriptionConfirmationEmail: jest.fn().mockReturnValue({
+    subject: 'Subscription confirmed',
+    body: 'body',
+    html: '<p>body</p>',
+  }),
+};
+
 function createService(overrides?: {
   transaction?: Record<string, unknown>;
   existingWebhook?: Record<string, unknown> | null;
@@ -107,6 +119,8 @@ function createService(overrides?: {
     { recordPaymentFailure: jest.fn() } as never,
     { get: jest.fn() } as never,
     lifecycleService as never,
+    emailService as never,
+    emailTemplateService as never,
   );
 
   return { service, prisma, tx, adapter, lifecycleService };
@@ -243,6 +257,8 @@ describe('PaymentsService checkout initiation', () => {
       { recordPaymentFailure: jest.fn() } as never,
       { get: jest.fn().mockReturnValue('https://api.example.com/api/v1') } as never,
       lifecycleService as never,
+      emailService as never,
+      emailTemplateService as never,
     );
 
     const result = await service.initiateEbookCheckout('user_1', { ebookId: 'ebook_1' });
@@ -292,6 +308,8 @@ describe('PaymentsService payment completion redirect', () => {
       { recordPaymentFailure: jest.fn() } as never,
       { get: jest.fn() } as never,
       { recordStatusChange: jest.fn(), buildGraceEndsAt: jest.fn() } as never,
+      emailService as never,
+      emailTemplateService as never,
     );
 
     const result = await service.completeCheckout('wop_ref_done');
@@ -319,7 +337,15 @@ describe('PaymentsService payment completion redirect', () => {
         update: jest.fn().mockResolvedValue({
           ...transaction,
           status: PaymentStatus.SUCCESS,
-          userSubscription: { status: SubscriptionStatus.ACTIVE, plan: { code: 'PREMIUM' } },
+          userSubscription: {
+            status: SubscriptionStatus.ACTIVE,
+            plan: {
+              code: 'PREMIUM',
+              name: 'Premium',
+              amount: new Prisma.Decimal(25),
+              currency: 'USD',
+            },
+          },
         }),
       },
       userSubscription: {
@@ -336,6 +362,12 @@ describe('PaymentsService payment completion redirect', () => {
     const prisma = {
       paymentTransaction: {
         findUnique: jest.fn().mockResolvedValue(transaction),
+      },
+      user: {
+        findUnique: jest.fn().mockResolvedValue({
+          email: 'user@example.com',
+          fullName: 'Test User',
+        }),
       },
       $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
     };
@@ -363,6 +395,8 @@ describe('PaymentsService payment completion redirect', () => {
       { recordPaymentFailure: jest.fn() } as never,
       { get: jest.fn() } as never,
       lifecycleService as never,
+      emailService as never,
+      emailTemplateService as never,
     );
 
     const result = await service.completeCheckout('wop_ref_pending');

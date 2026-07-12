@@ -10,7 +10,11 @@ export class EmailHealthController {
     const snapshot = await this.emailReadinessService.refreshConnectionTest();
 
     return {
-      status: snapshot.ready ? 'ready' : snapshot.provider === 'MOCK_SMTP' ? 'mock' : 'not_ready',
+      status: snapshot.ready
+        ? 'ready'
+        : snapshot.provider === 'mock'
+          ? 'mock'
+          : 'not_ready',
       email: snapshot,
       timestamp: new Date().toISOString(),
     };

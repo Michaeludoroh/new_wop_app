@@ -6,7 +6,10 @@ import { JwtStrategy } from './jwt.strategy';
 
 function createStrategy(user: unknown) {
   const config = {
-    get: jest.fn((key: string) => (key === 'JWT_ACCESS_SECRET' ? 'A'.repeat(48) : undefined)),
+    get: jest.fn((key: string) => {
+      if (key === 'JWT_ACCESS_SECRET') return ` ${'A'.repeat(48)} `;
+      return undefined;
+    }),
   } as unknown as ConfigService;
 
   const prisma = {
