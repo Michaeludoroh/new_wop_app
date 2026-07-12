@@ -72,6 +72,7 @@ services:
       WEBSOCKET_ONLY_MODE: "false"
     volumes:
       - uploads_prod_data:/app/uploads
+      - /etc/wopp/firebase-admin.json:/etc/wopp/firebase-admin.json:ro
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -111,6 +112,7 @@ services:
       WEBSOCKET_ONLY_MODE: "true"
     volumes:
       - uploads_prod_data:/app/uploads
+      - /etc/wopp/firebase-admin.json:/etc/wopp/firebase-admin.json:ro
     depends_on:
       migrate:
         condition: service_completed_successfully
