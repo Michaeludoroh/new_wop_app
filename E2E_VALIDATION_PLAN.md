@@ -1,4 +1,4 @@
-# WOP Ministry Platform — End-to-End Validation Plan
+# WOPP — End-to-End Validation Plan
 
 **Platform:** Women and Men of Passion and Purpose (WOP) Ministry Platform  
 **Version:** 0.1.0 (pre-production)  

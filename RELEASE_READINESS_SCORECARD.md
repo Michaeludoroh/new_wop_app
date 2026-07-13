@@ -1,4 +1,4 @@
-# Release Readiness Scorecard — WOP Ministry Platform
+# Release Readiness Scorecard — WOPP
 
 **Release version:** _______________  
 **Target:** ☐ Staging deployment · ☐ Production launch  

@@ -48,9 +48,16 @@ class StoreLegalLinks extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.support_agent_outlined),
             title: const Text('Support'),
-            subtitle: Text(StoreUrls.supportEmail),
+            subtitle: const Text('Get help and contact support'),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => _openUrl(context, StoreUrls.supportUrl),
+          ),
+          ListTile(
+            leading: const Icon(Icons.person_off_outlined),
+            title: const Text('Account Deletion'),
+            subtitle: const Text('Request deletion of your account'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => _openUrl(context, StoreUrls.accountDeletionUrl),
           ),
         ],
       ),

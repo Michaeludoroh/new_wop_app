@@ -1,6 +1,6 @@
 # Closed Beta Feedback Template
 
-**Platform:** WOP Ministry Platform  
+**Platform:** WOPP  
 **Beta version:** _______________  
 **Tester name:** _______________  
 **Date submitted:** _______________  

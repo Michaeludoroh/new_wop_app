@@ -1,4 +1,4 @@
-# Release Gap Analysis — WOP Ministry Platform
+# Release Gap Analysis — WOPP
 
 **Date:** 2026-06-17  
 **Reference checklists:** `RELEASE_BLOCKERS_CHECKLIST.md`, `API_VALIDATION_CHECKLIST.md`, `ADMIN_SMOKE_TEST_CHECKLIST.md`, `MOBILE_SMOKE_TEST_CHECKLIST.md`, `PAYMENT_VALIDATION_CHECKLIST.md`  

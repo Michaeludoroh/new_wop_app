@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { PolicyType, Prisma, Role } from '@prisma/client';
@@ -41,8 +40,6 @@ type PolicyRecord = {
 
 @Injectable()
 export class PoliciesService {
-  private readonly logger = new Logger(PoliciesService.name);
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
@@ -592,21 +589,11 @@ export class PoliciesService {
         };
       });
 
-    const result = {
+    return {
       pending,
       accepted,
       requiresAction: pending.length > 0,
     };
-
-    this.logAcceptanceStatus(userId, pending.length, result.requiresAction);
-
-    return result;
-  }
-
-  private logAcceptanceStatus(userId: string, pendingCount: number, requiresAction: boolean) {
-    this.logger.log(
-      `[POLICY_DIAG] GET /policies/me/status userId=${userId} pendingCount=${pendingCount} requiresAction=${requiresAction}`,
-    );
   }
 
   async acceptPolicy(userId: string, dto: AcceptPolicyDto) {
@@ -639,12 +626,6 @@ export class PoliciesService {
         acceptedAt: new Date(),
       },
     });
-
-    const statusAfter = await this.getAcceptanceStatus(userId);
-
-    this.logger.log(
-      `[POLICY_DIAG] POST /policies/me/accept userId=${userId} policyId=${policy.id} policyType=${policy.type} policyVersion=${policy.version} acceptancePersisted=true pendingCountAfter=${statusAfter.pending.length}`,
-    );
 
     return {
       success: true,

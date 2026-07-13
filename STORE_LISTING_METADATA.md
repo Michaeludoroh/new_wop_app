@@ -153,14 +153,14 @@ Welcome to WOPP! This release includes announcements, events, programs, mentorsh
 
 ## Privacy & Support URLs
 
-*(Replace with production URLs before submission)*
-
-| Field | Placeholder |
-|-------|-------------|
-| Privacy Policy URL | `https://api.example.com/api/v1/policies/public/current/PRIVACY_POLICY` |
-| Terms of Use URL | `https://api.example.com/api/v1/policies/public/current/TERMS_OF_USE` |
+| Field | URL |
+|-------|-----|
+| Privacy Policy URL | `https://woppandmopp.com/privacy-policy` |
+| Terms of Service URL | `https://woppandmopp.com/terms-of-service` |
+| Support URL | `https://woppandmopp.com/support` |
+| Account Deletion URL | `https://woppandmopp.com/account-deletion` |
 | Support Email | `support@wopp.org` |
-| Marketing URL | `https://your-domain.com` |
+| Marketing URL | `https://woppandmopp.com` |
 
 ---
 

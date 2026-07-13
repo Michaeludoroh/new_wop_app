@@ -1,4 +1,4 @@
-# P0 Test Results — WOP Ministry Platform
+# P0 Test Results — WOPP
 
 **Date:** 2026-06-17  
 **Executed after:** P0 implementation (ACT-001–006 + renewal)

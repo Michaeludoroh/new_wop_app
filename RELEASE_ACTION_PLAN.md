@@ -1,4 +1,4 @@
-# Release Action Plan — WOP Ministry Platform
+# Release Action Plan — WOPP
 
 **Date:** 2026-06-17  
 **Target:** Beta on staging → Production readiness  

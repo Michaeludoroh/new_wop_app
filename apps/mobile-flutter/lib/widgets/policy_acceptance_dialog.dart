@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/policies/models/policy_models.dart';
-import '../core/policies/policy_acceptance_diagnostics.dart';
 import '../core/policies/policy_service.dart';
 
 Future<bool?> showPolicyAcceptanceDialog({
@@ -47,9 +46,6 @@ class _PolicyAcceptanceDialogState extends State<PolicyAcceptanceDialog> {
     super.initState();
     _service = widget.service ?? PolicyService();
     _pendingPolicies = List<PolicyItem>.from(widget.pendingPolicies);
-    PolicyAcceptanceDiagnostics.log(
-      'Policy modal opened index=0 total=${_pendingPolicies.length} type=${_pendingPolicies.first.typeLabel}',
-    );
   }
 
   Future<void> _acceptCurrent() async {
@@ -59,22 +55,11 @@ class _PolicyAcceptanceDialogState extends State<PolicyAcceptanceDialog> {
     });
 
     try {
-      PolicyAcceptanceDiagnostics.log(
-        'Accepting policy index=${_index + 1} id=${_currentPolicy.id} type=${_currentPolicy.typeLabel}',
-      );
       await _service.acceptPolicy(_currentPolicy.id);
-      PolicyAcceptanceDiagnostics.policyAcceptedCount += 1;
-      PolicyAcceptanceDiagnostics.log(
-        'Policy accepted id=${_currentPolicy.id} totalAccepted=${PolicyAcceptanceDiagnostics.policyAcceptedCount}',
-      );
       if (!mounted) return;
 
       final status = await _service.getAcceptanceStatus();
       if (!mounted) return;
-
-      PolicyAcceptanceDiagnostics.log(
-        'Status re-fetched in modal requiresAction=${status.requiresAction} pendingPolicies.length=${status.pending.length}',
-      );
 
       if (!status.requiresAction || status.pending.isEmpty) {
         Navigator.of(context).pop(true);
@@ -85,9 +70,6 @@ class _PolicyAcceptanceDialogState extends State<PolicyAcceptanceDialog> {
         _pendingPolicies = status.pending;
         _index = 0;
       });
-      PolicyAcceptanceDiagnostics.log(
-        'Advanced to policy index=${_index + 1} of ${_pendingPolicies.length} type=${_currentPolicy.typeLabel}',
-      );
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Unable to record acceptance. Please try again.');

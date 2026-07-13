@@ -1,4 +1,4 @@
-# API Validation Checklist — WOP Ministry Platform
+# API Validation Checklist — WOPP
 
 **Base URL:** `https://<host>/api/v1`  
 **Auth header:** `Authorization: Bearer <access_token>`  

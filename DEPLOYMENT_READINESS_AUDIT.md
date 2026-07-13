@@ -1,4 +1,4 @@
-# WOP Platform — Production Deployment Readiness Audit
+# WOPP — Production Deployment Readiness Audit
 
 **Date:** 2026-06-19  
 **Scope:** Environment, infrastructure, data layer, integrations, builds, security controls, observability, and recovery  

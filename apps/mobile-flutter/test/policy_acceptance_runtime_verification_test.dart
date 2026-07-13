@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ministry_mobile/core/policies/models/policy_models.dart';
-import 'package:ministry_mobile/core/policies/policy_acceptance_diagnostics.dart';
 import 'package:ministry_mobile/core/policies/policy_acceptance_gate.dart';
 import 'package:ministry_mobile/core/policies/policy_service.dart';
 import 'package:ministry_mobile/widgets/policy_acceptance_dialog.dart';
@@ -22,21 +21,18 @@ PolicyItem _policy(String id, String type, String label) {
 class _FakePolicyService extends PolicyService {
   _FakePolicyService(this._pending);
 
-  List<PolicyItem> _pending;
+  final List<PolicyItem> _pending;
   final List<String> acceptedIds = [];
+  int statusFetchCount = 0;
 
   @override
   Future<PolicyAcceptanceStatus> getAcceptanceStatus() async {
-    PolicyAcceptanceDiagnostics.statusFetchCount += 1;
-    final status = PolicyAcceptanceStatus(
+    statusFetchCount += 1;
+    return PolicyAcceptanceStatus(
       pending: List<PolicyItem>.from(_pending),
       accepted: const [],
       requiresAction: _pending.isNotEmpty,
     );
-    PolicyAcceptanceDiagnostics.log(
-      'FakePolicyService.getAcceptanceStatus pending=${_pending.length}',
-    );
-    return status;
   }
 
   @override
@@ -52,7 +48,6 @@ Finder _acceptButton(int step, int total) {
 
 void main() {
   setUp(() {
-    PolicyAcceptanceDiagnostics.reset();
     PolicyAcceptanceGate.resetSession();
   });
 
@@ -86,23 +81,17 @@ void main() {
       ),
     );
 
-    PolicyAcceptanceDiagnostics.log('Simulating login -> dashboard prompt');
     await tester.tap(find.text('Start'));
     await tester.pumpAndSettle();
 
-    expect(PolicyAcceptanceDiagnostics.gateEnterCount, 1);
-    expect(PolicyAcceptanceDiagnostics.modalPresentationCount, 1);
     expect(find.textContaining('Policy 1 of 4'), findsOneWidget);
+    expect(find.byType(PolicyAcceptanceDialog), findsOneWidget);
 
     for (var i = 0; i < 4; i++) {
       await tester.tap(_acceptButton(i + 1, 4));
       await tester.pumpAndSettle();
     }
 
-    expect(PolicyAcceptanceDiagnostics.policyAcceptedCount, 4);
-    expect(PolicyAcceptanceDiagnostics.gateExitCount, 1);
-    expect(PolicyAcceptanceDiagnostics.dashboardUnlockedCount, 1);
-    expect(PolicyAcceptanceDiagnostics.duplicatePromptDetected, isFalse);
     expect(PolicyAcceptanceGate.isSatisfiedFor('verify-user-1'), isTrue);
     expect(find.byType(PolicyAcceptanceDialog), findsNothing);
     expect(fakeService.acceptedIds, hasLength(4));
@@ -149,11 +138,13 @@ void main() {
     await tester.tap(find.text('B'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(PolicyAcceptanceDialog), findsOneWidget);
+
     await tester.tap(_acceptButton(1, 1));
     await tester.pumpAndSettle();
 
-    expect(PolicyAcceptanceDiagnostics.gateEnterCount, 1);
-    expect(PolicyAcceptanceDiagnostics.modalPresentationCount, 1);
-    expect(PolicyAcceptanceDiagnostics.duplicatePromptDetected, isFalse);
+    expect(PolicyAcceptanceGate.isSatisfiedFor('verify-user-2'), isTrue);
+    expect(find.byType(PolicyAcceptanceDialog), findsNothing);
+    expect(fakeService.acceptedIds, hasLength(1));
   });
 }

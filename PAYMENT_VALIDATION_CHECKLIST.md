@@ -1,4 +1,4 @@
-# Payment Validation Checklist — WOP Ministry Platform
+# Payment Validation Checklist — WOPP
 
 **Provider:** Flutterwave (only registered provider)  
 **Webhook:** `POST /api/v1/payments/webhooks/flutterwave`  

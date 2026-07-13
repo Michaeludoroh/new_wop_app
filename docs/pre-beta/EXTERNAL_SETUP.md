@@ -21,7 +21,7 @@ SMTP_SECURE=false
 SMTP_USER=your-smtp-username
 SMTP_PASS=your-smtp-password
 SMTP_FROM=no-reply@staging.example.com
-APP_NAME=Ministry Platform
+APP_NAME=WOPP
 WEB_APP_URL=https://staging-admin.example.com
 ```
 

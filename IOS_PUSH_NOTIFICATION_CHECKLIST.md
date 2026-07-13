@@ -1,4 +1,4 @@
-# iOS Push Notification Checklist — WOP Platform
+# iOS Push Notification Checklist — WOPP
 
 **App:** WOP (`apps/mobile-flutter`)  
 **Bundle ID:** `com.ministrymobile.app`  

@@ -1,4 +1,4 @@
-# Admin Smoke Test Checklist — WOP Ministry Platform
+# Admin Smoke Test Checklist — WOPP
 
 **App:** Next.js admin dashboard (`apps/admin-web`)  
 **Default port:** 3001  

@@ -1,4 +1,4 @@
-# Release Blockers Checklist — WOP Ministry Platform
+# Release Blockers Checklist — WOPP
 
 **Purpose:** Hard gates that **must pass** before staging deployment or production launch.  
 Any **Critical** blocker = **NO-GO** until resolved or formally accepted in writing.  

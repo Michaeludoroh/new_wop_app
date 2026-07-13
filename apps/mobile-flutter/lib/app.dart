@@ -7,7 +7,6 @@ import 'core/subscriptions/subscription_provider.dart';
 import 'widgets/trial_banner.dart';
 import 'core/theme/app_theme.dart';
 import 'core/logging/app_log.dart';
-import 'core/policies/policy_acceptance_diagnostics.dart';
 import 'core/router/app_router.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
@@ -89,14 +88,6 @@ class _MinistryMobileAppState extends State<MinistryMobileApp> {
                     authError: authState.errorMessage,
                   )
                 : const AuthLandingScreen());
-
-        if (authState.status == AuthStatus.authenticated) {
-          PolicyAcceptanceDiagnostics.dashboardRebuildCount += 1;
-        }
-
-        PolicyAcceptanceDiagnostics.log(
-          'MinistryMobileApp rebuild authStatus=${authState.status} isBusy=${authState.isBusy}',
-        );
 
         final app = MaterialApp(
           title: AppConstants.appName,

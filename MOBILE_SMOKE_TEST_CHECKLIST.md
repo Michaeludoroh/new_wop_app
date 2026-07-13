@@ -1,4 +1,4 @@
-# Mobile Smoke Test Checklist — WOP Ministry Platform
+# Mobile Smoke Test Checklist — WOPP
 
 **App:** Flutter (`apps/mobile-flutter`)  
 **Bundle ID:** `com.ministrymobile.app`  

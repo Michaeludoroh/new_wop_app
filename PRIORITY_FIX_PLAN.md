@@ -1,4 +1,4 @@
-# WOP Ministry Platform — Priority Fix Plan
+# WOPP — Priority Fix Plan
 
 **Date:** 2026-06-19  
 **Status:** P0 and P1 remediation **complete** · P2/P3 backlog documented

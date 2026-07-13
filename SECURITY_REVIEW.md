@@ -1,4 +1,4 @@
-# WOP Platform — Security Review (Production Deployment)
+# WOPP — Security Review (Production Deployment)
 
 **Date:** 2026-06-19  
 **Scope:** Pre-production security posture for API, admin-web, mobile, infrastructure, and third-party integrations  

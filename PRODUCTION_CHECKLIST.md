@@ -1,4 +1,4 @@
-# WOP Platform — Production Checklist
+# WOPP — Production Checklist
 
 **Date:** 2026-06-19  
 **Use with:** `DEPLOYMENT_READINESS_AUDIT.md`, `SECURITY_REVIEW.md`

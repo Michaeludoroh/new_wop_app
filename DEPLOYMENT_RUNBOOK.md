@@ -1,4 +1,4 @@
-# WOP Platform — Deployment Runbook
+# WOPP — Deployment Runbook
 
 **Audience:** DevOps / release engineer  
 **Prerequisites:** Docker, Docker Compose, Node 20, production secrets in secret manager

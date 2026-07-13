@@ -1,4 +1,4 @@
-# WOP Ministry Platform — Defect Matrix
+# WOPP — Defect Matrix
 
 **Date:** 2026-06-19  
 **Classification:** P0 = production blocker · P1 = major defect · P2 = minor defect · P3 = enhancement

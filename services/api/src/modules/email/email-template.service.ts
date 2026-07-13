@@ -19,7 +19,7 @@ export class EmailTemplateService {
   constructor(private readonly configService: ConfigService) {}
 
   private get appName() {
-    return this.configService.get<string>('APP_NAME') ?? 'WOP Platform';
+    return this.configService.get<string>('APP_NAME') ?? 'WOPP';
   }
 
   private get webAppUrl() {

@@ -15,9 +15,7 @@ import 'clips_screen.dart';
 import 'events_screen.dart';
 import 'more_screen.dart';
 import 'profile_screen.dart';
-import '../core/policies/policy_acceptance_diagnostics.dart';
 import '../core/policies/policy_acceptance_gate.dart';
-import '../core/subscriptions/subscription_provider.dart';
 import '../widgets/trial_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -72,10 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
-    PolicyAcceptanceDiagnostics.dashboardMountCount += 1;
-    PolicyAcceptanceDiagnostics.log(
-      'Dashboard mounted count=${PolicyAcceptanceDiagnostics.dashboardMountCount}',
-    );
     WidgetsBinding.instance.addObserver(this);
     _notificationsProvider = NotificationsProvider()..initialize();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -217,10 +211,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    PolicyAcceptanceDiagnostics.dashboardRebuildCount += 1;
-    PolicyAcceptanceDiagnostics.log(
-      'Dashboard rebuild count=${PolicyAcceptanceDiagnostics.dashboardRebuildCount}',
-    );
     final authState = AuthScope.of(context).state;
     final user = authState.user;
     final userDisplayName =
