@@ -28,7 +28,7 @@ abstract final class AppConstants {
 
   static const developersDisplay = '$developerPrimary & $developerSecondary';
 
-  static const appVersion = '0.1.0';
+  static const appVersion = '1.0.0';
 
   static const buildNumber = '1';
 
