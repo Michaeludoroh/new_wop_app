@@ -14,9 +14,9 @@ Prepared for Google Play Store and Apple App Store submission.
 
 *(Google Play — max 80 characters)*
 
-A faith-based community platform for Men and Women of Passion and Purpose.
+WOPP — official app of Men and Women of Passion and Purpose.
 
-*(Character count: 72)*
+*(Character count: 62)*
 
 ---
 
@@ -112,9 +112,9 @@ faith,church,ministry,community,Christian,mentorship,events,sermons,devotional,b
 - faith-based community
 - Christian community app
 - church mobile app
-- ministry platform
+- WOPP app
 - men and women of passion and purpose
-- WOPP ministry
+- WOPP
 - church announcements
 - Christian events
 - mentorship program
@@ -161,6 +161,20 @@ Welcome to WOPP! This release includes announcements, events, programs, mentorsh
 | Account Deletion URL | `https://woppandmopp.com/account-deletion` |
 | Support Email | `support@wopp.org` |
 | Marketing URL | `https://woppandmopp.com` |
+
+---
+
+## App Store Privacy — Crash Diagnostics
+
+Declare the following under **App Privacy** (diagnostics only; not used for tracking or advertising):
+
+| Data type | Linked to user | Used for tracking | Purpose |
+|-----------|----------------|-------------------|---------|
+| Crash Data | No | No | App Functionality |
+| Diagnostics (other) | No | No | App Functionality |
+| Device ID | Yes (push / account) | No | App Functionality |
+
+Crash reports are collected via **Firebase Crashlytics** in profile/release builds only. Debug builds do not send crash reports. No advertising identifiers are collected for Crashlytics.
 
 ---
 

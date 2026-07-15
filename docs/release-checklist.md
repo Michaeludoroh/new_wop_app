@@ -1,4 +1,4 @@
-# Ministry Platform — Release Checklist (Critical-Path)
+# WOPP — Release Checklist (Critical-Path)
 
 ## Usage
 

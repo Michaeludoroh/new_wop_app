@@ -1,13 +1,17 @@
-# Ministry Community Platform Monorepo
+# WOPP Monorepo
 
-Production-oriented scaffold for a cross-platform ministry/community platform with:
+**WOPP** — The official app of **Men and Women of Passion and Purpose**.
 
-- **Mobile App**: Flutter (Android/iOS)
+Website: [https://woppandmopp.com](https://woppandmopp.com)
+
+Cross-platform product stack:
+
+- **Mobile App (WOPP)**: Flutter (Android/iOS)
 - **Admin Dashboard**: Next.js
 - **Backend API**: NestJS + Prisma + PostgreSQL
 - **Queue/Cache**: Redis
 - **Auth/Push**: Firebase Auth + FCM (integration-ready)
-- **Payments**: Flutterwave checkout and webhook integration
+- **Payments**: Native mobile IAP + Flutterwave website checkout
 
 ## Repository Structure
 

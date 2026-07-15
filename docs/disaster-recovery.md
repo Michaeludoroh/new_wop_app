@@ -1,8 +1,8 @@
-# Ministry Platform — Disaster Recovery Plan (Critical-Path)
+# WOPP — Disaster Recovery Plan (Critical-Path)
 
 ## Purpose
 
-Define the minimum operational disaster-recovery procedure for the Ministry Platform with focus on production-critical services and fast restoration.
+Define the minimum operational disaster-recovery procedure for WOPP with focus on production-critical services and fast restoration.
 
 ---
 

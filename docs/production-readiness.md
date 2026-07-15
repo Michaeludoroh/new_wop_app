@@ -1,8 +1,8 @@
-# Ministry Platform — Production Readiness Report (Phase 4, Critical-Path)
+# WOPP — Production Readiness Report (Phase 4, Critical-Path)
 
 ## Executive Summary
 
-Phase 4 critical-path production-readiness activities were executed for the **Ministry Platform** with focus on:
+Phase 4 critical-path production-readiness activities were executed for **WOPP** with focus on:
 - observability/alerting operational correctness,
 - auth runtime correctness on success and edge paths,
 - security risk classification and launch gate posture,
@@ -96,7 +96,7 @@ Security decision text is intentionally kept non-final in this document until an
 
 ---
 
-## Ministry Platform Production Readiness Score
+## WOPP Production Readiness Score
 
 ## Overall Score: **88 / 100**
 

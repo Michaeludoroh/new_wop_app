@@ -9,18 +9,18 @@ type RootLayoutProps = {
 export const metadata: Metadata = {
   title: "Men and Women of Passion and Purpose",
   description:
-    "Official ministry platform for Men and Women of Passion and Purpose. Download the WOPP App to stay connected.",
+    "WOPP — The official app of Men and Women of Passion and Purpose. Download WOPP to stay connected.",
   openGraph: {
     title: "Men and Women of Passion and Purpose",
     description:
-      "Download the WOPP App — announcements, events, mentorship, and digital resources in one place.",
+      "WOPP — The official app of Men and Women of Passion and Purpose. Announcements, events, mentorship, and digital resources in one place.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Men and Women of Passion and Purpose",
     description:
-      "Download the WOPP App — announcements, events, mentorship, and digital resources in one place.",
+      "WOPP — The official app of Men and Women of Passion and Purpose. Announcements, events, mentorship, and digital resources in one place.",
   },
 };
 

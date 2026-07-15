@@ -42,7 +42,7 @@ export class EmailTemplateService {
       'Blessings,',
       `${this.appName} Team`,
     ].join('\n');
-    const html = `<p>Hello ${safeName},</p><p>Welcome to <strong>${escapeHtml(this.appName)}</strong>. Your account is ready.</p><p><a href="${escapeHtml(this.webAppUrl)}">Open the platform</a></p>`;
+    const html = `<p>Hello ${safeName},</p><p>Welcome to <strong>${escapeHtml(this.appName)}</strong>. Your account is ready.</p><p><a href="${escapeHtml(this.webAppUrl)}">Open WOPP</a></p>`;
     return { subject, body, html };
   }
 
@@ -120,7 +120,7 @@ export class EmailTemplateService {
       `<p>Your <strong>${safePlan}</strong> subscription is active (${escapeHtml(input.amountLabel)}).</p>`,
       `<p>${escapeHtml(expiryLine)}</p>`,
       providerLine ? `<p>${escapeHtml(providerLine)}</p>` : '',
-      `<p><a href="${escapeHtml(this.webAppUrl)}">Open the platform</a></p>`,
+      `<p><a href="${escapeHtml(this.webAppUrl)}">Open WOPP</a></p>`,
     ]
       .filter(Boolean)
       .join('');

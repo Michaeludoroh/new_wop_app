@@ -86,6 +86,10 @@ export default function SermonPage() {
 
       <footer className={styles.footer}>
         <p>© {new Date().getFullYear()} Men and Women of Passion and Purpose. All rights reserved.</p>
+        <p>
+          WOPP — The official app of Men and Women of Passion and Purpose.{" "}
+          <a href="https://woppandmopp.com">woppandmopp.com</a>
+        </p>
       </footer>
     </div>
   );

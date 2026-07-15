@@ -1,6 +1,6 @@
 # WOPP — End-to-End Validation Plan
 
-**Platform:** Women and Men of Passion and Purpose (WOP) Ministry Platform  
+**Platform:** WOPP — The official app of Men and Women of Passion and Purpose  
 **Version:** 0.1.0 (pre-production)  
 **Document owner:** QA / Engineering  
 **Last updated:** 2026-06-17  

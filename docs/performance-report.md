@@ -1,4 +1,4 @@
-# Ministry Platform — Performance Report (Phase 4 Critical-Path)
+# WOPP — Performance Report (Phase 4 Critical-Path)
 
 ## Scope
 
