@@ -10,6 +10,12 @@ abstract final class AppConstants {
   /// Mobile app acronym expansion (ministry website name remains [organizationName]).
   static const appAcronymExpansion = 'Women of Passion and Purpose';
 
+  /// User-facing tagline for About, auth, and marketing surfaces.
+  static const appTagline =
+      'WOPP — The official app of Men and Women of Passion and Purpose';
+
+  static const websiteUrl = 'https://woppandmopp.com';
+
   static const aboutTitle = 'About $appName';
 
   static const logoSemanticLabel = '$appName logo';

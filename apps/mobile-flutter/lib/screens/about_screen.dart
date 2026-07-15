@@ -38,6 +38,24 @@ class AboutScreen extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 12),
+          Text(
+            AppConstants.appTagline,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppColors.onSurfaceVariant,
+              height: 1.4,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            AppConstants.websiteUrl,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.primaryPurple,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 20),
           _BrandingCard(
             child: Column(

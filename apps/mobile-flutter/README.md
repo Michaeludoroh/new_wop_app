@@ -1,6 +1,8 @@
 # WOPP
 
-Faith-based community mobile app for **Men and Women of Passion and Purpose**.
+**WOPP** — The official app of **Men and Women of Passion and Purpose**.
+
+Website: [https://woppandmopp.com](https://woppandmopp.com)
 
 **WOPP** stands for **Women of Passion and Purpose**.
 

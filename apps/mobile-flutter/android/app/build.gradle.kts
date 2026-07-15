@@ -75,4 +75,19 @@ flutter {
 val googleServicesFile = file("google-services.json")
 if (googleServicesFile.exists()) {
     apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+
+    // Upload R8/ProGuard mapping for readable stack traces in Crashlytics.
+    // Fail-open if the extension is unavailable for any reason.
+    try {
+        android.buildTypes.named("release").configure {
+            configure<com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension> {
+                mappingFileUploadEnabled = true
+            }
+        }
+    } catch (_: Throwable) {
+        logger.warn(
+            "Crashlytics mappingFileUploadEnabled could not be configured; continuing.",
+        )
+    }
 }

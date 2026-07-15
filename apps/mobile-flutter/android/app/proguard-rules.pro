@@ -10,3 +10,7 @@
 # Firebase / Play Billing (keep plugin entry points)
 -keep class com.google.firebase.** { *; }
 -dontwarn com.google.firebase.**
+
+# Crashlytics / NDK symbolication helpers
+-keepattributes SourceFile,LineNumberTable
+-keep public class * extends java.lang.Exception

@@ -101,7 +101,7 @@ class _PolicyAcceptanceDialogState extends State<PolicyAcceptanceDialog> {
               Text(
                 isUpdatePrompt
                     ? '${policy.typeLabel} has been updated to version ${policy.version}. Please review and accept the latest version to continue.'
-                    : 'Please review and accept ${policy.typeLabel} before using the platform.',
+                    : 'Please review and accept ${policy.typeLabel} before using WOPP.',
               ),
               const SizedBox(height: 12),
               Text(
