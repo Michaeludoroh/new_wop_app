@@ -35,4 +35,10 @@ void main() {
     expect(CrashlyticsBootstrap.isInitialized, isFalse);
     expect(CrashlyticsBootstrap.isCollectionEnabled, isFalse);
   });
+
+  test('development test helpers are safe no-ops in test environment', () async {
+    await CrashlyticsBootstrap.sendDevelopmentTestReport();
+    CrashlyticsBootstrap.crashForDevelopmentTesting();
+    expect(CrashlyticsBootstrap.isInitialized, isFalse);
+  });
 }

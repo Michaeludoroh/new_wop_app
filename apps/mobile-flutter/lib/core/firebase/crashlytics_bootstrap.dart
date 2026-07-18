@@ -108,6 +108,37 @@ abstract final class CrashlyticsBootstrap {
     );
   }
 
+  /// Development/profile-only: records a non-fatal test event for Crashlytics.
+  ///
+  /// No-op in release builds. Verify in Firebase Console using a profile build
+  /// (`flutter run --profile`) where collection is enabled.
+  static Future<void> sendDevelopmentTestReport() async {
+    if (kReleaseMode) return;
+    await recordNonFatal(
+      Exception('Crashlytics development test (non-fatal)'),
+      StackTrace.current,
+      information: const ['crashlytics-dev-test'],
+    );
+  }
+
+  /// Development/profile-only: forces a fatal crash to verify end-to-end Crashlytics.
+  ///
+  /// No-op in release builds. Use only from dev tooling or a hidden debug control.
+  static void crashForDevelopmentTesting() {
+    if (kReleaseMode) return;
+    try {
+      if (!isCollectionEnabled) {
+        AppLog.debug(
+          'Crashlytics dev crash skipped: collection disabled (use profile build).',
+        );
+        return;
+      }
+      FirebaseCrashlytics.instance.crash();
+    } catch (error) {
+      AppLog.debug('Crashlytics.crashForDevelopmentTesting failed: $error');
+    }
+  }
+
   /// Test helper to reset state without touching Firebase.
   @visibleForTesting
   static void resetForTest() {

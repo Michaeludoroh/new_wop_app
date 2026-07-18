@@ -13,8 +13,26 @@ Deployment order:
 2. Redis
 3. API + WebSocket
 4. Admin dashboard
-5. Nginx reverse proxy
-6. Mobile app release (after API verified)
+5. Docker platform (localhost-published ports for host Nginx)
+6. Host Nginx (`mwpp` site) proxies `/api/` + `/realtime` to Docker; Flask remains apex
+7. Mobile app release (after API verified)
+
+### Coexistence with Flask public website
+
+Production apex `woppandmopp.com` is served by **host Nginx → Flask Gunicorn (`mwpp.service` :8000)**.
+
+Docker Compose must **not** bind host `:80`/`:443`. Publish NestJS/admin on localhost only:
+
+| Service | Host bind |
+|---------|-----------|
+| API | `127.0.0.1:4000` |
+| WebSocket | `127.0.0.1:4100` |
+| Admin web | `127.0.0.1:3001` |
+| Docker Nginx (internal) | `127.0.0.1:8080` |
+
+Host Nginx site config lives in the Flask repo: `deploy/nginx/mwpp.conf` (see that project's `VPS_DEPLOYMENT.md`).
+
+Mobile `API_BASE_URL`: `https://woppandmopp.com/api/v1`
 
 ---
 

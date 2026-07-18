@@ -1,0 +1,83 @@
+﻿Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.72 (1.3.75 available)
+  cli_util 0.4.2 (0.5.1 available)
+  connectivity_plus 6.1.5 (7.2.0 available)
+  dbus 0.7.13 (0.7.14 available)
+  dio 5.9.2 (5.10.0 available)
+  dio_web_adapter 2.1.2 (2.2.0 available)
+  extension 0.6.0 (1.0.0 available)
+  firebase_core 4.10.0 (4.12.1 available)
+  firebase_core_platform_interface 7.0.1 (8.0.0 available)
+  firebase_core_web 3.8.0 (3.9.1 available)
+  firebase_crashlytics 5.2.3 (5.2.6 available)
+  firebase_crashlytics_platform_interface 3.8.23 (3.8.26 available)
+  firebase_messaging 16.3.0 (16.4.3 available)
+  firebase_messaging_platform_interface 4.8.0 (4.9.2 available)
+  firebase_messaging_web 4.2.0 (4.2.3 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  flutter_secure_storage 9.2.4 (10.3.1 available)
+  flutter_secure_storage_linux 1.2.3 (3.0.1 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+  flutter_secure_storage_web 1.2.1 (2.1.1 available)
+  flutter_secure_storage_windows 3.1.2 (4.2.2 available)
+  hooks 2.0.0 (2.1.0 available)
+  js 0.6.7 (0.7.2 available)
+  lints 3.0.0 (6.1.0 available)
+  matcher 0.12.19 (0.12.20 available)
+  meta 1.18.0 (1.19.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  record_use 0.6.0 (1.0.0 available)
+  shared_preferences_android 2.4.23 (2.4.27 available)
+  socket_io_client 3.1.5 (3.1.6 available)
+  test_api 0.7.11 (0.7.13 available)
+  vector_math 2.2.0 (2.4.0 available)
+  video_player 2.11.1 (2.13.0 available)
+  video_player_android 2.9.6 (2.11.0 available)
+  video_player_avfoundation 2.9.7 (2.11.0 available)
+  video_player_platform_interface 6.7.0 (6.9.0 available)
+  win32 5.15.0 (6.3.0 available)
+Got dependencies!
+41 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Running Gradle task 'assembleRelease'...                        
+flutter : Exception in thread "main" java.net.SocketException: An established connection was aborted by the software 
+in your host machine
+At C:\Users\user\AppData\Local\Temp\ps-script-ba92af27-528b-4e66-9850-afd7bb7a855b.ps1:108 char:50
++ ... wop_app\apps\mobile-flutter; flutter build apk --release 2>&1 | Out-F ...
++                                  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Exception in th...ur host machine:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+	at java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:330)
+	at java.base/sun.nio.ch.NioSocketImpl.read(NioSocketImpl.java:355)
+	at java.base/sun.nio.ch.NioSocketImpl$1.read(NioSocketImpl.java:808)
+	at java.base/java.net.Socket$SocketInputStream.read(Socket.java:966)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.read(SSLSocketInputRecord.java:484)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.readFully(SSLSocketInputRecord.java:467)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.decodeInputRecord(SSLSocketInputRecord.java:243)
+	at java.base/sun.security.ssl.SSLSocketInputRecord.decode(SSLSocketInputRecord.java:181)
+	at java.base/sun.security.ssl.SSLTransport.decode(SSLTransport.java:111)
+	at java.base/sun.security.ssl.SSLSocketImpl.decode(SSLSocketImpl.java:1512)
+	at java.base/sun.security.ssl.SSLSocketImpl.readApplicationRecord(SSLSocketImpl.java:1483)
+	at java.base/sun.security.ssl.SSLSocketImpl$AppInputStream.read(SSLSocketImpl.java:1069)
+	at java.base/java.io.BufferedInputStream.read1(BufferedInputStream.java:282)
+	at java.base/java.io.BufferedInputStream.read(BufferedInputStream.java:343)
+	at java.base/sun.net.www.MeteredStream.read(MeteredStream.java:141)
+	at java.base/java.io.FilterInputStream.read(FilterInputStream.java:132)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection$HttpInputStream.read(HttpURLConnection.java:3750)
+	at java.base/sun.net.www.protocol.http.HttpURLConnection$HttpInputStream.read(HttpURLConnection.java:3743)
+	at org.gradle.wrapper.Download.downloadInternal(Download.java:62)
+	at org.gradle.wrapper.Download.download(Download.java:44)
+	at org.gradle.wrapper.Install$1.call(Install.java:61)
+	at org.gradle.wrapper.Install$1.call(Install.java:48)
+	at org.gradle.wrapper.ExclusiveFileAccessManager.access(ExclusiveFileAccessManager.java:65)
+	at org.gradle.wrapper.Install.createDist(Install.java:48)
+	at org.gradle.wrapper.WrapperExecutor.execute(WrapperExecutor.java:128)
+	at org.gradle.wrapper.GradleWrapperMain.main(GradleWrapperMain.java:61)
+Running Gradle task 'assembleRelease'...                          235.9s
+Gradle task assembleRelease failed with exit code 1

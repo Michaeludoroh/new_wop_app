@@ -13,12 +13,18 @@ import 'core/notifications/services/firebase_messaging_service.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
+  debugPrint('[BOOT] Entering main()');
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     // Firebase + Crashlytics are fail-open: never block startup.
+    debugPrint('[BOOT] before FirebaseBootstrap.initialize()');
     await FirebaseBootstrap.initialize();
+    debugPrint('[BOOT] Firebase initialized');
+
+    debugPrint('[BOOT] before CrashlyticsBootstrap.initialize()');
     await CrashlyticsBootstrap.initialize();
+    debugPrint('[BOOT] after CrashlyticsBootstrap.initialize()');
 
     FlutterError.onError = (FlutterErrorDetails details) {
       FlutterError.presentError(details);
@@ -48,9 +54,13 @@ Future<void> main() async {
 
     registerFirebaseMessagingBackgroundHandler();
 
+    debugPrint('[BOOT] before creating AuthProvider');
     final authProvider = AuthProvider();
+    debugPrint('[BOOT] before authProvider.bootstrap()');
     await authProvider.bootstrap();
+    debugPrint('[BOOT] after authProvider.bootstrap()');
 
+    debugPrint('[BOOT] runApp()');
     runApp(
       AuthScope(
         notifier: authProvider,

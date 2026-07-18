@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../config/api_config.dart';
 import '../logging/app_log.dart';
@@ -19,6 +20,66 @@ class AuthApiConfig {
   static const String resendVerificationPath = '/auth/resend-verification';
 }
 
+/// TEMP: Remove after auth connectivity diagnosis.
+class _AuthDebugInterceptor extends Interceptor {
+  String _fullUrl(RequestOptions options) {
+    final base = options.baseUrl;
+    final path = options.path;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return '$normalizedBase$normalizedPath';
+  }
+
+  Map<String, dynamic> _safeHeaders(Map<String, dynamic> headers) {
+    final copy = Map<String, dynamic>.from(headers);
+    final auth = copy['Authorization'] ?? copy['authorization'];
+    if (auth is String && auth.isNotEmpty) {
+      copy['Authorization'] = auth.length > 20
+          ? '${auth.substring(0, 20)}…(redacted)'
+          : '(redacted)';
+      copy.remove('authorization');
+    }
+    return copy;
+  }
+
+  @override
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
+    debugPrint('[AUTH] ========== REQUEST ==========');
+    debugPrint('[AUTH] METHOD: ${options.method}');
+    debugPrint('[AUTH] FULL URL: ${_fullUrl(options)}');
+    debugPrint('[AUTH] HEADERS: ${_safeHeaders(options.headers)}');
+    debugPrint('[AUTH] baseUrl=${options.baseUrl} path=${options.path}');
+    handler.next(options);
+  }
+
+  @override
+  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+    debugPrint('[AUTH] ========== RESPONSE ==========');
+    debugPrint('[AUTH] STATUS CODE: ${response.statusCode}');
+    debugPrint('[AUTH] BODY: ${response.data}');
+    handler.next(response);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    debugPrint('[AUTH] ========== NO RESPONSE / ERROR ==========');
+    debugPrint('[AUTH] FULL URL: ${_fullUrl(err.requestOptions)}');
+    debugPrint('[AUTH] TYPE: ${err.type}');
+    debugPrint('[AUTH] MESSAGE: ${err.message}');
+    if (err.response != null) {
+      debugPrint('[AUTH] STATUS CODE: ${err.response?.statusCode}');
+      debugPrint('[AUTH] BODY: ${err.response?.data}');
+    } else {
+      debugPrint('[AUTH] DioException (complete): $err');
+      debugPrint('[AUTH] error: ${err.error}');
+    }
+    handler.next(err);
+  }
+}
+
 class AuthService {
   AuthService({
     Dio? dio,
@@ -33,7 +94,13 @@ class AuthService {
                 headers: {'Content-Type': 'application/json'},
               ),
             ),
-        _tokenStorageService = tokenStorageService ?? TokenStorageService();
+        _tokenStorageService = tokenStorageService ?? TokenStorageService() {
+    // TEMP: Remove after auth connectivity diagnosis.
+    if (dio == null) {
+      _dio.interceptors.add(_AuthDebugInterceptor());
+      debugPrint('[AUTH] ApiConfig.apiBaseUrl => ${AuthApiConfig.baseUrl}');
+    }
+  }
 
   final Dio _dio;
   final TokenStorageService _tokenStorageService;

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_constants.dart';
+import 'crashlytics_debug_screen.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_logo.dart';
@@ -143,6 +145,21 @@ class AboutScreen extends StatelessWidget {
               ],
             ),
           ),
+          // TEMP: Remove this block after Crashlytics verification.
+          if (!kReleaseMode) ...[
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CrashlyticsDebugScreen(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.bug_report_outlined),
+              label: const Text('Crashlytics Dev Tools'),
+            ),
+          ],
           const SizedBox(height: 24),
           Text(
             AppConstants.copyrightNotice,

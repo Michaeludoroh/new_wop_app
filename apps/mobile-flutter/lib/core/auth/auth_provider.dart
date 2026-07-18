@@ -34,6 +34,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> bootstrap() async {
+    debugPrint('[BOOT] Auth bootstrap started');
     _setState(
       _state.copyWith(
         status: AuthStatus.loading,
@@ -43,8 +44,13 @@ class AuthProvider extends ChangeNotifier {
     );
 
     try {
+      debugPrint('[BOOT] before getAccessToken()');
       final accessToken = await _tokenStorageService.getAccessToken();
-      if (accessToken == null || accessToken.isEmpty) {
+      final hasAccessToken = accessToken != null && accessToken.isNotEmpty;
+      debugPrint(
+        '[BOOT] after getAccessToken() (present=$hasAccessToken)',
+      );
+      if (!hasAccessToken) {
         _setState(
           _state.copyWith(
             status: AuthStatus.unauthenticated,
@@ -54,13 +60,22 @@ class AuthProvider extends ChangeNotifier {
             clearError: true,
           ),
         );
+        debugPrint(
+          '[BOOT] final auth state: status=${_state.status} '
+          'bootstrapped=${_state.isBootstrapped}',
+        );
+        debugPrint('[BOOT] bootstrap completed');
         return;
       }
 
+      debugPrint('[BOOT] before getTokenExpiry()');
       final expiry = await _tokenStorageService.getTokenExpiry();
+      debugPrint('[BOOT] after getTokenExpiry() (expiry=$expiry)');
       if (expiry != null && expiry.isBefore(DateTime.now().toUtc())) {
         try {
+          debugPrint('[BOOT] before refresh()');
           await _authService.refresh();
+          debugPrint('[BOOT] after refresh()');
         } catch (_) {
           await _tokenStorageService.clearTokens();
           _setState(
@@ -72,11 +87,18 @@ class AuthProvider extends ChangeNotifier {
               clearError: true,
             ),
           );
+          debugPrint(
+            '[BOOT] final auth state: status=${_state.status} '
+            'bootstrapped=${_state.isBootstrapped}',
+          );
+          debugPrint('[BOOT] bootstrap completed');
           return;
         }
       }
 
+      debugPrint('[BOOT] before me()');
       final user = await _authService.me();
+      debugPrint('[BOOT] after me()');
       _setAuthenticated(user, isBootstrapped: true);
     } catch (e) {
       _setState(
@@ -88,7 +110,14 @@ class AuthProvider extends ChangeNotifier {
           isBootstrapped: true,
         ),
       );
+      debugPrint('[BOOT] bootstrap error: $e');
     }
+
+    debugPrint(
+      '[BOOT] final auth state: status=${_state.status} '
+      'bootstrapped=${_state.isBootstrapped}',
+    );
+    debugPrint('[BOOT] bootstrap completed');
   }
 
   Future<void> login(LoginRequest request) async {
