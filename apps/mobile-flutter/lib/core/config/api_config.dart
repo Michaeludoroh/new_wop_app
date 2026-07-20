@@ -18,7 +18,7 @@ abstract final class ApiConfig {
     }
     throw StateError(
       'API_BASE_URL must be set via --dart-define for release/profile builds. '
-      'Example: --dart-define=API_BASE_URL=https://api.example.com/api/v1',
+      'Example: --dart-define=API_BASE_URL=https://woppandmopp.com/api/v1',
     );
   }
 

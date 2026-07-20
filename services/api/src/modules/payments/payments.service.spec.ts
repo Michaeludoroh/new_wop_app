@@ -255,7 +255,7 @@ describe('PaymentsService checkout initiation', () => {
       prisma as never,
       { resolve: jest.fn().mockReturnValue(adapter) } as never,
       { recordPaymentFailure: jest.fn() } as never,
-      { get: jest.fn().mockReturnValue('https://api.example.com/api/v1') } as never,
+      { get: jest.fn().mockReturnValue('https://woppandmopp.com/api/v1') } as never,
       lifecycleService as never,
       emailService as never,
       emailTemplateService as never,

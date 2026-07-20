@@ -18,7 +18,7 @@ if (!apiBaseUrl && existsSync(prodExamplePath)) {
 }
 
 if (!apiBaseUrl) {
-  apiBaseUrl = 'https://api.example.com/api/v1';
+  apiBaseUrl = 'https://woppandmopp.com/api/v1';
 }
 
 const defines = [

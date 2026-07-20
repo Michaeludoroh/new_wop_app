@@ -251,7 +251,7 @@
 | ID | Finding | Severity | Remediation |
 |----|---------|----------|-------------|
 | CI-01 | **Deploy and rollback steps are placeholders** | **Blocker** | Integrate real provider before automated prod deploy |
-| CI-02 | Health URLs still use `example.com` | Medium | Parameterize per environment |
+| CI-02 | Production health URLs use canonical `woppandmopp.com` / `admin.woppandmopp.com` | Resolved | Staging CI still uses `staging-*.example.com` |
 | CI-03 | Docker images not scanned for vulnerabilities in CI | Medium | Add Trivy/Snyk scan step |
 
 ---

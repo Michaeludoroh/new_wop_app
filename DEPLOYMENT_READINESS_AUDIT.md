@@ -268,7 +268,7 @@ app.enableCors({ origin: buildCorsOrigin(), credentials: true, ... });
 |----|---------|----------|
 | OBS-01 | Observability stack not wired into `docker-compose.prod.yml` | Medium |
 | OBS-02 | Sentry not documented in production env template | Low |
-| OBS-03 | Deploy health URLs in workflow still use `example.com` placeholders | Medium |
+| OBS-03 | Production deploy health URLs use canonical `woppandmopp.com` hostnames | Resolved |
 
 ---
 
@@ -372,8 +372,8 @@ node scripts/deploy/run-migrations.mjs
 3. Build release binaries:
    ```bash
    cd apps/mobile-flutter
-   flutter build apk --release --dart-define=API_BASE_URL=https://api.example.com/api/v1
-   flutter build ipa --release --dart-define=API_BASE_URL=https://api.example.com/api/v1
+   flutter build apk --release --dart-define=API_BASE_URL=https://woppandmopp.com/api/v1
+   flutter build ipa --release --dart-define=API_BASE_URL=https://woppandmopp.com/api/v1
    ```
 4. Submit to Play Console / App Store after smoke tests against production API
 

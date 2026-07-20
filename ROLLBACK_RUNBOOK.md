@@ -39,9 +39,9 @@ Note `releases[0]` (current) and `releases[1]` (previous).
 
 ```bash
 export DEPLOY_ENV=production
-export API_HEALTH_URL=https://api.your-domain.org/api/v1/health
-export WS_HEALTH_URL=https://ws.your-domain.org/api/v1/health
-export ADMIN_HEALTH_URL=https://admin.your-domain.org
+export API_HEALTH_URL=https://woppandmopp.com/api/v1/health
+export WS_HEALTH_URL=https://woppandmopp.com/realtime
+export ADMIN_HEALTH_URL=https://admin.woppandmopp.com
 
 node scripts/deploy/rollback.mjs
 ```

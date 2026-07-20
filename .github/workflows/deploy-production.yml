@@ -15,9 +15,9 @@ jobs:
     with:
       environment_name: production
       image_tag: prod-${{ github.sha }}
-      api_health_url: https://api.example.com/api/v1/health
-      ws_health_url: https://ws.example.com
-      admin_health_url: https://admin.example.com
+      api_health_url: https://woppandmopp.com/api/v1/health
+      ws_health_url: https://woppandmopp.com/realtime
+      admin_health_url: https://admin.woppandmopp.com
       run_compose_up: false
     secrets:
       DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}

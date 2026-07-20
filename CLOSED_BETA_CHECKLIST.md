@@ -193,7 +193,7 @@ Complete every **Gate** item before inviting closed beta testers. **Track** item
 | WS-07 | `WEBSOCKET_ONLY_MODE` in compose | ⚠ | Env var not read by API runtime — both services run full app |
 | WS-08 | Realtime connect + announcement event on staging | ☐ | Post-deploy smoke |
 
-**Beta recommendation:** Route Socket.IO through the **API host** (`api.example.com/realtime`). The separate `ws.*` subdomain is optional and not required by current clients.
+**Production recommendation:** Route Socket.IO through the apex host (`https://woppandmopp.com/realtime`). Legacy `ws.woppandmopp.com` redirects to this path.
 
 **Gate:** WS-08 on staging.
 

@@ -19,7 +19,18 @@ Deployment order:
 
 ### Coexistence with Flask public website
 
-Production apex `woppandmopp.com` is served by **host Nginx → Flask Gunicorn (`mwpp.service` :8000)**.
+Production canonical URLs:
+
+| Role | URL |
+|------|-----|
+| Website (Flask) | `https://woppandmopp.com` |
+| Website login | `https://woppandmopp.com/login` |
+| Website admin | `https://woppandmopp.com/admin` |
+| Nest API | `https://woppandmopp.com/api/v1` |
+| WebSocket | `https://woppandmopp.com/realtime` |
+| App admin (Next.js) | `https://admin.woppandmopp.com` |
+
+Production apex `woppandmopp.com` is served by **Docker Nginx reverse-proxy** (Flask at `172.18.0.1:8000` for `/`, Nest for `/api/`, WebSocket for `/realtime`).
 
 Docker Compose must **not** bind host `:80`/`:443`. Publish NestJS/admin on localhost only:
 
@@ -39,7 +50,7 @@ Mobile `API_BASE_URL`: `https://woppandmopp.com/api/v1`
 ## Phase 0 — Pre-deploy checklist
 
 - [ ] All secrets in `docs/PRODUCTION_SECRETS.md` configured
-- [ ] DNS: `api.*`, `admin.*`, `ws.*` point to load balancer / host
+- [ ] DNS: `admin.woppandmopp.com` → production host; apex `woppandmopp.com` already resolves
 - [ ] TLS certificates in `infra/nginx/certs/` (or terminate at LB)
 - [ ] Postgres backup taken: `node scripts/backup/postgres-backup.mjs`
 - [ ] Uploads backup (if upgrading): `node scripts/backup/uploads-backup.mjs`
@@ -63,12 +74,12 @@ export DATABASE_URL=...
 export REDIS_URL=...
 export JWT_ACCESS_SECRET=...
 export JWT_REFRESH_SECRET=...
-export CORS_ORIGIN=https://admin.your-domain.org
+export CORS_ORIGIN=https://admin.woppandmopp.com
 export CONTENT_ACCESS_SECRET=...
 export METRICS_AUTH_TOKEN=...
-export API_PUBLIC_URL=https://api.your-domain.org
-export NEXT_PUBLIC_API_BASE_URL=https://api.your-domain.org/api/v1
-export NEXT_PUBLIC_WEBSOCKET_URL=https://ws.your-domain.org
+export API_PUBLIC_URL=https://woppandmopp.com
+export NEXT_PUBLIC_API_BASE_URL=https://woppandmopp.com/api/v1
+export NEXT_PUBLIC_WEBSOCKET_URL=https://woppandmopp.com/realtime
 export POSTGRES_USER=ministry
 export POSTGRES_PASSWORD=...
 export POSTGRES_DB=ministry_platform
@@ -156,9 +167,9 @@ If backends are still starting, nginx will remain up; proxied routes may return 
 ## Phase 5 — Health validation
 
 ```bash
-export API_HEALTH_URL=https://api.your-domain.org/api/v1/health
-export WS_HEALTH_URL=https://ws.your-domain.org/api/v1/health
-export ADMIN_HEALTH_URL=https://admin.your-domain.org
+export API_HEALTH_URL=https://woppandmopp.com/api/v1/health
+export WS_HEALTH_URL=https://woppandmopp.com/realtime
+export ADMIN_HEALTH_URL=https://admin.woppandmopp.com
 node scripts/deploy/verify-health.mjs
 ```
 
@@ -172,15 +183,15 @@ curl http://127.0.0.1:8080/api/v1/health
 ### Integration health
 
 ```bash
-curl https://api.your-domain.org/api/v1/health/email
-curl https://api.your-domain.org/api/v1/health/flutterwave
+curl https://woppandmopp.com/api/v1/health/email
+curl https://woppandmopp.com/api/v1/health/flutterwave
 ```
 
 ---
 
 ## Phase 6 — Admin dashboard verification
 
-1. Open `https://admin.your-domain.org/login`
+1. Open `https://admin.woppandmopp.com/login`
 2. Login as SUPER_ADMIN
 3. Verify notifications realtime connects (WebSocket)
 4. Upload test clip thumbnail (validates uploads volume)
@@ -195,7 +206,7 @@ After API is stable:
 ```bash
 cd apps/mobile-flutter
 flutter build appbundle --release \
-  --dart-define=API_BASE_URL=https://api.your-domain.org/api/v1
+  --dart-define=API_BASE_URL=https://woppandmopp.com/api/v1
 ```
 
 Submit to Play Console / App Store. See `scripts/beta/build-mobile-staging.mjs` for command templates.
@@ -238,7 +249,7 @@ docker compose -f docker-compose.prod.yml down
 |---------|-------|
 | API exits on start | JWT/CONTENT_ACCESS secrets; logs show `Security configuration error` |
 | CORS errors in admin | `CORS_ORIGIN` must exactly match admin URL |
-| WebSocket fails | Nginx `websocket.server.conf`; `NEXT_PUBLIC_WEBSOCKET_URL` |
+| WebSocket fails | Nginx `woppandmopp.server.conf` `/realtime`; `NEXT_PUBLIC_WEBSOCKET_URL=https://woppandmopp.com/realtime` |
 | Migrations fail | Postgres reachable; `migrate` service logs |
 | Uploads missing after restart | Verify `uploads_prod_data` volume mounted |
 

@@ -1,13 +1,17 @@
 # TLS certificates for production nginx
 
-Place certificate files here before enabling HTTPS server blocks in `conf.d/*.server.conf`:
+## Production hostnames (Let's Encrypt)
 
-| File | Description |
-|------|-------------|
-| `fullchain.pem` | Full certificate chain (Let's Encrypt or CA) |
-| `privkey.pem` | Private key |
+| Hostname | Purpose | Cert path |
+|----------|---------|-----------|
+| `woppandmopp.com` | Flask website, Nest API (`/api/v1`), WebSocket (`/realtime`) | `/etc/letsencrypt/live/woppandmopp.com/` |
+| `admin.woppandmopp.com` | Next.js app admin | `/etc/letsencrypt/live/admin.woppandmopp.com/` |
 
-## Generate self-signed certs (local/staging only)
+API and WebSocket are served on the apex domain via path routing (`woppandmopp.server.conf`), not separate subdomains.
+
+Legacy subdomains `api.woppandmopp.com` and `ws.woppandmopp.com` redirect to the apex paths.
+
+## Self-signed certs (local/staging only)
 
 From the repository root:
 
@@ -18,11 +22,5 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -out infra/nginx/certs/fullchain.pem \
   -subj "/CN=localhost"
 ```
-
-Then uncomment the HTTPS `server` blocks in `infra/nginx/conf.d/api.server.conf` (and add matching blocks for admin/ws).
-
-## Production (Let's Encrypt)
-
-Use certbot on the host or a sidecar container. Mount the resulting files into this directory.
 
 **Do not commit real private keys.** This directory is gitignored except this README.

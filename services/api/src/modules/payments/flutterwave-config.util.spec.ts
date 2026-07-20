@@ -18,13 +18,13 @@ describe('flutterwave-config.util', () => {
     const config = resolveFlutterwaveConfig({
       FLUTTERWAVE_SECRET_KEY: 'FLWSECK_TEST-abc123',
       FLUTTERWAVE_WEBHOOK_SECRET: 'whsec_test',
-      PAYMENT_REDIRECT_BASE_URL: 'https://api.example.com/api/v1',
+      PAYMENT_REDIRECT_BASE_URL: 'https://woppandmopp.com/api/v1',
     });
 
     expect(resolveFlutterwaveProviderMode({ FLUTTERWAVE_SECRET_KEY: 'key' })).toBe('FLUTTERWAVE');
     expect(config.configured).toBe(true);
     expect(config.webhookReady).toBe(true);
-    expect(config.redirectBaseUrl).toBe('https://api.example.com/api/v1');
+    expect(config.redirectBaseUrl).toBe('https://woppandmopp.com/api/v1');
     expect(config.missingVariables).toEqual([]);
   });
 

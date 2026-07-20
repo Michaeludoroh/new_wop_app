@@ -29,11 +29,11 @@ Complete all **Blocker** items before production cutover.
 - [ ] `JWT_REFRESH_SECRET` — ≥32 chars, different from access secret
 - [ ] `JWT_ACCESS_EXPIRES_IN=15m` (or approved value)
 - [ ] `JWT_REFRESH_EXPIRES_IN=7d` (must exceed access expiry)
-- [ ] `CORS_ORIGIN=https://<admin-host>` (exact origin, no wildcard)
+- [ ] `CORS_ORIGIN=https://admin.woppandmopp.com` (exact origin, no wildcard)
 - [ ] `METRICS_AUTH_TOKEN` — random token for `/metrics`
 - [ ] `CONTENT_ACCESS_SECRET` — ≥32 chars (eBook streaming)
-- [ ] `API_PUBLIC_URL=https://<api-host>`
-- [ ] `PAYMENT_REDIRECT_BASE_URL=https://<api-host>/api/v1`
+- [ ] `API_PUBLIC_URL=https://woppandmopp.com`
+- [ ] `PAYMENT_REDIRECT_BASE_URL=https://woppandmopp.com/api/v1`
 
 Validate:
 ```bash
@@ -57,8 +57,8 @@ node scripts/env/validate-env.mjs --target=api
 ### Admin-web (required)
 
 - [ ] `NODE_ENV=production`
-- [ ] `NEXT_PUBLIC_API_BASE_URL=https://<api-host>/api/v1`
-- [ ] `NEXT_PUBLIC_WEBSOCKET_URL=https://<ws-host>`
+- [ ] `NEXT_PUBLIC_API_BASE_URL=https://woppandmopp.com/api/v1`
+- [ ] `NEXT_PUBLIC_WEBSOCKET_URL=https://woppandmopp.com/realtime`
 
 Validate:
 ```bash
@@ -68,7 +68,7 @@ node scripts/env/validate-env.mjs --target=admin-web
 
 ### Mobile (build-time)
 
-- [ ] `API_BASE_URL=https://<api-host>/api/v1` via `--dart-define`
+- [ ] `API_BASE_URL=https://woppandmopp.com/api/v1` via `--dart-define`
 - [ ] `google-services.json` matches production Firebase project
 - [ ] `GoogleService-Info.plist` matches production Firebase project
 - [ ] iOS APNs key uploaded to Firebase Console
@@ -82,7 +82,7 @@ node scripts/env/validate-env.mjs --target=admin-web
 - [ ] Add migration init container or pre-deploy job (`node scripts/deploy/run-migrations.mjs`)
 - [ ] Postgres: enable automated backups (managed provider or cron `pg_dump`)
 - [ ] Redis: confirm AOF persistence or managed failover
-- [ ] TLS certificates valid for API, WS, and admin hostnames
+- [ ] TLS certificates valid for `woppandmopp.com` and `admin.woppandmopp.com`
 - [ ] Firewall: Postgres/Redis not publicly exposed
 
 Build images:
@@ -138,7 +138,7 @@ docker build -t ministry-admin:prod ./apps/admin-web
 
 - [ ] Production or live sandbox keys in secret store
 - [ ] `GET /api/v1/health/flutterwave` → `status: ready`
-- [ ] Webhook URL registered: `https://<api-host>/api/v1/payments/webhook/flutterwave`
+- [ ] Webhook URL registered: `https://woppandmopp.com/api/v1/payments/webhook/flutterwave`
 - [ ] `PAYMENT_REDIRECT_BASE_URL` points to public API
 - [ ] End-to-end: subscription checkout → redirect → entitlement active
 - [ ] Webhook signature validation tested
@@ -161,7 +161,7 @@ docker build -t ministry-admin:prod ./apps/admin-web
 - [ ] `flutter test` — all pass
 - [ ] Release build:
   ```bash
-  flutter build apk --release --dart-define=API_BASE_URL=https://<api-host>/api/v1
+  flutter build apk --release --dart-define=API_BASE_URL=https://woppandmopp.com/api/v1
   flutter build appbundle --release --dart-define=API_BASE_URL=...
   flutter build ipa --release --dart-define=API_BASE_URL=...
   ```
@@ -203,9 +203,9 @@ See `SECURITY_REVIEW.md` for full matrix.
 
 Post-deploy verification:
 ```bash
-API_HEALTH_URL=https://<api-host>/api/v1/health \
-WS_HEALTH_URL=https://<ws-host>/api/v1/health \
-ADMIN_HEALTH_URL=https://<admin-host> \
+API_HEALTH_URL=https://woppandmopp.com/api/v1/health \
+WS_HEALTH_URL=https://woppandmopp.com/realtime \
+ADMIN_HEALTH_URL=https://admin.woppandmopp.com \
 node scripts/deploy/verify-health.mjs
 ```
 

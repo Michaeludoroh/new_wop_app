@@ -52,9 +52,19 @@ Configure in **Settings → Environments → production**:
 | `PRODUCTION_JWT_REFRESH_SECRET` | Yes |
 | `PRODUCTION_CONTENT_ACCESS_SECRET` | Yes |
 | `PRODUCTION_METRICS_AUTH_TOKEN` | Yes |
-| `PRODUCTION_CORS_ORIGIN` | Yes |
-| `PRODUCTION_API_PUBLIC_URL` | Yes |
+| `PRODUCTION_CORS_ORIGIN` | Yes — set to `https://admin.woppandmopp.com` |
+| `PRODUCTION_API_PUBLIC_URL` | Yes — set to `https://woppandmopp.com` |
 | `PRODUCTION_POSTGRES_PASSWORD` | Yes (compose deploys) |
+
+## Canonical production URLs
+
+| Variable | Value |
+|----------|-------|
+| `PRODUCTION_CORS_ORIGIN` | `https://admin.woppandmopp.com` |
+| `PRODUCTION_API_PUBLIC_URL` | `https://woppandmopp.com` |
+| `NEXT_PUBLIC_API_BASE_URL` (build) | `https://woppandmopp.com/api/v1` |
+| `NEXT_PUBLIC_WEBSOCKET_URL` (build) | `https://woppandmopp.com/realtime` |
+| Mobile `API_BASE_URL` (build) | `https://woppandmopp.com/api/v1` |
 
 ## Validation commands
 
