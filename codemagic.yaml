@@ -4,7 +4,7 @@ definitions:
     max_build_duration: 120
 
   env_versions: &env_versions
-    flutter: stable
+    flutter: 3.44.0
     java: 17
     xcode: latest
     cocoapods: default
@@ -64,6 +64,9 @@ workflows:
 
       - name: Flutter doctor
         script: flutter doctor -v
+
+      - name: Clean
+        script: flutter clean
 
       - name: Install dependencies
         script: flutter pub get
@@ -142,6 +145,9 @@ workflows:
       - name: Flutter doctor
         script: flutter doctor -v
 
+      - name: Clean
+        script: flutter clean
+
       - name: Install dependencies
         script: flutter pub get
 
@@ -179,7 +185,7 @@ workflows:
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID" \
-            --export-options-plist=/Users/builder/export_options.plist
+  
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
