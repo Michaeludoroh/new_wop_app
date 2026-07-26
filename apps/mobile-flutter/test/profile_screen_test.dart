@@ -84,9 +84,11 @@ void main() {
     expect(find.text('Account'), findsOneWidget);
     expect(find.text('Policies & Governance'), findsOneWidget);
     expect(find.text('Terms of Use'), findsOneWidget);
-    expect(find.text('Privacy Policy'), findsOneWidget);
+    // Appears in Policies & Governance and again in StoreLegalLinks.
+    expect(find.text('Privacy Policy'), findsNWidgets(2));
     expect(find.text('Community Guidelines'), findsOneWidget);
     expect(find.text('Content Sharing Rules'), findsOneWidget);
+    expect(find.text('Legal & Support'), findsOneWidget);
     expect(find.text('Save profile'), findsOneWidget);
   });
 }

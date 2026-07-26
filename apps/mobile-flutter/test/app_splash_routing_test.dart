@@ -108,6 +108,11 @@ void main() {
     expect(find.byType(DashboardScreen), findsOneWidget);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(AuthLandingScreen), findsNothing);
+
+    // Authenticated startup triggers SubscriptionProvider.refresh() -> Dio.
+    // Advance fake time past Dio connect/receive timeouts so no timers remain
+    // after the widget tree is disposed.
+    await tester.pump(const Duration(seconds: 30));
   });
 
   testWidgets('shows AuthLandingScreen when unauthenticated and bootstrapped',
