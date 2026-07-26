@@ -19,12 +19,12 @@ class AboutScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: MinistryAppBarTitle(title: AppConstants.aboutTitle),
+        title: const MinistryAppBarTitle(title: AppConstants.aboutTitle),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
         children: [
-          Center(
+          const Center(
             child: MinistryLogo(
               height: MinistryLogo.heroHeight,
               variant: MinistryLogoVariant.hero,
@@ -116,12 +116,12 @@ class AboutScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _InfoRow(
+                const _InfoRow(
                   label: 'Version',
                   value: AppConstants.appVersion,
                 ),
                 const SizedBox(height: 8),
-                _InfoRow(
+                const _InfoRow(
                   label: 'Build',
                   value: AppConstants.buildNumber,
                 ),

@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
+                      const Center(
                         child: MinistryLogo(
                           height: MinistryLogo.authFormHeight,
                           variant: MinistryLogoVariant.hero,

@@ -90,7 +90,7 @@ class CrashlyticsDebugScreen extends StatelessWidget {
             value: collectionEnabled ? 'Yes' : 'No',
           ),
           const SizedBox(height: 12),
-          _StatusCard(
+          const _StatusCard(
             label: 'Build mode',
             value: kReleaseMode
                 ? 'Release'

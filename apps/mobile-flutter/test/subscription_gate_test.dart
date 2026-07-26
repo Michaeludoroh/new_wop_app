@@ -28,16 +28,15 @@ SubscriptionStatusModel _status({
 }
 
 class _FakeSubscriptionProvider extends SubscriptionProvider {
-  _FakeSubscriptionProvider(this._status, {this.isLoading = false});
+  _FakeSubscriptionProvider(this._status);
 
   final SubscriptionStatusModel? _status;
-  final bool isLoading;
 
   @override
   SubscriptionStatusModel? get status => _status;
 
   @override
-  bool get loading => isLoading;
+  bool get loading => false;
 
   @override
   Future<void> refresh() async {}

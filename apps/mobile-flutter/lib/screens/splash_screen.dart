@@ -19,7 +19,7 @@ class SplashScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MinistryLogo(
+              const MinistryLogo(
                 height: MinistryLogo.heroHeight,
                 variant: MinistryLogoVariant.hero,
               ),

@@ -54,8 +54,8 @@ class _ClipsScreenState extends State<ClipsScreen> {
       ]);
       if (!mounted) return;
       setState(() {
-        _clips = results[0] as ClipListResponse;
-        _featured = results[1] as ClipListResponse;
+        _clips = results[0];
+        _featured = results[1];
       });
     } catch (_) {
       if (!mounted) return;

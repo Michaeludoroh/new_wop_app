@@ -132,6 +132,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         await _mobileBilling.completePurchase(purchase);
         if (!mounted) return;
         await _loadStatus();
+        if (!mounted) return;
         SubscriptionScope.maybeOf(context)?.refresh();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -199,6 +200,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       await _mobileBilling.restorePurchases();
       if (!mounted) return;
       await _loadStatus();
+      if (!mounted) return;
       SubscriptionScope.maybeOf(context)?.refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,6 +222,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       await _service.cancel(immediate: false, reason: 'Cancelled from mobile app');
       if (!mounted) return;
       await _loadStatus();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

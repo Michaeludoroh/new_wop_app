@@ -141,7 +141,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                         ),
                       ),
                     if (library != null) ...[
-                      _Header('Recently Read'),
+                      const _Header('Recently Read'),
                       if (library.recentlyRead.isEmpty)
                         const _EmptyLine('No recent reading activity yet.')
                       else
@@ -149,7 +149,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               item: p,
                               onTap: () => _continueReading(p),
                             )),
-                      _Header('Continue Reading'),
+                      const _Header('Continue Reading'),
                       if (library.continueReading.isEmpty)
                         const _EmptyLine('Nothing in progress right now.')
                       else
@@ -157,7 +157,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               item: p,
                               onTap: () => _continueReading(p),
                             )),
-                      _Header('Your eBooks'),
+                      const _Header('Your eBooks'),
                       if (library.purchased.isEmpty)
                         const _EmptyLine('No eBooks in your library yet.')
                       else
@@ -166,7 +166,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               subtitle: e.author,
                               onTap: () => _openDetails(e),
                             )),
-                      _Header('Subscription eBooks'),
+                      const _Header('Subscription eBooks'),
                       if (library.subscription.isEmpty)
                         const _EmptyLine('No subscription titles available.')
                       else
@@ -175,7 +175,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               subtitle: e.author,
                               onTap: () => _openDetails(e),
                             )),
-                      _Header('Downloads'),
+                      const _Header('Downloads'),
                       if (library.downloads.isEmpty)
                         const _EmptyLine('No downloaded eBooks yet.')
                       else
@@ -184,7 +184,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                               subtitle: 'Downloaded',
                               onTap: () => _continueReading(p),
                             )),
-                      _Header('Reading History'),
+                      const _Header('Reading History'),
                       if (library.history.isEmpty)
                         const _EmptyLine('No reading history yet.')
                       else

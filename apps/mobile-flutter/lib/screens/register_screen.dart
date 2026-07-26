@@ -124,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
+                      const Center(
                         child: MinistryLogo(
                           height: MinistryLogo.authFormHeight,
                           variant: MinistryLogoVariant.hero,

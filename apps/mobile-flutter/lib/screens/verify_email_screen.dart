@@ -99,7 +99,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Center(
+                    const Center(
                       child: MinistryLogo(
                         height: MinistryLogo.authFormHeight,
                         variant: MinistryLogoVariant.hero,

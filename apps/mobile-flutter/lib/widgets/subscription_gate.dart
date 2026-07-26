@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/auth/auth_scope.dart';
-import '../core/subscriptions/subscription_provider.dart';
 import '../core/subscriptions/trial_manager.dart';
 import '../screens/subscription_screen.dart';
 import '../screens/verify_email_screen.dart';

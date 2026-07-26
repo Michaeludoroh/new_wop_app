@@ -127,7 +127,7 @@ class _EbookScreenState extends State<EbookScreen> {
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: _category.isEmpty ? null : _category,
+                      initialValue: _category.isEmpty ? null : _category,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                       ),
@@ -153,7 +153,7 @@ class _EbookScreenState extends State<EbookScreen> {
                         ),
                       ),
                     if (_recentlyRead.isNotEmpty) ...[
-                      _SectionHeader(title: 'Recently Read'),
+                      const _SectionHeader(title: 'Recently Read'),
                       ..._recentlyRead.map(
                         (item) => Card(
                           child: ListTile(
@@ -172,7 +172,7 @@ class _EbookScreenState extends State<EbookScreen> {
                       const SizedBox(height: 12),
                     ],
                     if (data != null) ...[
-                      _SectionHeader(title: 'Featured'),
+                      const _SectionHeader(title: 'Featured'),
                       if (data.featured.isEmpty)
                         const _EmptySection(message: 'No featured eBooks yet.')
                       else
@@ -181,7 +181,7 @@ class _EbookScreenState extends State<EbookScreen> {
                               onTap: () => _openDetails(e),
                             )),
                       const SizedBox(height: 12),
-                      _SectionHeader(title: 'Recently Added'),
+                      const _SectionHeader(title: 'Recently Added'),
                       if (data.recent.isEmpty)
                         const _EmptySection(message: 'No recent eBooks yet.')
                       else
@@ -190,7 +190,7 @@ class _EbookScreenState extends State<EbookScreen> {
                               onTap: () => _openDetails(e),
                             )),
                       const SizedBox(height: 12),
-                      _SectionHeader(title: 'All eBooks'),
+                      const _SectionHeader(title: 'All eBooks'),
                       if (data.data.isEmpty)
                         const _EmptySection(message: 'No eBooks match your filters.')
                       else

@@ -147,8 +147,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          Card(
-            child: const StoreLegalLinks(),
+          const Card(
+            child: StoreLegalLinks(),
           ),
         ],
       ),

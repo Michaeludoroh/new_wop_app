@@ -1,5 +1,3 @@
-import 'package:dio/dio.dart';
-
 import '../http/authenticated_dio.dart';
 
 class UserProfile {
