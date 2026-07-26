@@ -153,6 +153,7 @@ workflows:
 
       - name: Analyze
         script: |
+          echo "THIS IS THE NEW ANALYZE SCRIPT"
           flutter analyze || true
 
       - name: Run tests
