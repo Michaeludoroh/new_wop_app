@@ -44,13 +44,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                throw GradleException(
-                    "Release signing requires android/key.properties. " +
-                        "Copy android/key.properties.example and configure your upload keystore."
-                )
+            // Only attach release signing when key.properties is present.
+            // Do not throw here: this block is evaluated at configuration time
+            // for every build (including assembleDebug).
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
             }
             isMinifyEnabled = true
             isShrinkResources = true
@@ -59,6 +57,20 @@ android {
                 "proguard-rules.pro",
             )
         }
+    }
+}
+
+// Fail release/bundle tasks without key.properties (task-graph time, not config time).
+// Debug builds never include *Release* tasks, so they succeed without the file.
+gradle.taskGraph.whenReady {
+    val isReleaseBuild = allTasks.any { task ->
+        task.name.contains("Release", ignoreCase = false)
+    }
+    if (isReleaseBuild && !keystorePropertiesFile.exists()) {
+        throw GradleException(
+            "Release signing requires android/key.properties. " +
+                "Copy android/key.properties.example and configure your upload keystore.",
+        )
     }
 }
 
