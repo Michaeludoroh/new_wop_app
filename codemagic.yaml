@@ -191,6 +191,12 @@ workflows:
             -scheme Runner \
             -showBuildSettings | grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_ENTITLEMENTS|PROVISIONING_PROFILE|PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
 
+          echo "=== Provisioning Profile Entitlements ==="
+          security cms -D \
+            -i ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision \
+            | plutil -p - \
+            | grep -A20 Entitlements || true
+
       - name: Build Android APK
         script: |
           flutter build apk --release \
