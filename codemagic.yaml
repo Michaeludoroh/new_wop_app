@@ -65,11 +65,17 @@ workflows:
       - name: Flutter doctor
         script: flutter doctor -v
 
-      - name: Clean
-        script: flutter clean
-
-      - name: Install dependencies
-        script: flutter pub get
+      # Same SPM/CocoaPods prep as Release: Android builds still regenerate
+      # iOS plugin metadata and can crash on stale SPM ephemeral links.
+      - name: Prepare Flutter dependencies
+        script: |
+          set -euo pipefail
+          flutter config --no-enable-swift-package-manager
+          rm -rf ios/Flutter/ephemeral
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+          flutter clean
+          flutter pub get
 
       - name: Analyze
         script: flutter analyze
@@ -145,11 +151,21 @@ workflows:
       - name: Flutter doctor
         script: flutter doctor -v
 
-      - name: Clean
-        script: flutter clean
-
-      - name: Install dependencies
-        script: flutter pub get
+      # CocoaPods-only: disable SPM on the CI machine and wipe stale iOS
+      # ephemeral/Pods state before any Android or iOS release build.
+      - name: Prepare Flutter and CocoaPods
+        script: |
+          set -euo pipefail
+          flutter config --no-enable-swift-package-manager
+          rm -rf ios/Flutter/ephemeral
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+          flutter clean
+          flutter pub get
+          cd ios
+          pod repo update
+          pod install
+          cd ..
 
       - name: Analyze
         script: |
@@ -161,11 +177,6 @@ workflows:
 
       - name: Set up iOS code signing
         script: xcode-project use-profiles
-
-      - name: Install CocoaPods
-        script: |
-          cd ios
-          pod install
 
       - name: Build Android APK
         script: |
@@ -186,8 +197,7 @@ workflows:
           flutter build ipa --release \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
-            --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID" \
-  
+            --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk

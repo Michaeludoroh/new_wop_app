@@ -1,4 +1,5 @@
-# Firebase iOS SDK package products require iOS 15.0+.
+# CocoaPods is the sole iOS dependency manager for this app (SwiftPM disabled).
+# Firebase iOS SDK pods require iOS 15.0+.
 platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
