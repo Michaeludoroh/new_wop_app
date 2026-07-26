@@ -178,6 +178,19 @@ workflows:
       - name: Set up iOS code signing
         script: xcode-project use-profiles
 
+      - name: Debug iOS signing
+        script: |
+          echo "=== ExportOptions.plist ==="
+          find . -name "ExportOptions.plist" -exec cat {} \; || true
+
+          echo "=== Provisioning Profiles ==="
+          find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" || true
+
+          echo "=== Build Settings ==="
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -showBuildSettings | grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_ENTITLEMENTS|PROVISIONING_PROFILE|PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
+
       - name: Build Android APK
         script: |
           flutter build apk --release \
