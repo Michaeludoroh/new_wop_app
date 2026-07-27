@@ -211,9 +211,9 @@ workflows:
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
 
-      - name: Build iOS IPA
+      - name: Build iOS IPA (verbose)
         script: |
-          flutter build ipa --release \
+          flutter build ipa --release -v \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
