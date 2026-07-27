@@ -178,6 +178,35 @@ workflows:
       - name: Set up iOS code signing
         script: xcode-project use-profiles
 
+      - name: Verify iOS signing assets
+        script: |
+          set -euxo pipefail
+
+          echo "===== HOME ====="
+          echo "$HOME"
+
+          echo "===== Search for ExportOptions.plist ====="
+          find "$HOME" -iname "*ExportOptions*.plist" -o -iname "*export_options*.plist" || true
+
+          echo "===== /Users/builder ====="
+          ls -la /Users/builder || true
+
+          echo "===== ExportOptions.plist ====="
+          if [ -f /Users/builder/export_options.plist ]; then
+            cat /Users/builder/export_options.plist
+          else
+            echo "export_options.plist NOT FOUND"
+          fi
+
+          echo "===== Installed Provisioning Profiles ====="
+          find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" -print || true
+
+          echo "===== Profile Details ====="
+          for p in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+            echo "========== $p =========="
+            security cms -D -i "$p" | plutil -p -
+          done 
+
       - name: Debug iOS signing
         script: |
           echo "=== ExportOptions.plist ==="
@@ -211,13 +240,18 @@ workflows:
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
 
-      - name: Build iOS IPA (verbose)
+      - name: Build iOS IPA
         script: |
-          flutter build ipa --release -v \
+          test -f /Users/builder/export_options.plist
+
+          flutter build ipa \
+            --release \
+            --verbose \
+            --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
-
+  
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
