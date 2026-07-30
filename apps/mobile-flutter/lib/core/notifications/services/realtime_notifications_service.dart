@@ -28,6 +28,8 @@ class RealtimeNotificationsService {
     if (token == null || token.isEmpty) return;
 
     _isRunning = true;
+    // URL ends with `/realtime` → Socket.IO namespace `/realtime`.
+    // No setPath() → Engine.IO path defaults to `/socket.io`.
     final socket = io.io(
       _resolveRealtimeUrl(),
       io.OptionBuilder()

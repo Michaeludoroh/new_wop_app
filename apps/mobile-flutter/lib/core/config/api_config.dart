@@ -22,6 +22,8 @@ abstract final class ApiConfig {
     );
   }
 
+  /// Socket.IO connect URL. Path segment `/realtime` is the Socket.IO namespace.
+  /// Engine.IO transport path remains the library default `/socket.io`.
   static String get realtimeBaseUrl {
     final trimmed =
         apiBaseUrl.endsWith('/') ? apiBaseUrl.substring(0, apiBaseUrl.length - 1) : apiBaseUrl;

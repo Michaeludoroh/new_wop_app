@@ -32,6 +32,8 @@ class RealtimeSocketClient {
 
     const token = tokenStorage.getAccessToken();
 
+    // Socket.IO URL path `/realtime` is the namespace.
+    // Engine.IO transport path remains the library default: `/socket.io`.
     this.socket = io(`${REALTIME_URL}/realtime`, {
       transports: ["websocket"],
       autoConnect: true,

@@ -11,9 +11,12 @@ import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
 import { ObservabilityService } from './observability/observability.service';
+import { RedisIoAdapter } from './modules/realtime/redis-io.adapter';
 
 const isProdLike = ['production', 'staging'].includes(process.env.NODE_ENV ?? 'development');
 const sentryEnabled = Boolean(process.env.SENTRY_DSN);
+const websocketOnlyMode = process.env.WEBSOCKET_ONLY_MODE === 'true';
+const redisAdapterEnabled = process.env.REDIS_ADAPTER_ENABLED === 'true';
 
 function buildCorsOrigin() {
   const configured = process.env.CORS_ORIGIN;
@@ -21,6 +24,15 @@ function buildCorsOrigin() {
     return isProdLike ? false : true;
   }
   return configured.split(',').map((v) => v.trim());
+}
+
+function isWebsocketOnlyAllowedPath(url: string): boolean {
+  return (
+    url.startsWith('/socket.io') ||
+    url.startsWith('/api/v1/health') ||
+    url.startsWith('/api/v1/metrics') ||
+    url.startsWith('/api/v1/realtime/health')
+  );
 }
 
 async function bootstrap() {
@@ -40,7 +52,32 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance();
   const observability = app.get(ObservabilityService);
 
+  let redisIoAdapter: RedisIoAdapter | null = null;
+  if (redisAdapterEnabled) {
+    const redisUrl = process.env.REDIS_URL?.trim();
+    if (!redisUrl) {
+      throw new Error('REDIS_URL is required when REDIS_ADAPTER_ENABLED=true');
+    }
+    redisIoAdapter = new RedisIoAdapter(app);
+    await redisIoAdapter.connectToRedis(redisUrl);
+    app.useWebSocketAdapter(redisIoAdapter);
+  }
+
   expressApp.set('trust proxy', isProdLike ? 1 : 0);
+
+  if (websocketOnlyMode) {
+    // REST traffic belongs on the API container; keep health/metrics for probes.
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      const url = req.originalUrl || req.url || '';
+      if (isWebsocketOnlyAllowedPath(url)) {
+        return next();
+      }
+      res.status(404).json({
+        message: 'This process serves Socket.IO only. Use the API service for REST.',
+        service: 'websocket',
+      });
+    });
+  }
 
   app.use(
     pinoHttp({
@@ -54,6 +91,7 @@ async function bootstrap() {
         route: req.url,
         method: req.method,
         statusCode: res.statusCode,
+        serviceRole: websocketOnlyMode ? 'websocket' : 'api',
       }),
       transport:
         process.env.NODE_ENV === 'development' && process.env.ENABLE_PRETTY_LOGS === 'true'
@@ -80,6 +118,7 @@ async function bootstrap() {
             route,
             method: req.method,
             statusCode: String(res.statusCode),
+            serviceRole: websocketOnlyMode ? 'websocket' : 'api',
           },
           extra: {
             correlationId,
@@ -99,13 +138,16 @@ async function bootstrap() {
     }),
   );
   app.use(compression());
-  expressApp.use('/api/v1/uploads/ebooks/file', (_req: Request, res: Response) => {
-    res.status(403).json({
-      message:
-        'Direct eBook file access is disabled. Request access via /ebooks/:id/access and use the secured stream URL.',
+
+  if (!websocketOnlyMode) {
+    expressApp.use('/api/v1/uploads/ebooks/file', (_req: Request, res: Response) => {
+      res.status(403).json({
+        message:
+          'Direct eBook file access is disabled. Request access via /ebooks/:id/access and use the secured stream URL.',
+      });
     });
-  });
-  expressApp.use('/api/v1/uploads', express.static(join(process.cwd(), 'uploads')));
+    expressApp.use('/api/v1/uploads', express.static(join(process.cwd(), 'uploads')));
+  }
 
   app.enableCors({
     origin: buildCorsOrigin(),
@@ -148,19 +190,32 @@ async function bootstrap() {
     process.exit(1);
   });
 
-  const port = Number(process.env.PORT ?? 4000);
+  const port = Number(process.env.PORT ?? (websocketOnlyMode ? 4100 : 4000));
   await app.listen(port);
 
   const shutdown = async (signal: string) => {
     console.log(`[runtime] received ${signal}, shutting down gracefully...`);
     await app.close();
+    if (redisIoAdapter) {
+      await redisIoAdapter.dispose();
+    }
     process.exit(0);
   };
 
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
-  console.log(`API running on http://localhost:${port}/api/v1`);
+  if (websocketOnlyMode) {
+    console.log(
+      `WebSocket service running on :${port} (Socket.IO namespace /realtime, path /socket.io` +
+        `${redisAdapterEnabled ? ', Redis adapter enabled' : ''})`,
+    );
+  } else {
+    console.log(
+      `API running on http://localhost:${port}/api/v1` +
+        `${redisAdapterEnabled ? ' (Socket.IO Redis adapter enabled for realtime emits)' : ''}`,
+    );
+  }
 }
 
 bootstrap();
