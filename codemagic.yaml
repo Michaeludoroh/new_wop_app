@@ -98,12 +98,12 @@ workflows:
           failure: true
 
 
-  # Signed release builds for Play Store / TestFlight distribution.
+  # Signed release builds for Play Store / App Store distribution.
   wopp_mobile:
     name: WOPP Mobile Release
     <<: *mobile_workflow_base
 
-    # Existing App Store Connect integration in Codemagic.
+    # Existing App Store Connect integration.
     integrations:
       app_store_connect: Codemagic WOPP
 
@@ -284,10 +284,7 @@ workflows:
           success: true
           failure: true
 
-      # Upload the signed WOPP IPA directly to App Store Connect
-      # and submit it to TestFlight.
+      # Upload the signed WOPP IPA directly to App Store Connect.
+      # TestFlight external review submission is intentionally disabled.
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
-        beta_groups:
-          - Internal Testers
