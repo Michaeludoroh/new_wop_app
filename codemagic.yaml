@@ -97,10 +97,15 @@ workflows:
           success: true
           failure: true
 
+
   # Signed release builds for Play Store / TestFlight distribution.
   wopp_mobile:
     name: WOPP Mobile Release
     <<: *mobile_workflow_base
+
+    # Existing App Store Connect integration in Codemagic.
+    integrations:
+      app_store_connect: Codemagic WOPP
 
     triggering:
       events:
@@ -118,11 +123,14 @@ workflows:
 
     environment:
       <<: *env_versions
+
       android_signing:
         - wopp_upload_keystore
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.ministrymobile.app
+
       vars:
         <<: *mobile_env_vars
 
@@ -186,7 +194,10 @@ workflows:
           echo "$HOME"
 
           echo "===== Search for ExportOptions.plist ====="
-          find "$HOME" -iname "*ExportOptions*.plist" -o -iname "*export_options*.plist" || true
+          find "$HOME" \
+            -iname "*ExportOptions*.plist" \
+            -o \
+            -iname "*export_options*.plist" || true
 
           echo "===== /Users/builder ====="
           ls -la /Users/builder || true
@@ -199,13 +210,15 @@ workflows:
           fi
 
           echo "===== Installed Provisioning Profiles ====="
-          find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" -print || true
+          find ~/Library/MobileDevice/Provisioning\ Profiles \
+            -name "*.mobileprovision" \
+            -print || true
 
           echo "===== Profile Details ====="
           for p in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
             echo "========== $p =========="
             security cms -D -i "$p" | plutil -p -
-          done 
+          done
 
       - name: Debug iOS signing
         script: |
@@ -213,12 +226,17 @@ workflows:
           find . -name "ExportOptions.plist" -exec cat {} \; || true
 
           echo "=== Provisioning Profiles ==="
-          find ~/Library/MobileDevice/Provisioning\ Profiles -name "*.mobileprovision" || true
+          find ~/Library/MobileDevice/Provisioning\ Profiles \
+            -name "*.mobileprovision" || true
 
           echo "=== Build Settings ==="
-          xcodebuild -workspace ios/Runner.xcworkspace \
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
             -scheme Runner \
-            -showBuildSettings | grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_ENTITLEMENTS|PROVISIONING_PROFILE|PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" || true
+            -showBuildSettings |
+            grep -E \
+            "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_ENTITLEMENTS|PROVISIONING_PROFILE|PROVISIONING_PROFILE_SPECIFIER|DEVELOPMENT_TEAM|CODE_SIGN_STYLE" \
+            || true
 
           echo "=== Provisioning Profile Entitlements ==="
           security cms -D \
@@ -251,7 +269,7 @@ workflows:
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="$MOBILE_ANDROID_PREMIUM_PRODUCT_ID" \
             --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="$MOBILE_IOS_PREMIUM_PRODUCT_ID"
-  
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
       - build/app/outputs/bundle/release/app-release.aab
@@ -265,9 +283,11 @@ workflows:
         notify:
           success: true
           failure: true
-      # Uncomment after configuring App Store Connect integration in Codemagic UI.
-      # app_store_connect:
-      #   auth: integration
-      #   submit_to_testflight: true
-      #   beta_groups:
-      #     - Internal Testers
+
+      # Upload the signed WOPP IPA directly to App Store Connect
+      # and submit it to TestFlight.
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
