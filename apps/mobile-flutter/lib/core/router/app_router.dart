@@ -86,9 +86,7 @@ class AppRouter {
         final authState = AuthScope.of(context).state;
         final routeName = settings.name ?? '/';
 
-        if (authState.status == AuthStatus.loading ||
-            authState.status == AuthStatus.unknown ||
-            !authState.isBootstrapped) {
+        if (!authState.isBootstrapped) {
           return const SizedBox.shrink();
         }
 
@@ -128,7 +126,9 @@ class AppRouter {
           case ForgotPasswordScreen.routeName:
             return const ForgotPasswordScreen();
           case ResetPasswordScreen.routeName:
-            return const ResetPasswordScreen();
+            return ResetPasswordScreen(
+              initialToken: _resetTokenFromArguments(settings.arguments),
+            );
           case VerifyEmailScreen.routeName:
             return VerifyEmailScreen(
               email: settings.arguments as String?,
@@ -242,5 +242,18 @@ class AppRouter {
         }
       },
     );
+  }
+
+  static String? _resetTokenFromArguments(Object? arguments) {
+    if (arguments is String && arguments.trim().isNotEmpty) {
+      return arguments.trim();
+    }
+    if (arguments is Map) {
+      final token = arguments['token']?.toString().trim();
+      if (token != null && token.isNotEmpty) {
+        return token;
+      }
+    }
+    return null;
   }
 }

@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  buildUserEmailVerificationUrl,
+  buildUserPasswordResetUrl,
+  resolveUserWebAppUrl,
+} from '../auth/user-web-app-url.util';
 
 function escapeHtml(value: string): string {
   return value
@@ -30,23 +35,36 @@ export class EmailTemplateService {
     );
   }
 
+  private get userWebEnv(): Record<string, string | undefined> {
+    return {
+      USER_WEB_APP_URL: this.configService.get<string>('USER_WEB_APP_URL'),
+      PUBLIC_WEB_APP_URL: this.configService.get<string>('PUBLIC_WEB_APP_URL'),
+      API_PUBLIC_URL: this.configService.get<string>('API_PUBLIC_URL'),
+    };
+  }
+
+  private get userWebAppUrl() {
+    return resolveUserWebAppUrl(this.userWebEnv);
+  }
+
   welcomeEmail(fullName: string) {
     const safeName = escapeHtml(fullName);
+    const userOrigin = this.userWebAppUrl;
     const subject = `Welcome to ${this.appName}`;
     const body = [
       `Hello ${fullName},`,
       '',
       `Welcome to ${this.appName}. Your account is ready.`,
-      `Sign in anytime at ${this.webAppUrl}.`,
+      `Sign in anytime at ${userOrigin}.`,
       '',
       'Blessings,',
       `${this.appName} Team`,
     ].join('\n');
-    const html = `<p>Hello ${safeName},</p><p>Welcome to <strong>${escapeHtml(this.appName)}</strong>. Your account is ready.</p><p><a href="${escapeHtml(this.webAppUrl)}">Open WOPP</a></p>`;
+    const html = `<p>Hello ${safeName},</p><p>Welcome to <strong>${escapeHtml(this.appName)}</strong>. Your account is ready.</p><p><a href="${escapeHtml(userOrigin)}">Open WOPP</a></p>`;
     return { subject, body, html };
   }
 
-  passwordResetEmail(fullName: string, resetUrl: string) {
+  passwordResetEmail(fullName: string, resetUrl: string, rawToken?: string) {
     const safeName = escapeHtml(fullName);
     const safeUrl = escapeHtml(resetUrl);
     const subject = `${this.appName} password reset`;
@@ -55,10 +73,26 @@ export class EmailTemplateService {
       '',
       'We received a request to reset your password.',
       `Use this link within 15 minutes: ${resetUrl}`,
+      ...(rawToken
+        ? [
+            '',
+            `If you are using the ${this.appName} mobile app, open Forgot Password → Reset now and paste this token: ${rawToken}`,
+          ]
+        : []),
       '',
       'If you did not request this, you can ignore this email.',
     ].join('\n');
-    const html = `<p>Hello ${safeName},</p><p>We received a request to reset your password.</p><p><a href="${safeUrl}">Reset your password</a></p><p>This link expires in 15 minutes.</p>`;
+    const html = [
+      `<p>Hello ${safeName},</p>`,
+      '<p>We received a request to reset your password.</p>',
+      `<p><a href="${safeUrl}">Reset your password</a></p>`,
+      rawToken
+        ? `<p>If you are using the ${escapeHtml(this.appName)} mobile app, open Forgot Password → Reset now and paste this token:</p><p style="word-break:break-all;font-family:monospace;">${escapeHtml(rawToken)}</p>`
+        : '',
+      '<p>This link expires in 15 minutes.</p>',
+    ]
+      .filter(Boolean)
+      .join('');
     return { subject, body, html };
   }
 
@@ -99,6 +133,7 @@ export class EmailTemplateService {
     const providerLine = input.providerLabel
       ? `Billing provider: ${input.providerLabel}.`
       : '';
+    const userOrigin = this.userWebAppUrl;
 
     const subject = `${this.appName} subscription confirmed`;
     const body = [
@@ -108,7 +143,7 @@ export class EmailTemplateService {
       expiryLine,
       providerLine,
       '',
-      `Manage your account at ${this.webAppUrl}.`,
+      `Manage your account at ${userOrigin}.`,
       '',
       `${this.appName} Team`,
     ]
@@ -120,7 +155,7 @@ export class EmailTemplateService {
       `<p>Your <strong>${safePlan}</strong> subscription is active (${escapeHtml(input.amountLabel)}).</p>`,
       `<p>${escapeHtml(expiryLine)}</p>`,
       providerLine ? `<p>${escapeHtml(providerLine)}</p>` : '',
-      `<p><a href="${escapeHtml(this.webAppUrl)}">Open WOPP</a></p>`,
+      `<p><a href="${escapeHtml(userOrigin)}">Open WOPP</a></p>`,
     ]
       .filter(Boolean)
       .join('');
@@ -183,13 +218,11 @@ export class EmailTemplateService {
   }
 
   buildPasswordResetUrl(rawToken: string) {
-    const base = this.webAppUrl.replace(/\/$/, '');
-    return `${base}/reset-password?token=${encodeURIComponent(rawToken)}`;
+    return buildUserPasswordResetUrl(rawToken, this.userWebEnv);
   }
 
   buildEmailVerificationUrl(rawToken: string) {
-    const base = this.webAppUrl.replace(/\/$/, '');
-    return `${base}/verify-email?token=${encodeURIComponent(rawToken)}`;
+    return buildUserEmailVerificationUrl(rawToken, this.userWebEnv);
   }
 
   private get supportEmail() {

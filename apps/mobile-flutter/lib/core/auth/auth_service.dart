@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../config/api_config.dart';
+import '../http/api_error.dart';
 import '../logging/app_log.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
@@ -20,62 +21,39 @@ class AuthApiConfig {
   static const String resendVerificationPath = '/auth/resend-verification';
 }
 
-/// TEMP: Remove after auth connectivity diagnosis.
+/// Debug-only auth traffic logger. Never logs bodies, tokens, passwords, or Authorization.
 class _AuthDebugInterceptor extends Interceptor {
-  String _fullUrl(RequestOptions options) {
-    final base = options.baseUrl;
+  String _safePath(RequestOptions options) {
     final path = options.path;
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
+      try {
+        return Uri.parse(path).replace(query: '', fragment: '').toString();
+      } catch (_) {
+        return path.split('?').first;
+      }
     }
-    final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
-    return '$normalizedBase$normalizedPath';
-  }
-
-  Map<String, dynamic> _safeHeaders(Map<String, dynamic> headers) {
-    final copy = Map<String, dynamic>.from(headers);
-    final auth = copy['Authorization'] ?? copy['authorization'];
-    if (auth is String && auth.isNotEmpty) {
-      copy['Authorization'] = auth.length > 20
-          ? '${auth.substring(0, 20)}…(redacted)'
-          : '(redacted)';
-      copy.remove('authorization');
-    }
-    return copy;
+    return path.split('?').first;
   }
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    debugPrint('[AUTH] ========== REQUEST ==========');
-    debugPrint('[AUTH] METHOD: ${options.method}');
-    debugPrint('[AUTH] FULL URL: ${_fullUrl(options)}');
-    debugPrint('[AUTH] HEADERS: ${_safeHeaders(options.headers)}');
-    debugPrint('[AUTH] baseUrl=${options.baseUrl} path=${options.path}');
+    AppLog.debug('[AUTH] ${options.method} ${_safePath(options)}');
     handler.next(options);
   }
 
   @override
   void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
-    debugPrint('[AUTH] ========== RESPONSE ==========');
-    debugPrint('[AUTH] STATUS CODE: ${response.statusCode}');
-    debugPrint('[AUTH] BODY: ${response.data}');
+    AppLog.debug(
+      '[AUTH] ${response.requestOptions.method} ${_safePath(response.requestOptions)} -> ${response.statusCode}',
+    );
     handler.next(response);
   }
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    debugPrint('[AUTH] ========== NO RESPONSE / ERROR ==========');
-    debugPrint('[AUTH] FULL URL: ${_fullUrl(err.requestOptions)}');
-    debugPrint('[AUTH] TYPE: ${err.type}');
-    debugPrint('[AUTH] MESSAGE: ${err.message}');
-    if (err.response != null) {
-      debugPrint('[AUTH] STATUS CODE: ${err.response?.statusCode}');
-      debugPrint('[AUTH] BODY: ${err.response?.data}');
-    } else {
-      debugPrint('[AUTH] DioException (complete): $err');
-      debugPrint('[AUTH] error: ${err.error}');
-    }
+    AppLog.debug(
+      '[AUTH] ${err.requestOptions.method} ${_safePath(err.requestOptions)} error type=${err.type} status=${err.response?.statusCode}',
+    );
     handler.next(err);
   }
 }
@@ -95,10 +73,8 @@ class AuthService {
               ),
             ),
         _tokenStorageService = tokenStorageService ?? TokenStorageService() {
-    // TEMP: Remove after auth connectivity diagnosis.
-    if (dio == null) {
+    if (dio == null && kDebugMode) {
       _dio.interceptors.add(_AuthDebugInterceptor());
-      debugPrint('[AUTH] ApiConfig.apiBaseUrl => ${AuthApiConfig.baseUrl}');
     }
   }
 
@@ -117,14 +93,10 @@ class AuthService {
   }
 
   Future<AuthSession> register(RegisterRequest request) async {
-    AppLog.debug('REGISTER REQUEST: ${request.toJson()}');
-
     final response = await _dio.post<dynamic>(
       AuthApiConfig.registerPath,
       data: request.toJson(),
     );
-
-    AppLog.debug('REGISTER RESPONSE: ${response.data}');
 
     final session = _parseSession(response.data);
     await _persistTokens(session.tokens);
@@ -187,17 +159,41 @@ class AuthService {
   }
 
   Future<void> forgotPassword(ForgotPasswordRequest request) async {
-    await _dio.post<dynamic>(
-      AuthApiConfig.forgotPasswordPath,
-      data: request.toJson(),
-    );
+    try {
+      await _dio.post<dynamic>(
+        AuthApiConfig.forgotPasswordPath,
+        data: request.toJson(),
+      );
+    } catch (error) {
+      AppLog.debug(
+        'Forgot password request failed: status=${_statusOf(error)} type=${_typeOf(error)}',
+      );
+      throw Exception(
+        messageFromDio(
+          error,
+          fallback: 'Failed to request password reset. Please try again.',
+        ),
+      );
+    }
   }
 
   Future<void> resetPassword(ResetPasswordRequest request) async {
-    await _dio.post<dynamic>(
-      AuthApiConfig.resetPasswordPath,
-      data: request.toJson(),
-    );
+    try {
+      await _dio.post<dynamic>(
+        AuthApiConfig.resetPasswordPath,
+        data: request.toJson(),
+      );
+    } catch (error) {
+      AppLog.debug(
+        'Reset password request failed: status=${_statusOf(error)} type=${_typeOf(error)}',
+      );
+      throw Exception(
+        messageFromDio(
+          error,
+          fallback: 'Failed to reset password. Please try again.',
+        ),
+      );
+    }
   }
 
   Future<void> resendVerificationEmail() async {
@@ -275,5 +271,19 @@ class AuthService {
       );
     }
     return <String, dynamic>{};
+  }
+
+  String _statusOf(Object error) {
+    if (error is DioException) {
+      return '${error.response?.statusCode ?? 'none'}';
+    }
+    return 'n/a';
+  }
+
+  String _typeOf(Object error) {
+    if (error is DioException) {
+      return error.type.name;
+    }
+    return error.runtimeType.toString();
   }
 }

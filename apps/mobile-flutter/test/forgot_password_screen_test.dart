@@ -153,7 +153,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(
-      find.text('Failed to request password reset. Please try again.'),
+      find.text('forgot password failed'),
       findsOneWidget,
     );
     expect(provider.forgotPasswordCalls, 1);

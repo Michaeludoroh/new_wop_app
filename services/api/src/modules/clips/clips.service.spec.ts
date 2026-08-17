@@ -78,6 +78,34 @@ describe('ClipsService', () => {
     );
   });
 
+  it('rewrites localhost media URLs to the public API origin', async () => {
+    const previous = process.env.API_PUBLIC_URL;
+    process.env.API_PUBLIC_URL = 'https://woppandmopp.com';
+    const { service, prisma } = createService();
+    prisma.clip.findMany.mockResolvedValueOnce([
+      {
+        ...clip,
+        mediaUrl: 'http://localhost:4000/api/v1/uploads/clips/media/faith.mp4',
+      },
+    ]);
+
+    try {
+      await expect(service.listPublic({})).resolves.toMatchObject({
+        data: [
+          expect.objectContaining({
+            videoUrl: 'https://woppandmopp.com/api/v1/uploads/clips/media/faith.mp4',
+          }),
+        ],
+      });
+    } finally {
+      if (previous === undefined) {
+        delete process.env.API_PUBLIC_URL;
+      } else {
+        process.env.API_PUBLIC_URL = previous;
+      }
+    }
+  });
+
   it('creates published clips with canonical metadata and video URL mapped to mediaUrl', async () => {
     const { service, prisma } = createService();
 

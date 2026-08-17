@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { ClipQueryDto } from './dto/clip-query.dto';
 import { CreateClipDto } from './dto/create-clip.dto';
 import { UpdateClipDto } from './dto/update-clip.dto';
+import { toPublicAssetUrl } from './clips-public-url.util';
 
 @Injectable()
 export class ClipsService {
@@ -219,8 +220,8 @@ export class ClipsService {
       id: clip.id,
       title: clip.title,
       description: clip.description,
-      videoUrl: clip.mediaUrl,
-      thumbnailUrl: clip.thumbnailUrl,
+      videoUrl: toPublicAssetUrl(clip.mediaUrl) ?? clip.mediaUrl,
+      thumbnailUrl: toPublicAssetUrl(clip.thumbnailUrl),
       category: clip.category,
       durationSeconds: clip.durationSeconds,
       speaker: clip.speaker,

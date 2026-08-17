@@ -2,13 +2,16 @@
 /**
  * Writes .env.production from process environment (CI / deploy hosts).
  * Skips if file exists unless FORCE_MATERIALIZE=1.
+ *
+ * Public (non-secret) production URLs, preserved when unset:
+ *   WEB_APP_URL=https://admin.woppandmopp.com
+ *   USER_WEB_APP_URL=https://woppandmopp.com
  */
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const target = resolve('.env.production');
-
-const KEYS = [
+export const KEYS = [
   'NODE_ENV',
   'POSTGRES_USER',
   'POSTGRES_PASSWORD',
@@ -27,6 +30,8 @@ const KEYS = [
   'METRICS_AUTH_TOKEN',
   'CONTENT_ACCESS_SECRET',
   'API_PUBLIC_URL',
+  'WEB_APP_URL',
+  'USER_WEB_APP_URL',
   'WEBSOCKET_PORT',
   'WEBSOCKET_ONLY_MODE',
   'NEXT_PUBLIC_WEBSOCKET_URL',
@@ -53,29 +58,73 @@ const KEYS = [
   'IMAGE_TAG',
 ];
 
-function main() {
-  if (existsSync(target) && process.env.FORCE_MATERIALIZE !== '1') {
-    console.log('[materialize-env] .env.production exists — skipping');
-    return;
-  }
+/** Non-secret production origins. Never used to invent credentials. */
+export const PRODUCTION_PUBLIC_URL_DEFAULTS = {
+  WEB_APP_URL: 'https://admin.woppandmopp.com',
+  USER_WEB_APP_URL: 'https://woppandmopp.com',
+};
 
+export function buildEnvLines(env) {
   const lines = ['# Materialized by scripts/deploy/materialize-production-env.mjs'];
   for (const key of KEYS) {
-    const value = process.env[key];
+    const value = env[key];
     if (value != null && String(value).trim() !== '') {
       lines.push(`${key}=${value}`);
     }
   }
 
-  if (!lines.some((l) => l.startsWith('NODE_ENV='))) {
-    lines.push(`NODE_ENV=${process.env.DEPLOY_ENV || 'production'}`);
-  }
-  if (!lines.some((l) => l.startsWith('IMAGE_TAG=')) && process.env.IMAGE_TAG) {
-    lines.push(`IMAGE_TAG=${process.env.IMAGE_TAG}`);
+  for (const [key, fallback] of Object.entries(PRODUCTION_PUBLIC_URL_DEFAULTS)) {
+    if (!lines.some((line) => line.startsWith(`${key}=`))) {
+      lines.push(`${key}=${fallback}`);
+    }
   }
 
-  writeFileSync(target, `${lines.join('\n')}\n`);
+  if (!lines.some((line) => line.startsWith('NODE_ENV='))) {
+    lines.push(`NODE_ENV=${env.DEPLOY_ENV || 'production'}`);
+  }
+  if (!lines.some((line) => line.startsWith('IMAGE_TAG=')) && env.IMAGE_TAG) {
+    lines.push(`IMAGE_TAG=${env.IMAGE_TAG}`);
+  }
+
+  return lines;
+}
+
+export function materializeProductionEnv({
+  target,
+  env,
+  force,
+  exists,
+  write,
+}) {
+  if (exists(target) && force !== '1') {
+    return { skipped: true, lines: [] };
+  }
+
+  const lines = buildEnvLines(env);
+  write(target, `${lines.join('\n')}\n`);
+  return { skipped: false, lines };
+}
+
+function main() {
+  const target = resolve('.env.production');
+  const result = materializeProductionEnv({
+    target,
+    env: process.env,
+    force: process.env.FORCE_MATERIALIZE,
+    exists: existsSync,
+    write: writeFileSync,
+  });
+
+  if (result.skipped) {
+    console.log('[materialize-env] .env.production exists — skipping');
+    return;
+  }
+
   console.log('[materialize-env] Wrote .env.production');
 }
 
-main();
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : '';
+const isDirectRun = invokedPath === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  main();
+}

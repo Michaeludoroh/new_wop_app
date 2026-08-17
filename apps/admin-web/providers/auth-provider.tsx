@@ -34,7 +34,7 @@ const defaultState: AuthState = {
   error: null
 };
 
-const PUBLIC_ROUTES = new Set(["/login", "/sermon"]);
+const PUBLIC_ROUTES = new Set(["/login", "/sermon", "/verify-email"]);
 const SESSION_INVALIDATED_EVENT = "auth:session-invalidated";
 const DEBUG_AUTH = process.env.NEXT_PUBLIC_DEBUG_AUTH_GATE === "true";
 const ADMIN_PORTAL_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "MODERATOR"];

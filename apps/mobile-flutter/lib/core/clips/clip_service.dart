@@ -1,7 +1,18 @@
 import 'package:dio/dio.dart';
 
+import '../http/api_error.dart';
 import '../http/authenticated_dio.dart';
+import '../logging/app_log.dart';
 import 'models/clip_models.dart';
+
+class ClipServiceException implements Exception {
+  ClipServiceException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class ClipService {
   ClipService({AuthenticatedDio? authenticatedDio})
@@ -16,32 +27,61 @@ class ClipService {
     int limit = 20,
     int offset = 0,
   }) async {
-    final response = await _dio.get<dynamic>(
+    return _getList(
       '/clips/public',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (category != null && category.isNotEmpty) 'category': category,
-        if (featured != null) 'featured': '$featured',
+        if (featured != null) 'featured': featured,
         'limit': limit,
         'offset': offset,
       },
     );
-
-    return ClipListResponse.fromJson(_asMap(response.data));
   }
 
   Future<ClipListResponse> getFeaturedClips({int limit = 10}) async {
-    final response = await _dio.get<dynamic>(
+    return _getList(
       '/clips/public/featured',
       queryParameters: {'limit': limit},
     );
-
-    return ClipListResponse.fromJson(_asMap(response.data));
   }
 
   Future<ClipDetailsResponse> getClipDetails(String id) async {
-    final response = await _dio.get<dynamic>('/clips/public/$id');
-    return ClipDetailsResponse.fromJson(_asMap(response.data));
+    try {
+      final response = await _dio.get<dynamic>('/clips/public/$id');
+      return ClipDetailsResponse.fromJson(_asMap(response.data));
+    } catch (error) {
+      AppLog.debug(
+        'Clip details failed: id=$id status=${_statusOf(error)} type=${_typeOf(error)}',
+      );
+      throw ClipServiceException(
+        messageFromDio(error, fallback: 'Failed to load clip.'),
+      );
+    }
+  }
+
+  Future<ClipListResponse> _getList(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        path,
+        queryParameters: queryParameters,
+      );
+      final parsed = ClipListResponse.fromJson(_asMap(response.data));
+      AppLog.debug(
+        'Clips loaded: path=$path count=${parsed.data.length} total=${parsed.total}',
+      );
+      return parsed;
+    } catch (error) {
+      AppLog.debug(
+        'Clips request failed: path=$path status=${_statusOf(error)} type=${_typeOf(error)}',
+      );
+      throw ClipServiceException(
+        messageFromDio(error, fallback: 'Failed to load clips.'),
+      );
+    }
   }
 
   Map<String, dynamic> _asMap(dynamic value) {
@@ -51,6 +91,23 @@ class ClipService {
     if (value is Map) {
       return value.map((key, val) => MapEntry(key.toString(), val));
     }
+    if (value is List) {
+      return <String, dynamic>{'data': value, 'total': value.length};
+    }
     return <String, dynamic>{};
+  }
+
+  String _statusOf(Object error) {
+    if (error is DioException) {
+      return '${error.response?.statusCode ?? 'none'}';
+    }
+    return 'n/a';
+  }
+
+  String _typeOf(Object error) {
+    if (error is DioException) {
+      return error.type.name;
+    }
+    return error.runtimeType.toString();
   }
 }

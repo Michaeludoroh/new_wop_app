@@ -4,19 +4,22 @@ import '../core/clips/clip_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../core/clips/models/clip_models.dart';
+import '../core/logging/app_log.dart';
 import 'clip_details_screen.dart';
 
 class ClipsScreen extends StatefulWidget {
-  const ClipsScreen({super.key});
+  const ClipsScreen({super.key, this.service});
 
   static const routeName = '/clips';
+
+  final ClipService? service;
 
   @override
   State<ClipsScreen> createState() => _ClipsScreenState();
 }
 
 class _ClipsScreenState extends State<ClipsScreen> {
-  final ClipService _service = ClipService();
+  late final ClipService _service;
   final TextEditingController _searchController = TextEditingController();
 
   bool _loading = true;
@@ -28,6 +31,7 @@ class _ClipsScreenState extends State<ClipsScreen> {
   @override
   void initState() {
     super.initState();
+    _service = widget.service ?? ClipService();
     _load();
   }
 
@@ -43,26 +47,35 @@ class _ClipsScreenState extends State<ClipsScreen> {
       _error = null;
     });
 
+    ClipListResponse? clips;
+    ClipListResponse? featured;
+    String? error;
+
     try {
-      final results = await Future.wait([
-        _service.getClips(
-          search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
-          category: _category.isEmpty ? null : _category,
-          limit: 50,
-        ),
-        _service.getFeaturedClips(limit: 8),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _clips = results[0];
-        _featured = results[1];
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _error = 'Failed to load clips.');
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      clips = await _service.getClips(
+        search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+        category: _category.isEmpty ? null : _category,
+        limit: 50,
+      );
+    } catch (errorObject) {
+      AppLog.debug('Clips list failed: $errorObject');
+      error = errorObject.toString();
     }
+
+    try {
+      featured = await _service.getFeaturedClips(limit: 8);
+    } catch (errorObject) {
+      AppLog.debug('Featured clips failed: $errorObject');
+      featured = const ClipListResponse(data: [], total: 0, limit: 8, offset: 0);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _clips = clips;
+      _featured = featured;
+      _error = error;
+      _loading = false;
+    });
   }
 
   void _openDetails(ClipItem clip) {
@@ -117,13 +130,22 @@ class _ClipsScreenState extends State<ClipsScreen> {
                         color: Theme.of(context).colorScheme.errorContainer,
                         child: Padding(
                           padding: const EdgeInsets.all(12),
-                          child: Text(_error!),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_error!),
+                              TextButton(
+                                onPressed: _load,
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     if (featured.isNotEmpty) ...[
                       const _SectionHeader(title: 'Featured Clips'),
                       SizedBox(
-                        height: 190,
+                        height: 240,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: featured.length,
@@ -140,11 +162,13 @@ class _ClipsScreenState extends State<ClipsScreen> {
                       const SizedBox(height: 16),
                     ],
                     const _SectionHeader(title: 'Latest Clips'),
-                    if (clips.isEmpty)
+                    if (clips.isEmpty && _error == null)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: Text('No clips found.'),
                       )
+                    else if (clips.isEmpty && _error != null)
+                      const SizedBox.shrink()
                     else
                       ...clips.map((clip) => _ClipCard(
                             clip: clip,
@@ -192,17 +216,26 @@ class _ClipCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 9,
-              child: clip.thumbnailUrl == null
-                  ? const ColoredBox(
+              child: clip.hasThumbnail
+                  ? Image.network(
+                      clip.thumbnailUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: AppColors.dividerGrey,
+                        child: Icon(Icons.play_circle_outline, size: 40),
+                      ),
+                    )
+                  : const ColoredBox(
                       color: AppColors.dividerGrey,
                       child: Icon(Icons.play_circle_outline, size: 40),
-                    )
-                  : Image.network(clip.thumbnailUrl!, fit: BoxFit.cover),
+                    ),
             ),
             ListTile(
               title: Text(clip.title, maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(
-                [clip.speaker, clip.category, clip.durationLabel].where((item) => item != null && item.toString().isNotEmpty).join(' • '),
+                [clip.speaker, clip.category, clip.durationLabel]
+                    .where((item) => item != null && item.toString().isNotEmpty)
+                    .join(' • '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

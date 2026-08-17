@@ -1,4 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { EmailVerificationService } from '../auth/email-verification.service';
 import { UsersService } from './users.service';
 
 const sampleUser = {
@@ -29,9 +30,13 @@ function createService() {
     },
     $transaction: jest.fn((ops: Promise<unknown>[]) => Promise.all(ops)),
   };
+  const emailVerificationService = {
+    adminVerifyEmail: jest.fn(),
+    adminResendVerificationEmail: jest.fn(),
+  } as unknown as EmailVerificationService;
 
   return {
-    service: new UsersService(prisma),
+    service: new UsersService(prisma, emailVerificationService),
     prisma,
   };
 }

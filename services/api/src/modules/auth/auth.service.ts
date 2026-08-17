@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Prisma, Role, User } from '@prisma/client';
@@ -31,6 +31,8 @@ type SessionMetadata = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
@@ -227,8 +229,9 @@ export class AuthService {
     const resetEmail = this.emailTemplateService.passwordResetEmail(
       user.fullName,
       resetUrl,
+      rawToken,
     );
-    await this.emailService.send([
+    await this.deliverTransactionalEmail(
       {
         to: user.email,
         subject: resetEmail.subject,
@@ -236,7 +239,9 @@ export class AuthService {
         html: resetEmail.html,
         dedupeKey: `password-reset:${user.id}:${tokenHash.slice(0, 12)}`,
       },
-    ]).catch(() => undefined);
+      'password_reset',
+      user.id,
+    );
 
     return {
       message: 'If the email exists, a reset link has been generated',
@@ -285,17 +290,17 @@ export class AuthService {
     ]);
 
     const successEmail = this.emailTemplateService.passwordResetSuccessEmail(user.fullName);
-    await this.emailService
-      .send([
-        {
-          to: user.email,
-          subject: successEmail.subject,
-          body: successEmail.body,
-          html: successEmail.html,
-          dedupeKey: `password-reset-success:${user.id}:${Date.now().toString().slice(0, 10)}`,
-        },
-      ])
-      .catch(() => undefined);
+    await this.deliverTransactionalEmail(
+      {
+        to: user.email,
+        subject: successEmail.subject,
+        body: successEmail.body,
+        html: successEmail.html,
+        dedupeKey: `password-reset-success:${user.id}:${Date.now().toString().slice(0, 10)}`,
+      },
+      'password_reset_success',
+      user.id,
+    );
 
     return { message: 'Password reset successful' };
   }
@@ -460,6 +465,37 @@ export class AuthService {
 
   private hashToken(value: string) {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private async deliverTransactionalEmail(
+    message: {
+      to: string;
+      subject: string;
+      body: string;
+      html: string;
+      dedupeKey: string;
+    },
+    event: string,
+    userId: string,
+  ) {
+    try {
+      const result = await this.emailService.send([message]);
+      const failed = result.attempts.find((attempt) => !attempt.success);
+      if (failed) {
+        this.logger.error('Transactional email delivery failed', {
+          event,
+          userId,
+          provider: result.provider,
+          errorCode: failed.errorCode,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Transactional email delivery threw', {
+        event,
+        userId,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      });
+    }
   }
 
   private toAuthUser(user: User): AuthUserResponse {

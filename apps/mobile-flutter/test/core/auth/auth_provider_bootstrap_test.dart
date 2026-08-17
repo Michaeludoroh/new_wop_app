@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ministry_mobile/core/auth/auth_provider.dart';
 import 'package:ministry_mobile/core/auth/auth_service.dart';
@@ -46,6 +48,7 @@ class _FakeAuthService extends AuthService {
 
   int refreshCallCount = 0;
   int meCallCount = 0;
+  Future<void>? forgotPasswordDelay;
 
   @override
   Future<AuthTokens> refresh() async {
@@ -87,7 +90,11 @@ class _FakeAuthService extends AuthService {
   Future<void> logout() async {}
 
   @override
-  Future<void> forgotPassword(ForgotPasswordRequest request) async {}
+  Future<void> forgotPassword(ForgotPasswordRequest request) async {
+    if (forgotPasswordDelay != null) {
+      await forgotPasswordDelay;
+    }
+  }
 
   @override
   Future<void> resetPassword(ResetPasswordRequest request) async {}
@@ -187,6 +194,34 @@ void main() {
       expect(provider.state.isBootstrapped, isTrue);
       expect(provider.state.isBusy, isFalse);
       expect(provider.state.user, isNull);
+    });
+  });
+
+  group('AuthProvider.forgotPassword', () {
+    test('stays unauthenticated while sending a reset request', () async {
+      final delay = Completer<void>();
+      final authService = _FakeAuthService()..forgotPasswordDelay = delay.future;
+      final provider = AuthProvider(
+        authService: authService,
+        tokenStorageService: _FakeTokenStorageService(),
+      );
+
+      await provider.bootstrap();
+      expect(provider.state.status, AuthStatus.unauthenticated);
+
+      final inFlight = provider.forgotPassword(
+        ForgotPasswordRequest(email: 'user@example.com'),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.state.status, AuthStatus.unauthenticated);
+      expect(provider.state.isBusy, isTrue);
+
+      delay.complete();
+      await inFlight;
+
+      expect(provider.state.status, AuthStatus.unauthenticated);
+      expect(provider.state.isBusy, isFalse);
     });
   });
 }

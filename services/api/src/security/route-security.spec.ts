@@ -13,6 +13,8 @@ import { PaymentsController } from '../modules/payments/payments.controller';
 import { AnalyticsController } from '../modules/analytics/analytics.controller';
 import { AnnouncementsController } from '../modules/announcements/announcements.controller';
 import { NotificationsController } from '../modules/notifications/notifications.controller';
+import { AuthController } from '../modules/auth/auth.controller';
+import { PublicUserResetPageController } from '../modules/auth/public-reset-page.controller';
 
 type ControllerClass = new (...args: never[]) => unknown;
 
@@ -111,5 +113,13 @@ describe('route security metadata', () => {
 
     expect(methodRoles(NotificationsController, 'createBroadcast')).toEqual(['SUPER_ADMIN', 'ADMIN']);
     expect(methodRoles(NotificationsController, 'createTargeted')).toEqual(['SUPER_ADMIN', 'ADMIN']);
+  });
+
+  it('keeps normal-user password reset public and does not attach admin auth guards', () => {
+    expect(methodGuards(AuthController, 'forgotPassword')).toEqual([]);
+    expect(methodGuards(AuthController, 'resetPassword')).toEqual([]);
+    expect(methodGuards(AuthController, 'login')).toEqual([]);
+    expect(classGuards(PublicUserResetPageController)).toEqual([]);
+    expect(methodGuards(PublicUserResetPageController, 'render')).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ import { EmailModule } from '../email/email.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { PublicUserResetPageController } from './public-reset-page.controller';
 import { EmailVerificationService } from './email-verification.service';
 import { RolesGuard } from './guards/roles.guard';
 import { readJwtAccessSecret } from './jwt-config.util';
@@ -37,7 +38,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, PublicUserResetPageController],
   providers: [AuthService, EmailVerificationService, JwtStrategy, Reflector, RolesGuard],
   exports: [AuthService, EmailVerificationService, RolesGuard],
 })

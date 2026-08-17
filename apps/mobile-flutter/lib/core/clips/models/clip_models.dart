@@ -31,13 +31,19 @@ class ClipItem {
   final bool isPublished;
   final DateTime? publishedAt;
 
+  bool get hasThumbnail {
+    final url = thumbnailUrl;
+    return url != null && url.trim().isNotEmpty;
+  }
+
   factory ClipItem.fromJson(Map<String, dynamic> json) {
+    final thumbnail = json['thumbnailUrl']?.toString().trim();
     return ClipItem(
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Untitled clip',
       description: json['description']?.toString(),
       videoUrl: json['videoUrl']?.toString() ?? json['mediaUrl']?.toString() ?? '',
-      thumbnailUrl: json['thumbnailUrl']?.toString(),
+      thumbnailUrl: (thumbnail == null || thumbnail.isEmpty) ? null : thumbnail,
       category: json['category']?.toString() ?? 'GENERAL',
       durationSeconds: _asInt(json['durationSeconds']),
       speaker: json['speaker']?.toString(),
@@ -70,6 +76,41 @@ class ClipItem {
     }
     return const [];
   }
+
+  static Map<String, dynamic> asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+    if (value is Map) {
+      return value.map((key, val) => MapEntry(key.toString(), val));
+    }
+    return <String, dynamic>{};
+  }
+
+  static List<ClipItem> parseList(dynamic raw) {
+    dynamic items = raw;
+    if (raw is Map) {
+      final nested = raw['data'];
+      items = nested is List ? nested : (nested is Map ? nested['data'] : raw['items']);
+    }
+    if (items is! List) {
+      return const [];
+    }
+
+    return items
+        .map((item) {
+          if (item is Map<String, dynamic>) {
+            return ClipItem.fromJson(item);
+          }
+          if (item is Map) {
+            return ClipItem.fromJson(item.map((key, value) => MapEntry(key.toString(), value)));
+          }
+          return null;
+        })
+        .whereType<ClipItem>()
+        .where((item) => item.id.isNotEmpty)
+        .toList();
+  }
 }
 
 class ClipListResponse {
@@ -86,12 +127,9 @@ class ClipListResponse {
   final int offset;
 
   factory ClipListResponse.fromJson(Map<String, dynamic> json) {
-    final items = json['data'] is List ? json['data'] as List : const [];
+    final items = ClipItem.parseList(json);
     return ClipListResponse(
-      data: items
-          .whereType<Map>()
-          .map((item) => ClipItem.fromJson(item.map((key, value) => MapEntry(key.toString(), value))))
-          .toList(),
+      data: items,
       total: ClipItem._asInt(json['total']) ?? items.length,
       limit: ClipItem._asInt(json['limit']) ?? items.length,
       offset: ClipItem._asInt(json['offset']) ?? 0,
@@ -108,7 +146,7 @@ class ClipDetailsResponse {
     final data = json['data'];
     if (data is Map) {
       return ClipDetailsResponse(
-        data: ClipItem.fromJson(data.map((key, value) => MapEntry(key.toString(), value))),
+        data: ClipItem.fromJson(ClipItem.asMap(data)),
       );
     }
     return ClipDetailsResponse(data: ClipItem.fromJson(json));

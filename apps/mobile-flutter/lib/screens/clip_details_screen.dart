@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import '../core/clips/clip_service.dart';
 import '../core/clips/models/clip_models.dart';
+import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 
 class ClipDetailsScreen extends StatefulWidget {
@@ -45,19 +46,35 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
 
     try {
       final details = await _service.getClipDetails(widget.clipId);
-      final controller = VideoPlayerController.networkUrl(Uri.parse(details.data.videoUrl));
-      await controller.initialize();
+      VideoPlayerController? controller;
+      var playbackError = false;
+      if (details.data.videoUrl.trim().isNotEmpty) {
+        try {
+          controller = VideoPlayerController.networkUrl(Uri.parse(details.data.videoUrl));
+          await controller.initialize();
+        } catch (error) {
+          await controller?.dispose();
+          controller = null;
+          playbackError = true;
+          debugPrint('Clip playback failed: $error');
+        }
+      } else {
+        playbackError = true;
+      }
       if (!mounted) {
-        await controller.dispose();
+        await controller?.dispose();
         return;
       }
       setState(() {
         _clip = details.data;
         _controller = controller;
+        if (playbackError) {
+          _error = 'Clip loaded, but the video could not be played.';
+        }
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load clip.');
+      setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -100,30 +117,57 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? Center(child: Text(_error!))
-                : clip == null || controller == null
-                    ? const Center(child: Text('Clip not found.'))
-                    : ListView(
-                        padding: const EdgeInsets.all(16),
+            : clip == null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          AspectRatio(
-                            aspectRatio: controller.value.aspectRatio,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                VideoPlayer(controller),
-                                IconButton.filled(
-                                  iconSize: 40,
-                                  onPressed: _togglePlayback,
-                                  icon: Icon(
-                                    controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
-                                  ),
+                          Text(_error ?? 'Clip not found.'),
+                          const SizedBox(height: 12),
+                          TextButton(onPressed: _load, child: const Text('Retry')),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      if (controller != null) ...[
+                        AspectRatio(
+                          aspectRatio: controller.value.aspectRatio == 0
+                              ? 16 / 9
+                              : controller.value.aspectRatio,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              VideoPlayer(controller),
+                              IconButton.filled(
+                                iconSize: 40,
+                                onPressed: _togglePlayback,
+                                icon: Icon(
+                                  controller.value.isPlaying ? Icons.pause : Icons.play_arrow,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          VideoProgressIndicator(controller, allowScrubbing: true),
+                        ),
+                        VideoProgressIndicator(controller, allowScrubbing: true),
+                      ] else ...[
+                        const AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: ColoredBox(
+                            color: AppColors.dividerGrey,
+                            child: Center(child: Icon(Icons.videocam_off_outlined, size: 40)),
+                          ),
+                        ),
+                        if (_error != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(_error!),
+                          ),
+                      ],
                           const SizedBox(height: 16),
                           Text(clip.title, style: Theme.of(context).textTheme.headlineSmall),
                           const SizedBox(height: 8),

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../core/auth/auth_scope.dart';
 import '../core/auth/models/auth_models.dart';
+import '../core/http/api_error.dart';
 import '../widgets/ministry_app_bar_title.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key});
+  const ResetPasswordScreen({super.key, this.initialToken});
 
   static const String routeName = '/reset-password';
+
+  final String? initialToken;
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -23,14 +26,35 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _submitSuccess;
 
   @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialToken?.trim();
+    if (initial != null && initial.isNotEmpty) {
+      _tokenController.text = _normalizeToken(initial);
+    }
+  }
+
+  @override
   void dispose() {
     _tokenController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  String _normalizeToken(String input) {
+    final trimmed = input.trim();
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.hasScheme && uri.queryParameters['token'] != null) {
+      final token = uri.queryParameters['token']!.trim();
+      if (token.isNotEmpty) {
+        return token;
+      }
+    }
+    return trimmed;
+  }
+
   String? _validateToken(String? value) {
-    final input = (value ?? '').trim();
+    final input = _normalizeToken(value ?? '');
     if (input.isEmpty) return 'Reset token is required';
     return null;
   }
@@ -38,7 +62,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _validatePassword(String? value) {
     final input = value ?? '';
     if (input.isEmpty) return 'Password is required';
-    if (input.length < 6) return 'Password must be at least 6 characters';
+    if (input.length < 8) return 'Password must be at least 8 characters';
     return null;
   }
 
@@ -57,7 +81,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     try {
       await AuthScope.read(context).resetPassword(
         ResetPasswordRequest(
-          token: _tokenController.text.trim(),
+          token: _normalizeToken(_tokenController.text),
           newPassword: _passwordController.text,
         ),
       );
@@ -67,10 +91,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         _submitSuccess =
             'Password has been reset successfully. You can now log in.';
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _submitError = 'Failed to reset password. Please try again.';
+        _submitError = messageFromDio(
+          error,
+          fallback: 'Failed to reset password. Please try again.',
+        );
       });
     } finally {
       if (mounted) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/auth/auth_scope.dart';
 import '../core/auth/models/auth_models.dart';
+import '../core/http/api_error.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import 'reset_password_screen.dart';
 
@@ -59,10 +60,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       setState(() {
         _submitSuccess = 'If that email exists, a reset link has been sent.';
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _submitError = 'Failed to request password reset. Please try again.';
+        _submitError = messageFromDio(
+          error,
+          fallback: 'Failed to request password reset. Please try again.',
+        );
       });
     } finally {
       if (mounted) {

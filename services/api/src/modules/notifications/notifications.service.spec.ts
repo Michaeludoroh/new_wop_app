@@ -35,6 +35,7 @@ function createService(existingNotification: unknown = null) {
       realtime as never,
       push as never,
       {} as never,
+      {} as never,
       { recordNotificationFailure: jest.fn() } as never,
     ),
     prisma,
@@ -141,6 +142,7 @@ describe('NotificationsService broadcast push delivery', () => {
       realtime as never,
       push as never,
       {} as never,
+      {} as never,
       { recordNotificationFailure: jest.fn() } as never,
     );
 
@@ -201,6 +203,7 @@ describe('NotificationsService broadcast push delivery', () => {
       { emitNotificationCreated: jest.fn() } as never,
       push as never,
       {} as never,
+      {} as never,
       { recordNotificationFailure: jest.fn() } as never,
     );
 
@@ -244,6 +247,7 @@ describe('NotificationsService broadcast push delivery', () => {
       prisma as never,
       { emitNotificationCreated: jest.fn() } as never,
       push as never,
+      {} as never,
       {} as never,
       { recordNotificationFailure: jest.fn() } as never,
     );

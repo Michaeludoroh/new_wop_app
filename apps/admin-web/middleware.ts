@@ -5,7 +5,7 @@ type UserRole = "SUPER_ADMIN" | "ADMIN" | "MODERATOR" | "USER";
 const ACCESS_TOKEN_KEY = "ministry_admin_access_token";
 const USER_KEY = "ministry_admin_user";
 
-const PUBLIC_ROUTES = new Set(["/login"]);
+const PUBLIC_ROUTES = new Set(["/login", "/sermon", "/verify-email"]);
 const ADMIN_PORTAL_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "MODERATOR"];
 
 const ROLE_ROUTE_MAP: Record<string, UserRole[]> = {

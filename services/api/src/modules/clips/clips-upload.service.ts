@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { resolveApiPublicOrigin } from './clips-public-url.util';
 
 type ClipUploadKind = 'media' | 'thumbnail';
 
@@ -38,7 +39,7 @@ export class ClipsUploadService {
     const relativeKey = `clips/${kind}/${filename}`;
     await writeFile(join(directory, filename), file.buffer);
 
-    const baseUrl = (process.env.API_PUBLIC_URL ?? 'http://localhost:4000').replace(/\/$/, '');
+    const baseUrl = resolveApiPublicOrigin();
     return {
       url: `${baseUrl}/api/v1/uploads/${relativeKey}`,
       key: relativeKey,

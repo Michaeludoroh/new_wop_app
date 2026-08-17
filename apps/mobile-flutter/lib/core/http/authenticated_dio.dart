@@ -24,7 +24,11 @@ class AuthenticatedDio {
           InterceptorsWrapper(
             onRequest: (options, handler) async {
               final token = await _tokenStorageService.getAccessToken();
-              options.headers['Authorization'] = 'Bearer ${token ?? ''}';
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              } else {
+                options.headers.remove('Authorization');
+              }
               handler.next(options);
             },
             onError: (error, handler) async {
@@ -40,7 +44,11 @@ class AuthenticatedDio {
                 final retryOptions = error.requestOptions;
                 retryOptions.extra['_retried'] = true;
                 final token = await _tokenStorageService.getAccessToken();
-                retryOptions.headers['Authorization'] = 'Bearer ${token ?? ''}';
+                if (token != null && token.isNotEmpty) {
+                  retryOptions.headers['Authorization'] = 'Bearer $token';
+                } else {
+                  retryOptions.headers.remove('Authorization');
+                }
                 final response = await this.dio.fetch<dynamic>(retryOptions);
                 handler.resolve(response);
               } catch (_) {

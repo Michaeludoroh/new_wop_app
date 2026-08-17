@@ -77,9 +77,7 @@ class _MinistryMobileAppState extends State<MinistryMobileApp> {
           AuthStatus.unknown => 'Unknown',
         };
 
-        final home = (!authState.isBootstrapped ||
-                authState.status == AuthStatus.unknown ||
-                authState.status == AuthStatus.loading)
+        final home = !authState.isBootstrapped
             ? const SplashScreen()
             : (authState.status == AuthStatus.authenticated
                 ? DashboardScreen(

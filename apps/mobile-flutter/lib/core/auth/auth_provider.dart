@@ -286,7 +286,6 @@ class AuthProvider extends ChangeNotifier {
   Future<void> _runBusyAction(Future<void> Function() action) async {
     _setState(
       _state.copyWith(
-        status: AuthStatus.loading,
         isBusy: true,
         clearError: true,
       ),
@@ -305,6 +304,7 @@ class AuthProvider extends ChangeNotifier {
           isBusy: false,
         ),
       );
+      rethrow;
     }
   }
 
