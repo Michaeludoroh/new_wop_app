@@ -35,14 +35,9 @@ String messageFromDio(
   }
 
   final data = error.response?.data;
-  if (data is Map) {
-    final raw = data['message'];
-    if (raw is String && raw.trim().isNotEmpty) {
-      return raw.trim();
-    }
-    if (raw is List && raw.isNotEmpty) {
-      return raw.map((item) => item.toString()).where((item) => item.isNotEmpty).join('\n');
-    }
+  final extracted = _extractApiMessage(data);
+  if (extracted != null) {
+    return extracted;
   }
 
   if (status != null) {
@@ -50,4 +45,59 @@ String messageFromDio(
   }
 
   return fallback;
+}
+
+String? _extractApiMessage(dynamic data) {
+  if (data is Map) {
+    final raw = data['message'];
+    if (raw is String && raw.trim().isNotEmpty) {
+      return raw.trim();
+    }
+    if (raw is List && raw.isNotEmpty) {
+      final joined = raw
+          .map((item) => item.toString())
+          .where((item) => item.isNotEmpty)
+          .join('\n');
+      if (joined.isNotEmpty) {
+        return joined;
+      }
+    }
+    if (raw is Map) {
+      final nested = raw['message'];
+      if (nested is String && nested.trim().isNotEmpty) {
+        return nested.trim();
+      }
+    }
+  }
+  return null;
+}
+
+int? apiHttpStatus(Object error) {
+  if (error is DioException) {
+    return error.response?.statusCode;
+  }
+  return null;
+}
+
+/// Nest/Dio error code when the backend sends `{ message: { code, message } }`.
+String? apiErrorCode(Object error) {
+  if (error is! DioException) {
+    return null;
+  }
+  final data = error.response?.data;
+  if (data is! Map) {
+    return null;
+  }
+  final code = data['code'];
+  if (code is String && code.trim().isNotEmpty) {
+    return code.trim();
+  }
+  final message = data['message'];
+  if (message is Map) {
+    final nested = message['code'];
+    if (nested is String && nested.trim().isNotEmpty) {
+      return nested.trim();
+    }
+  }
+  return null;
 }

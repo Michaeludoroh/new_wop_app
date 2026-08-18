@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
+import '../core/http/api_error.dart';
+import '../core/subscriptions/mobile_billing_exception.dart';
 import '../core/subscriptions/mobile_billing_service.dart';
 import '../core/subscriptions/subscription_models.dart';
 import '../core/subscriptions/subscription_service.dart';
@@ -59,9 +61,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       await _mobileBilling.initialize(
         onPurchaseUpdated: _handlePurchaseUpdated,
         onError: (error) {
+          _logBillingError('store purchase stream', error, StackTrace.current);
           if (!mounted) return;
           setState(() {
-            _error = 'Store purchase failed. Please try again.';
+            _error = _safeErrorMessage(
+              error,
+              'Store purchase failed. Please try again.',
+            );
+            _submitting = false;
           });
         },
       );
@@ -69,6 +76,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
 
     await _loadStatus();
+    if (!mounted) return;
+    final setupMessage = _mobileBilling.storeSetupMessage;
+    if (_usesNativeBilling && _storeProduct == null && setupMessage != null) {
+      setState(() {
+        _error ??= setupMessage;
+      });
+    }
   }
 
   Future<void> _loadStatus() async {
@@ -97,10 +111,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           }
         }
       });
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logBillingError('load subscription status', error, stackTrace);
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to load subscription status.';
+        _error = _safeErrorMessage(error, 'Failed to load subscription status.');
       });
     } finally {
       if (mounted) {
@@ -116,11 +131,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       return;
     }
 
-    if (purchase.status == PurchaseStatus.error) {
+    if (purchase.status == PurchaseStatus.canceled) {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = purchase.error?.message ?? 'Purchase failed.';
+        _error = null;
+      });
+      return;
+    }
+
+    if (purchase.status == PurchaseStatus.error) {
+      debugPrint(
+        '[billing] PurchaseStatus.error code=${purchase.error?.code} message=${purchase.error?.message}',
+      );
+      try {
+        await _mobileBilling.completePurchase(purchase);
+      } catch (error, stackTrace) {
+        _logBillingError('complete failed purchase', error, stackTrace);
+      }
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = purchase.error?.message.trim().isNotEmpty == true
+            ? 'Purchase failed: ${purchase.error!.message}'
+            : 'The App Store could not complete this purchase. Please try again.';
       });
       return;
     }
@@ -138,10 +172,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Subscription activated successfully.')),
         );
-      } catch (_) {
+      } catch (error, stackTrace) {
+        _logBillingError('purchase verification', error, stackTrace);
+        try {
+          await _mobileBilling.completePurchase(purchase);
+        } catch (completeError, completeStack) {
+          _logBillingError('complete after verification failure', completeError, completeStack);
+        }
         if (!mounted) return;
         setState(() {
-          _error = 'Purchase verification failed. Please try again or restore purchases.';
+          _error = _safeErrorMessage(
+            error,
+            'Purchase verification failed. Use Restore purchases if you were charged.',
+          );
         });
       } finally {
         if (mounted) setState(() => _submitting = false);
@@ -176,10 +219,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
 
       await _mobileBilling.purchasePremium();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logBillingError('subscribe', error, stackTrace);
       if (!mounted) return;
       setState(() {
-        _error = 'Subscription update failed. Please try again.';
+        _submitting = false;
+        _error = _safeErrorMessage(
+          error,
+          'Subscription update failed. Please try again.',
+        );
       });
     } finally {
       if (mounted && (!_usesNativeBilling || plan == MembershipPlan.free)) {
@@ -206,10 +254,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Purchases restored successfully.')),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logBillingError('restore purchases', error, stackTrace);
       if (!mounted) return;
       setState(() {
-        _error = 'Unable to restore purchases.';
+        _error = _safeErrorMessage(error, 'Unable to restore purchases.');
       });
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -232,9 +281,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
         ),
       );
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _logBillingError('cancel subscription', error, stackTrace);
       if (!mounted) return;
-      setState(() => _error = 'Unable to cancel subscription.');
+      setState(() => _error = _safeErrorMessage(error, 'Unable to cancel subscription.'));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -321,6 +371,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       plan: _premiumPlan,
                       storePrice: storePrice,
                       usesNativeBilling: _usesNativeBilling,
+                      canSubscribe: !_usesNativeBilling || _storeProduct != null,
+                      unavailableMessage: _usesNativeBilling
+                          ? _mobileBilling.storeSetupMessage
+                          : null,
                     ),
                     if (_plans.any((plan) => plan.code.toUpperCase() == 'FREE')) ...[
                       const SizedBox(height: 16),
@@ -383,6 +437,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final currency = plan.code.toUpperCase().contains('PREMIUM') ? '₦' : '\$';
     return '${plan.billingInterval} • $currency${plan.amount.toStringAsFixed(0)}';
   }
+
+  String _safeErrorMessage(Object error, String fallback) {
+    if (error is MobileBillingException && error.message.trim().isNotEmpty) {
+      return error.message;
+    }
+    return messageFromDio(error, fallback: fallback);
+  }
+
+  void _logBillingError(String action, Object error, StackTrace stackTrace) {
+    debugPrint('[billing] $action failed: $error');
+    debugPrint('[billing] $stackTrace');
+  }
 }
 
 class _PremiumMembershipCard extends StatelessWidget {
@@ -390,6 +456,8 @@ class _PremiumMembershipCard extends StatelessWidget {
     required this.submitting,
     required this.onSubscribe,
     required this.usesNativeBilling,
+    this.canSubscribe = true,
+    this.unavailableMessage,
     this.plan,
     this.storePrice,
   });
@@ -397,6 +465,8 @@ class _PremiumMembershipCard extends StatelessWidget {
   final bool submitting;
   final VoidCallback onSubscribe;
   final bool usesNativeBilling;
+  final bool canSubscribe;
+  final String? unavailableMessage;
   final SubscriptionPlanModel? plan;
   final String? storePrice;
 
@@ -451,11 +521,20 @@ class _PremiumMembershipCard extends StatelessWidget {
             const _BenefitLine(text: 'Video library'),
             const _BenefitLine(text: 'Live events'),
             const _BenefitLine(text: 'Member-only resources'),
+            if (unavailableMessage != null && !canSubscribe) ...[
+              const SizedBox(height: 12),
+              Text(
+                unavailableMessage!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: submitting ? null : onSubscribe,
+                onPressed: submitting || !canSubscribe ? null : onSubscribe,
                 child: Text(submitting ? 'Processing...' : 'Subscribe Now'),
               ),
             ),

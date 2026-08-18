@@ -1,7 +1,7 @@
 name: ministry_mobile
 description: WOPP — The official app of Men and Women of Passion and Purpose.
 publish_to: "none"
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -16,6 +16,8 @@ dependencies:
   connectivity_plus: ^6.0.5
   url_launcher: ^6.3.1
   in_app_purchase: ^3.2.0
+  in_app_purchase_android: ^0.5.1
+  in_app_purchase_storekit: ^0.4.10
   firebase_core: ^4.10.0
   firebase_messaging: ^16.3.0
   firebase_crashlytics: ^5.2.3
