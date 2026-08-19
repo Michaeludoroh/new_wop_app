@@ -1,3 +1,5 @@
+import '../../http/public_asset_url.dart';
+
 class ClipItem {
   const ClipItem({
     required this.id,
@@ -42,8 +44,10 @@ class ClipItem {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Untitled clip',
       description: json['description']?.toString(),
-      videoUrl: json['videoUrl']?.toString() ?? json['mediaUrl']?.toString() ?? '',
-      thumbnailUrl: (thumbnail == null || thumbnail.isEmpty) ? null : thumbnail,
+      videoUrl: rewritePublicAssetUrl(
+        json['videoUrl']?.toString() ?? json['mediaUrl']?.toString() ?? '',
+      ),
+      thumbnailUrl: rewritePublicAssetUrlOrNull(thumbnail),
       category: json['category']?.toString() ?? 'GENERAL',
       durationSeconds: _asInt(json['durationSeconds']),
       speaker: json['speaker']?.toString(),

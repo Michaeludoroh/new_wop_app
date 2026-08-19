@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/http/api_error.dart';
 import '../core/programs/program_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
@@ -46,12 +47,24 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
 
     try {
       final details = await _service.getProgramDetails(widget.programId);
+      var enrolled = false;
+      try {
+        final enrollments = await _service.getMyEnrollments();
+        enrolled = enrollments.any(
+          (item) =>
+              (item.program.id == details.data.id || item.program.slug == details.data.slug) &&
+              item.status.toUpperCase() == 'ENROLLED',
+        );
+      } catch (_) {
+        enrolled = false;
+      }
+
       ProgramProgressItem? progress;
       try {
         final loadedProgress = await _service.getProgress(details.data.id);
         progress = loadedProgress;
-        if (loadedProgress.completionPct > 0 || loadedProgress.currentModule != null) {
-          _enrolled = true;
+        if (loadedProgress.enrolled == true) {
+          enrolled = true;
         }
       } catch (_) {
         progress = null;
@@ -61,10 +74,11 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
       setState(() {
         _program = details.data;
         _progress = progress;
+        _enrolled = enrolled;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load program.');
+      setState(() => _error = messageFromDio(error, fallback: 'Failed to load program.'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -91,12 +105,21 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
             _progress = ProgramProgressItem(
               programId: program.id,
               completionPct: 0,
+              enrolled: true,
             );
           });
         }
       }
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Failed to update enrollment.');
+    } catch (error) {
+      if (apiHttpStatus(error) == 409) {
+        if (mounted) setState(() => _enrolled = true);
+        return;
+      }
+      if (mounted) {
+        setState(
+          () => _error = messageFromDio(error, fallback: 'Failed to update enrollment.'),
+        );
+      }
     }
   }
 
@@ -110,8 +133,12 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
         currentModule: _progress?.currentModule,
       );
       if (mounted) setState(() => _progress = progress);
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Failed to update progress.');
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = messageFromDio(error, fallback: 'Failed to update progress.'),
+        );
+      }
     }
   }
 

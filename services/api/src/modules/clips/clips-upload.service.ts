@@ -2,7 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
-import { resolveApiPublicOrigin } from './clips-public-url.util';
+import { buildPublicUploadUrl } from '../../common/public-url.util';
+import { readUploadedBuffer, UploadedBinary } from '../../common/read-uploaded-file.util';
 
 type ClipUploadKind = 'media' | 'thumbnail';
 
@@ -15,15 +16,13 @@ const ALLOWED_EXTENSIONS: Record<ClipUploadKind, Set<string>> = {
 export class ClipsUploadService {
   private readonly uploadRoot = join(process.cwd(), 'uploads', 'clips');
 
-  async saveUpload(
-    file: { buffer?: Buffer; originalname?: string } | undefined,
-    kind: ClipUploadKind,
-  ): Promise<{ url: string; key: string }> {
-    if (!file?.buffer?.length) {
+  async saveUpload(file: UploadedBinary | undefined, kind: ClipUploadKind): Promise<{ url: string; key: string }> {
+    const buffer = await readUploadedBuffer(file);
+    if (!buffer?.length) {
       throw new BadRequestException('A file is required');
     }
 
-    const extension = extname(file.originalname || '').toLowerCase();
+    const extension = extname(file?.originalname || '').toLowerCase();
     if (!ALLOWED_EXTENSIONS[kind].has(extension)) {
       throw new BadRequestException(
         kind === 'media'
@@ -37,11 +36,10 @@ export class ClipsUploadService {
 
     const filename = `${randomUUID()}${extension}`;
     const relativeKey = `clips/${kind}/${filename}`;
-    await writeFile(join(directory, filename), file.buffer);
+    await writeFile(join(directory, filename), buffer);
 
-    const baseUrl = resolveApiPublicOrigin();
     return {
-      url: `${baseUrl}/api/v1/uploads/${relativeKey}`,
+      url: buildPublicUploadUrl(relativeKey),
       key: relativeKey,
     };
   }

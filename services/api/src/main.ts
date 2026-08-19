@@ -146,7 +146,15 @@ async function bootstrap() {
           'Direct eBook file access is disabled. Request access via /ebooks/:id/access and use the secured stream URL.',
       });
     });
-    expressApp.use('/api/v1/uploads', express.static(join(process.cwd(), 'uploads')));
+    expressApp.use(
+      '/api/v1/uploads',
+      express.static(join(process.cwd(), 'uploads'), {
+        setHeaders(res) {
+          res.setHeader('Accept-Ranges', 'bytes');
+          res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        },
+      }),
+    );
   }
 
   app.enableCors({

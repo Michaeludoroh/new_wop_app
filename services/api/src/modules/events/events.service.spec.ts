@@ -201,6 +201,7 @@ describe('EventsService', () => {
   it('registers RSVP attendees while respecting capacity', async () => {
     const { service, prisma } = createService();
     prisma.event.findFirst.mockResolvedValueOnce({ ...event, _count: undefined });
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce(null);
 
     await expect(service.rsvp('event-1', 'user-1')).resolves.toMatchObject({
       data: expect.objectContaining({
@@ -216,9 +217,47 @@ describe('EventsService', () => {
     );
   });
 
+  it('allows RSVP when registrationRequired is false', async () => {
+    const { service, prisma } = createService();
+    prisma.event.findFirst.mockResolvedValueOnce({
+      ...event,
+      registrationRequired: false,
+      _count: undefined,
+    });
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce(null);
+
+    await expect(service.rsvp('event-1', 'user-1')).resolves.toMatchObject({
+      data: expect.objectContaining({
+        status: EventRsvpStatus.REGISTERED,
+      }),
+    });
+  });
+
+  it('returns the existing RSVP when the user is already registered', async () => {
+    const { service, prisma } = createService();
+    prisma.event.findFirst
+      .mockResolvedValueOnce({ ...event, _count: undefined })
+      .mockResolvedValueOnce(event);
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce({
+      id: 'attendee-1',
+      status: EventRsvpStatus.REGISTERED,
+      registeredAt: new Date('2026-06-10T10:00:00.000Z'),
+      cancelledAt: null,
+    });
+
+    await expect(service.rsvp('event-1', 'user-1')).resolves.toMatchObject({
+      data: expect.objectContaining({
+        id: 'attendee-1',
+        status: EventRsvpStatus.REGISTERED,
+      }),
+    });
+    expect(prisma.eventAttendee.upsert).not.toHaveBeenCalled();
+  });
+
   it('rejects RSVP when capacity is full', async () => {
     const { service, prisma } = createService();
     prisma.event.findFirst.mockResolvedValueOnce({ ...event, _count: undefined, maxCapacity: 3 });
+    prisma.eventAttendee.findUnique.mockResolvedValueOnce(null);
     prisma.eventAttendee.count.mockResolvedValueOnce(3);
 
     await expect(service.rsvp('event-1', 'user-1')).rejects.toBeInstanceOf(ConflictException);

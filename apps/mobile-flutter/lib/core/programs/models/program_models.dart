@@ -1,3 +1,5 @@
+import '../../http/public_asset_url.dart';
+
 class ProgramItem {
   const ProgramItem({
     required this.id,
@@ -38,7 +40,7 @@ class ProgramItem {
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
       category: json['category']?.toString() ?? 'GENERAL',
-      bannerImageUrl: json['bannerImageUrl']?.toString(),
+      bannerImageUrl: rewritePublicAssetUrlOrNull(json['bannerImageUrl']?.toString()),
       instructorName: json['instructorName']?.toString(),
       startDate: DateTime.tryParse(json['startDate']?.toString() ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -149,6 +151,7 @@ class ProgramProgressItem {
     this.currentModule,
     this.notes,
     this.lastUpdatedAt,
+    this.enrolled,
   });
 
   final String programId;
@@ -156,6 +159,7 @@ class ProgramProgressItem {
   final String? currentModule;
   final String? notes;
   final DateTime? lastUpdatedAt;
+  final bool? enrolled;
 
   factory ProgramProgressItem.fromJson(Map<String, dynamic> json) {
     final data = json['data'] is Map ? json['data'] as Map : json;
@@ -165,6 +169,7 @@ class ProgramProgressItem {
       currentModule: data['currentModule']?.toString(),
       notes: data['notes']?.toString(),
       lastUpdatedAt: DateTime.tryParse(data['lastUpdatedAt']?.toString() ?? ''),
+      enrolled: data['enrolled'] is bool ? data['enrolled'] as bool : null,
     );
   }
 

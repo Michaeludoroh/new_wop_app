@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventLocationType, EventRsvpStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toPublicAssetUrl } from '../../common/public-url.util';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
@@ -162,8 +163,21 @@ export class EventsService {
 
   async rsvp(id: string, userId: string) {
     const event = await this.ensurePublicEvent(id);
-    if (!event.registrationRequired) {
-      throw new BadRequestException('This event does not require RSVP registration');
+    const existing = await this.prisma.eventAttendee.findUnique({
+      where: { eventId_userId: { eventId: event.id, userId } },
+    });
+
+    if (existing?.status === EventRsvpStatus.REGISTERED) {
+      const current = await this.findEventWithCounts({ id: event.id });
+      return {
+        data: {
+          id: existing.id,
+          status: existing.status,
+          registeredAt: existing.registeredAt,
+          cancelledAt: existing.cancelledAt,
+          event: this.toResponse(current!),
+        },
+      };
     }
 
     if (event.maxCapacity !== null) {
@@ -438,7 +452,7 @@ export class EventsService {
       slug: event.slug,
       description: event.description,
       category: event.category,
-      bannerImageUrl: event.bannerImageUrl,
+      bannerImageUrl: toPublicAssetUrl(event.bannerImageUrl),
       locationType: event.locationType as EventLocationType,
       venue: event.venue,
       meetingLink: event.meetingLink,

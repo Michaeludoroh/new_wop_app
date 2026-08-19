@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { buildPublicUploadUrl } from '../../common/public-url.util';
+import { readUploadedBuffer, UploadedBinary } from '../../common/read-uploaded-file.util';
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
@@ -9,14 +11,13 @@ const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 export class AnnouncementsUploadService {
   private readonly uploadRoot = join(process.cwd(), 'uploads', 'announcements');
 
-  async saveImage(
-    file: { buffer?: Buffer; originalname?: string } | undefined,
-  ): Promise<{ url: string; key: string }> {
-    if (!file?.buffer?.length) {
+  async saveImage(file: UploadedBinary | undefined): Promise<{ url: string; key: string }> {
+    const buffer = await readUploadedBuffer(file);
+    if (!buffer?.length) {
       throw new BadRequestException('An image file is required');
     }
 
-    const extension = extname(file.originalname || '').toLowerCase();
+    const extension = extname(file?.originalname || '').toLowerCase();
     if (!ALLOWED_EXTENSIONS.has(extension)) {
       throw new BadRequestException(
         'Announcement images must be JPG, PNG, WEBP, or GIF',
@@ -28,14 +29,10 @@ export class AnnouncementsUploadService {
 
     const filename = `${randomUUID()}${extension}`;
     const relativeKey = `announcements/image/${filename}`;
-    await writeFile(join(directory, filename), file.buffer);
+    await writeFile(join(directory, filename), buffer);
 
-    const baseUrl = (process.env.API_PUBLIC_URL ?? 'http://localhost:4000').replace(
-      /\/$/,
-      '',
-    );
     return {
-      url: `${baseUrl}/api/v1/uploads/${relativeKey}`,
+      url: buildPublicUploadUrl(relativeKey),
       key: relativeKey,
     };
   }

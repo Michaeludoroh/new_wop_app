@@ -30,6 +30,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 import { ContentAccessService } from '../subscriptions/content-access.service';
 import { hasPremiumAccess } from '../subscriptions/subscription-access.util';
+import { resolveApiPublicOrigin, toPublicAssetUrl } from '../../common/public-url.util';
 
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -901,11 +902,7 @@ export class EbooksService {
 
   ) {
 
-    const baseUrl = (
-
-      this.configService.get<string>('API_PUBLIC_URL') ?? 'http://localhost:4000'
-
-    ).replace(/\/$/, '');
+    const baseUrl = resolveApiPublicOrigin();
 
     const streamUrl = `${baseUrl}/api/v1/ebooks/${ebookId}/stream?token=${encodeURIComponent(token.accessToken)}`;
 
@@ -1527,9 +1524,9 @@ export class EbooksService {
 
       isPremium: ebook.isPremium,
 
-      coverUrl: ebook.coverUrl,
+      coverUrl: toPublicAssetUrl(ebook.coverUrl),
 
-      coverImage: ebook.coverUrl ?? '',
+      coverImage: toPublicAssetUrl(ebook.coverUrl) ?? '',
 
       status: ebook.status,
 

@@ -63,18 +63,14 @@ export const clipsApi = {
   async uploadMedia(file: File): Promise<UploadResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/media", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/media", formData);
     return response.data;
   },
 
   async uploadThumbnail(file: File): Promise<UploadResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/thumbnail", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/thumbnail", formData);
     return response.data;
   }
 };

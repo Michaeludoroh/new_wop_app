@@ -151,6 +151,11 @@ export default function EbooksPage() {
 
   async function handleCoverUpload(file: File | undefined) {
     if (!file) return;
+    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+      setError("Cover uploads must be JPG, PNG, WEBP, or GIF");
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
@@ -216,8 +221,22 @@ export default function EbooksPage() {
             <input placeholder="Cover URL" value={form.coverUrl} onChange={(event) => setForm({ ...form, coverUrl: event.target.value })} />
             <label>
               Upload cover
-              <input type="file" accept="image/*" disabled={uploading} onChange={(event) => void handleCoverUpload(event.target.files?.[0])} />
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                disabled={uploading}
+                onChange={(event) => void handleCoverUpload(event.target.files?.[0])}
+              />
             </label>
+            {form.coverUrl ? (
+              <img
+                src={form.coverUrl}
+                alt="Selected eBook cover preview"
+                style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover", borderRadius: 8 }}
+              />
+            ) : (
+              <p style={{ margin: 0, color: "#666" }}>No cover selected. Existing eBooks without covers can still be saved.</p>
+            )}
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
               <label><input type="checkbox" checked={form.isPremium} onChange={(event) => setForm({ ...form, isPremium: event.target.checked })} /> Premium</label>
               <label><input type="checkbox" checked={form.isPublished} onChange={(event) => setForm({ ...form, isPublished: event.target.checked })} /> Published</label>

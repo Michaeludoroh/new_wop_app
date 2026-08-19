@@ -218,7 +218,7 @@ class AppRouter {
               child: ClipDetailsScreen(clipId: clipId),
             );
           case MyLibraryScreen.routeName:
-            return const SubscriptionGate(child: MyLibraryScreen());
+            return const MyLibraryScreen();
           case SubscriptionScreen.routeName:
             return const SubscriptionScreen();
           case AboutScreen.routeName:

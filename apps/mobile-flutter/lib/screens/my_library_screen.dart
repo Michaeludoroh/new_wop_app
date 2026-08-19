@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/ebooks/ebook_service.dart';
+import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../core/ebooks/models/ebook_models.dart';
@@ -41,37 +42,46 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
       final data = await _service.getMyLibrary();
       if (!mounted) return;
       setState(() => _library = data);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load your library.');
+      setState(() => _error = messageFromDio(error, fallback: 'Failed to load your library.'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _continueReading(ReadingProgressItem item) async {
-    final access = await _service.getAccess(item.ebookId);
-    if (!mounted) return;
-    if (!access.authorized || access.contentUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Subscribe or purchase this eBook to gain access.'),
+    try {
+      final access = await _service.getAccess(item.ebookId);
+      if (!mounted) return;
+      if (!access.authorized || access.contentUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscribe or purchase this eBook to gain access.'),
+          ),
+        );
+        return;
+      }
+      await Navigator.of(context).pushNamed(
+        PdfReaderScreen.routeName,
+        arguments: PdfReaderArgs(
+          ebookId: item.ebookId,
+          fileUrl: access.contentUrl,
+          title: item.ebook?.title ?? 'eBook',
+          initialPage: item.currentPage,
+          totalPages: item.totalPages,
+          bookmarkPages: item.bookmarkPages ?? const [],
         ),
       );
-      return;
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(messageFromDio(error, fallback: 'Unable to open this eBook.')),
+        ),
+      );
     }
-    await Navigator.of(context).pushNamed(
-      PdfReaderScreen.routeName,
-      arguments: PdfReaderArgs(
-        ebookId: item.ebookId,
-        fileUrl: access.contentUrl,
-        title: item.ebook?.title ?? 'eBook',
-        initialPage: item.currentPage,
-        totalPages: item.totalPages,
-        bookmarkPages: item.bookmarkPages ?? const [],
-      ),
-    );
-    await _load();
   }
 
   void _openDetails(EbookItem ebook) {
@@ -139,8 +149,8 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                             ],
                           ),
                         ),
-                      ),
-                    if (library != null) ...[
+                      )
+                    else if (library != null) ...[
                       const _Header('Recently Read'),
                       if (library.recentlyRead.isEmpty)
                         const _EmptyLine('No recent reading activity yet.')

@@ -81,6 +81,18 @@ export function createAuthenticatedClient(): AxiosInstance {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      const headers = config.headers;
+      if (headers && typeof headers.delete === "function") {
+        headers.delete("Content-Type");
+        headers.delete("content-type");
+      } else if (headers) {
+        delete headers["Content-Type"];
+        delete headers["content-type"];
+      }
+      config.timeout = Math.max(config.timeout ?? 0, 180000);
+    }
+
     if (DEBUG_AUTH) {
       console.info("[http-client] request", {
         method: config.method,

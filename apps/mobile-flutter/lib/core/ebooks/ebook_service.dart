@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../http/authenticated_dio.dart';
+import '../http/public_asset_url.dart';
 import '../subscriptions/subscription_service.dart';
 import 'models/ebook_models.dart';
 
@@ -62,11 +63,15 @@ class EbookService {
     if (access.authorized &&
         access.streamToken != null &&
         access.streamToken!.isNotEmpty) {
-      await _subscriptionService.validateContentAccess(
-        token: access.streamToken!,
-        resourceType: 'ebook',
-        resourceId: ebookId,
-      );
+      try {
+        await _subscriptionService.validateContentAccess(
+          token: access.streamToken!,
+          resourceType: 'ebook',
+          resourceId: ebookId,
+        );
+      } catch (_) {
+        // The stream URL already carries the access token. Do not block opening.
+      }
     }
 
     return access;
@@ -98,8 +103,12 @@ class EbookService {
   }
 
   Future<Response<List<int>>> downloadPdfBytes(String contentUrl) async {
+    final url = rewritePublicAssetUrl(contentUrl);
+    if (url.isEmpty || !isPlayableNetworkUrl(url)) {
+      throw Exception('Missing or invalid eBook stream URL');
+    }
     return _dio.get<List<int>>(
-      contentUrl,
+      url,
       options: Options(
         responseType: ResponseType.bytes,
       ),

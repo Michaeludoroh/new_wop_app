@@ -1,3 +1,5 @@
+import '../../http/public_asset_url.dart';
+
 class EbookItem {
 
   EbookItem({
@@ -64,19 +66,17 @@ class EbookItem {
 
       id: (json['id'] ?? '').toString(),
 
-      title: (json['title'] ?? '') as String,
-
-      author: (json['author'] ?? '') as String,
-
-      description: (json['description'] ?? '') as String,
-
-      category: (json['category'] ?? '') as String,
-
-      coverImage: (json['coverImage'] ?? json['coverUrl'] ?? '') as String,
+      title: (json['title'] ?? '').toString(),
+      author: (json['author'] ?? '').toString(),
+      description: (json['description'] ?? '').toString(),
+      category: (json['category'] ?? '').toString(),
+      coverImage: rewritePublicAssetUrl(
+        (json['coverImage'] ?? json['coverUrl'] ?? '').toString(),
+      ),
 
       price: _parseDouble(json['price']),
 
-      isPremium: (json['isPremium'] ?? false) as bool,
+      isPremium: json['isPremium'] == true,
 
       pdfPath: fileUrl,
 
@@ -153,23 +153,27 @@ class EbookListResponse {
 
 
   static List<EbookItem> _parseList(dynamic value) {
-
-    if (value is List) {
-
-      return value
-
-          .whereType<Map>()
-
-          .map((e) =>
-
-              EbookItem.fromJson(e.map((k, v) => MapEntry(k.toString(), v))))
-
-          .toList();
-
+    if (value is! List) {
+      return <EbookItem>[];
     }
-
-    return <EbookItem>[];
-
+    final items = <EbookItem>[];
+    for (final raw in value) {
+      if (raw is! Map) {
+        continue;
+      }
+      try {
+        final item = EbookItem.fromJson(
+          raw.map((k, v) => MapEntry(k.toString(), v)),
+        );
+        if (item.id.isEmpty) {
+          continue;
+        }
+        items.add(item);
+      } catch (_) {
+        continue;
+      }
+    }
+    return items;
   }
 
 }
@@ -273,45 +277,29 @@ class LibraryResponse {
 
 
   static List<EbookItem> _parseEbooks(dynamic value) {
-
-    if (value is List) {
-
-      return value
-
-          .whereType<Map>()
-
-          .map((e) =>
-
-              EbookItem.fromJson(e.map((k, v) => MapEntry(k.toString(), v))))
-
-          .toList();
-
-    }
-
-    return <EbookItem>[];
-
+    return EbookListResponse._parseList(value);
   }
 
-
-
   static List<ReadingProgressItem> _parseProgress(dynamic value) {
-
-    if (value is List) {
-
-      return value
-
-          .whereType<Map>()
-
-          .map((e) => ReadingProgressItem.fromJson(
-
-              e.map((k, v) => MapEntry(k.toString(), v))))
-
-          .toList();
-
+    if (value is! List) {
+      return <ReadingProgressItem>[];
     }
-
-    return <ReadingProgressItem>[];
-
+    final items = <ReadingProgressItem>[];
+    for (final raw in value) {
+      if (raw is! Map) {
+        continue;
+      }
+      try {
+        items.add(
+          ReadingProgressItem.fromJson(
+            raw.map((k, v) => MapEntry(k.toString(), v)),
+          ),
+        );
+      } catch (_) {
+        continue;
+      }
+    }
+    return items;
   }
 
 }
@@ -451,23 +439,23 @@ class AccessResponse {
 
 
   factory AccessResponse.fromJson(Map<String, dynamic> json) {
-
+    final source = json['authorized'] != null || json['streamUrl'] != null
+        ? json
+        : (json['data'] is Map
+            ? (json['data'] as Map).map((k, v) => MapEntry(k.toString(), v))
+            : json);
+    final streamUrl = rewritePublicAssetUrlOrNull(source['streamUrl']?.toString());
+    final fileUrl = rewritePublicAssetUrlOrNull(source['fileUrl']?.toString());
     return AccessResponse(
-
-      authorized: (json['authorized'] ?? false) as bool,
-
-      reason: (json['reason'] ?? '') as String,
-
-      fileUrl: json['fileUrl']?.toString(),
-
-      streamUrl: json['streamUrl']?.toString(),
-
-      streamToken: json['streamToken'] as String?,
-
-      expiresInSeconds: json['expiresInSeconds'] as int?,
-
+      authorized: source['authorized'] == true,
+      reason: source['reason']?.toString() ?? '',
+      fileUrl: fileUrl,
+      streamUrl: streamUrl,
+      streamToken: source['streamToken']?.toString(),
+      expiresInSeconds: source['expiresInSeconds'] is num
+          ? (source['expiresInSeconds'] as num).toInt()
+          : int.tryParse(source['expiresInSeconds']?.toString() ?? ''),
     );
-
   }
 
 }

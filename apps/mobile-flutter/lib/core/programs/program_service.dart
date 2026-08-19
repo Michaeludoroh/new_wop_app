@@ -53,6 +53,22 @@ class ProgramService {
     await _authorizedDelete('/programs/$programId/enroll');
   }
 
+  Future<List<ProgramEnrollmentResponse>> getMyEnrollments() async {
+    final response = await _authorizedGet('/programs/me/enrollments');
+    final data = _asMap(response.data)['data'];
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<Map>()
+        .map(
+          (item) => ProgramEnrollmentResponse.fromJson({
+            'data': item.map((key, value) => MapEntry(key.toString(), value)),
+          }),
+        )
+        .toList();
+  }
+
   Future<ProgramProgressItem> getProgress(String programId) async {
     final response = await _authorizedGet('/programs/me/$programId/progress');
     return ProgramProgressItem.fromJson(_asMap(response.data));

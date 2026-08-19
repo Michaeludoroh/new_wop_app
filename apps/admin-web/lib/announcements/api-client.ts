@@ -123,10 +123,7 @@ export const announcementsApi = {
     formData.append("file", file);
     const response = await announcementsClient.post<AnnouncementUploadResponse>(
       "/announcements/admin/upload/image",
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" }
-      }
+      formData
     );
     return response.data;
   }

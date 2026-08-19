@@ -10,9 +10,9 @@ const program = {
   category: 'LEADERSHIP',
   bannerImageUrl: 'https://cdn.example.com/programs/leadership.jpg',
   instructorName: 'Pastor Jane',
-  startDate: new Date('2026-08-01T09:00:00.000Z'),
-  endDate: new Date('2026-08-30T17:00:00.000Z'),
-  registrationDeadline: new Date('2026-07-25T23:59:59.000Z'),
+  startDate: new Date('2026-09-01T09:00:00.000Z'),
+  endDate: new Date('2026-09-30T17:00:00.000Z'),
+  registrationDeadline: new Date('2026-08-31T23:59:59.000Z'),
   capacity: 30,
   enrolledCount: 5,
   featured: true,
@@ -169,6 +169,48 @@ describe('ProgramsService', () => {
 
     expect(result.data.status).toBe(ProgramEnrollmentStatus.ENROLLED);
     expect(prisma.programEnrollment.upsert).toHaveBeenCalled();
+  });
+
+  it('returns the existing enrollment instead of conflicting', async () => {
+    const { service, prisma } = createService();
+    prisma.empowermentProgram.findFirst.mockResolvedValue(program);
+    prisma.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      status: ProgramEnrollmentStatus.ENROLLED,
+      enrolledAt: new Date('2026-06-10T10:00:00.000Z'),
+      cancelledAt: null,
+    });
+
+    const result = await service.enroll('program-1', 'user-1');
+
+    expect(result.data.status).toBe(ProgramEnrollmentStatus.ENROLLED);
+    expect(result.data.id).toBe('enrollment-1');
+    expect(prisma.programEnrollment.upsert).not.toHaveBeenCalled();
+  });
+
+  it('exposes enrolled=true for 0% progress', async () => {
+    const { service, prisma } = createService();
+    prisma.empowermentProgram.findFirst.mockResolvedValue(program);
+    prisma.programEnrollment.findUnique.mockResolvedValue({
+      id: 'enrollment-1',
+      status: ProgramEnrollmentStatus.ENROLLED,
+    });
+    prisma.programProgress.findUnique.mockResolvedValue({
+      id: 'progress-1',
+      programId: 'program-1',
+      userId: 'user-1',
+      completionPct: 0,
+      currentModule: null,
+      notes: null,
+      lastUpdatedAt: new Date('2026-06-10T10:00:00.000Z'),
+    });
+
+    await expect(service.getMyProgress('program-1', 'user-1')).resolves.toMatchObject({
+      data: expect.objectContaining({
+        completionPct: 0,
+        enrolled: true,
+      }),
+    });
   });
 
   it('blocks enrollment when capacity is reached', async () => {

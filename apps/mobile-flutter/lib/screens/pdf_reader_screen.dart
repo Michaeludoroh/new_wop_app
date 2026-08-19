@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pdfx/pdfx.dart';
 
 import '../core/ebooks/ebook_service.dart';
+import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 
@@ -78,6 +79,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         throw Exception('Empty PDF response');
       }
 
+      final contentType = response.headers.value('content-type') ?? '';
+      if (contentType.contains('application/json') ||
+          (bytes.isNotEmpty && bytes.first == 0x7B)) {
+        throw Exception('The server did not return a PDF. Check your access and try again.');
+      }
+
       final document = await PdfDocument.openData(Uint8List.fromList(bytes));
       _totalPages = document.pagesCount;
       _controller = PdfControllerPinch(
@@ -85,8 +92,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         initialPage: widget.args.initialPage.clamp(1, _totalPages),
       );
       _currentPage = widget.args.initialPage.clamp(1, _totalPages);
-    } catch (_) {
-      _error = 'Unable to open this eBook PDF.';
+    } catch (error) {
+      _error = messageFromDio(error, fallback: 'Unable to open this eBook PDF.');
     } finally {
       if (mounted) {
         setState(() => _loading = false);

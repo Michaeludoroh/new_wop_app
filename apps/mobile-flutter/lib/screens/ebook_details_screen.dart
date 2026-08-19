@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
+import '../core/http/api_error.dart';
 import '../core/subscriptions/trial_manager.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/trial_banner.dart';
@@ -50,10 +51,10 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
       setState(() {
         _ebook = details.data;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = 'Failed to load eBook details.';
+        _error = messageFromDio(error, fallback: 'Failed to load eBook details.');
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -99,11 +100,11 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
           bookmarkPages: progress.data?.bookmarkPages ?? const [],
         ),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to open this eBook. Please try again.'),
+        SnackBar(
+          content: Text(messageFromDio(error, fallback: 'Unable to open this eBook.')),
         ),
       );
     } finally {
@@ -126,7 +127,20 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                 : ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      const Icon(Icons.menu_book, size: 72),
+                      if (ebook.coverImage.isNotEmpty)
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              ebook.coverImage,
+                              height: 220,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.menu_book, size: 72),
+                            ),
+                          ),
+                        )
+                      else
+                        const Icon(Icons.menu_book, size: 72),
                       const SizedBox(height: 16),
                       Text(
                         ebook.title,
@@ -142,7 +156,9 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                       Text(
                         premium
                             ? 'Included with Premium'
-                            : 'Requires Premium subscription',
+                            : ebook.isPremium
+                                ? 'Requires Premium subscription'
+                                : 'Available to read',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 16),
@@ -151,7 +167,7 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                         child: Text(
                           _submitting
                               ? 'Opening...'
-                              : premium
+                              : premium || !ebook.isPremium
                                   ? 'Read Now'
                                   : 'Subscribe to Read',
                         ),

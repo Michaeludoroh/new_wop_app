@@ -66,8 +66,8 @@ void main() {
       find.textContaining('Your library is empty'),
       findsOneWidget,
     );
-    expect(find.text('Recently Read'), findsOneWidget);
     expect(find.text('Browse eBook Catalog'), findsOneWidget);
+    expect(find.text('Recently Read'), findsNothing);
   });
 
   testWidgets('library empty state opens ebook catalog', (tester) async {

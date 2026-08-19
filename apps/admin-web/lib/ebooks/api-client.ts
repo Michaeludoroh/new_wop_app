@@ -76,18 +76,14 @@ export const ebooksApi = {
   async uploadFile(file: File): Promise<UploadResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/file", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/file", formData);
     return response.data;
   },
 
   async uploadCover(file: File): Promise<UploadResult> {
     const formData = new FormData();
     formData.append("file", file);
-    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/cover", formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    });
+    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/cover", formData);
     return response.data;
   }
 };

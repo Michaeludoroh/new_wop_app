@@ -1,3 +1,5 @@
+import '../../http/public_asset_url.dart';
+
 class EventItem {
   const EventItem({
     required this.id,
@@ -88,7 +90,7 @@ class EventItem {
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
       category: json['category']?.toString() ?? 'GENERAL',
-      bannerImageUrl: json['bannerImageUrl']?.toString(),
+      bannerImageUrl: rewritePublicAssetUrlOrNull(json['bannerImageUrl']?.toString()),
       locationType: json['locationType']?.toString() ?? 'PHYSICAL',
       venue: json['venue']?.toString(),
       meetingLink: json['meetingLink']?.toString(),

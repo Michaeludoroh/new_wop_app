@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ProgramEnrollmentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { toPublicAssetUrl } from '../../common/public-url.util';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { ProgramQueryDto } from './dto/program-query.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
@@ -244,16 +245,25 @@ export class ProgramsService {
     const program = await this.ensurePublicProgram(slugOrId);
     this.assertEnrollmentWindow(program);
 
-    if (program.capacity !== null && program.enrolledCount >= program.capacity) {
-      throw new ConflictException('Program capacity has been reached');
-    }
-
     const existing = await this.prisma.programEnrollment.findUnique({
       where: { programId_userId: { programId: program.id, userId } },
     });
 
     if (existing?.status === ProgramEnrollmentStatus.ENROLLED) {
-      throw new ConflictException('Already enrolled in this program');
+      const current = await this.findProgramWithCounts({ id: program.id });
+      return {
+        data: {
+          id: existing.id,
+          status: existing.status,
+          enrolledAt: existing.enrolledAt,
+          cancelledAt: existing.cancelledAt,
+          program: this.toResponse(current),
+        },
+      };
+    }
+
+    if (program.capacity !== null && program.enrolledCount >= program.capacity) {
+      throw new ConflictException('Program capacity has been reached');
     }
 
     const enrollment = await this.prisma.$transaction(async (tx) => {
@@ -365,9 +375,15 @@ export class ProgramsService {
 
   async getMyProgress(slugOrId: string, userId: string) {
     const program = await this.ensurePublicProgram(slugOrId);
-    const progress = await this.prisma.programProgress.findUnique({
-      where: { programId_userId: { programId: program.id, userId } },
-    });
+    const [progress, enrollment] = await Promise.all([
+      this.prisma.programProgress.findUnique({
+        where: { programId_userId: { programId: program.id, userId } },
+      }),
+      this.prisma.programEnrollment.findUnique({
+        where: { programId_userId: { programId: program.id, userId } },
+      }),
+    ]);
+    const enrolled = enrollment?.status === ProgramEnrollmentStatus.ENROLLED;
 
     if (!progress) {
       return {
@@ -377,11 +393,12 @@ export class ProgramsService {
           currentModule: null,
           notes: null,
           lastUpdatedAt: null,
+          enrolled,
         },
       };
     }
 
-    return { data: this.toProgressResponse(progress) };
+    return { data: { ...this.toProgressResponse(progress), enrolled } };
   }
 
   async updateMyProgress(slugOrId: string, userId: string, dto: UpdateProgramProgressDto) {
@@ -625,7 +642,7 @@ export class ProgramsService {
       slug: program.slug,
       description: program.description,
       category: program.category,
-      bannerImageUrl: program.bannerImageUrl,
+      bannerImageUrl: toPublicAssetUrl(program.bannerImageUrl),
       instructorName: program.instructorName,
       startDate: program.startDate,
       endDate: program.endDate,

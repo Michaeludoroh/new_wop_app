@@ -183,7 +183,7 @@ export default function ClipsPage() {
             <input required placeholder="Title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
             <textarea placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
             <input required placeholder="Video URL" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
-            <input type="file" accept="video/*" disabled={uploading} onChange={(event) => void handleMediaUpload(event.target.files?.[0])} />
+            <input type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" disabled={uploading} onChange={(event) => void handleMediaUpload(event.target.files?.[0])} />
             <input placeholder="Thumbnail URL" value={form.thumbnailUrl} onChange={(event) => setForm({ ...form, thumbnailUrl: event.target.value })} />
             <input type="file" accept="image/*" disabled={uploading} onChange={(event) => void handleThumbnailUpload(event.target.files?.[0])} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>

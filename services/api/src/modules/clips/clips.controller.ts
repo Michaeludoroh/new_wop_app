@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Query, Patch, Delete, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -76,16 +77,21 @@ export class ClipsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('MODERATOR')
   @Post('admin/upload/media')
-  @UseInterceptors(FileInterceptor('file'))
-  uploadMedia(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 512 * 1024 * 1024 },
+    }),
+  )
+  uploadMedia(@UploadedFile() file: { buffer?: Buffer; path?: string; originalname?: string }) {
     return this.uploadService.saveUpload(file, 'media');
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('MODERATOR')
   @Post('admin/upload/thumbnail')
-  @UseInterceptors(FileInterceptor('file'))
-  uploadThumbnail(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
+  uploadThumbnail(@UploadedFile() file: { buffer?: Buffer; path?: string; originalname?: string }) {
     return this.uploadService.saveUpload(file, 'thumbnail');
   }
 

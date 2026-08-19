@@ -4,6 +4,8 @@ import 'package:video_player/video_player.dart';
 
 import '../core/clips/clip_service.dart';
 import '../core/clips/models/clip_models.dart';
+import '../core/http/api_error.dart';
+import '../core/http/public_asset_url.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 
@@ -34,6 +36,7 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
 
   @override
   void dispose() {
+    _controller?.removeListener(_onPlayerUpdate);
     _controller?.dispose();
     super.dispose();
   }
@@ -43,25 +46,37 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
       _loading = true;
       _error = null;
     });
+    await _controller?.dispose();
+    _controller = null;
 
     try {
       final details = await _service.getClipDetails(widget.clipId);
       VideoPlayerController? controller;
       var playbackError = false;
-      if (details.data.videoUrl.trim().isNotEmpty) {
+      String? playbackMessage;
+      final videoUrl = details.data.videoUrl.trim();
+      if (!isPlayableNetworkUrl(videoUrl)) {
+        playbackError = true;
+        playbackMessage = 'This clip does not have a valid video URL.';
+      } else {
         try {
-          controller = VideoPlayerController.networkUrl(Uri.parse(details.data.videoUrl));
+          controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+          controller.addListener(_onPlayerUpdate);
           await controller.initialize();
+          if (controller.value.hasError) {
+            throw Exception(controller.value.errorDescription ?? 'Video player error');
+          }
         } catch (error) {
+          controller?.removeListener(_onPlayerUpdate);
           await controller?.dispose();
           controller = null;
           playbackError = true;
+          playbackMessage = 'Clip loaded, but the video could not be played.';
           debugPrint('Clip playback failed: $error');
         }
-      } else {
-        playbackError = true;
       }
       if (!mounted) {
+        controller?.removeListener(_onPlayerUpdate);
         await controller?.dispose();
         return;
       }
@@ -69,15 +84,20 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
         _clip = details.data;
         _controller = controller;
         if (playbackError) {
-          _error = 'Clip loaded, but the video could not be played.';
+          _error = playbackMessage;
         }
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _error = error.toString());
+      setState(() => _error = messageFromDio(error, fallback: 'Failed to load clip.'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _onPlayerUpdate() {
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _share() async {

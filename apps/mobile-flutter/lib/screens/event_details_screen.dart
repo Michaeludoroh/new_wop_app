@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/events/event_service.dart';
+import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../core/events/models/event_models.dart';
@@ -57,9 +58,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       setState(() {
         _event = details.data.copyWith(userRsvpStatus: rsvpStatus?.status);
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
-      setState(() => _error = 'Failed to load event.');
+      setState(() => _error = messageFromDio(error, fallback: 'Failed to load event.'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -83,8 +84,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           setState(() => _event = response.event);
         }
       }
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Failed to update RSVP.');
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = messageFromDio(error, fallback: 'Failed to update enrollment.'),
+        );
+      }
     }
   }
 
@@ -171,14 +176,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                               ),
                             ],
                             const SizedBox(height: 24),
-                            if (event.registrationRequired)
-                              FilledButton.icon(
-                                onPressed: _toggleRsvp,
-                                icon: Icon(_rsvped ? Icons.event_busy : Icons.event_available),
-                                label: Text(_rsvped ? 'Cancel RSVP' : 'RSVP'),
-                              )
-                            else
-                              const Text('Registration is not required for this event.'),
+                            FilledButton.icon(
+                              onPressed: _toggleRsvp,
+                              icon: Icon(_rsvped ? Icons.event_busy : Icons.event_available),
+                              label: Text(_rsvped ? 'Cancel enrollment' : 'Enroll'),
+                            ),
                           ],
                         ),
                       ),
