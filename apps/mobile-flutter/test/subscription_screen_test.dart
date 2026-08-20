@@ -9,13 +9,13 @@ class _FakeSubscriptionService extends SubscriptionService {
   Future<SubscriptionStatusModel?> getStatus() async {
     return SubscriptionStatusModel(
       plan: MembershipPlan.premium,
-      status: 'GRACE',
+      status: 'ACTIVE',
       endDate: DateTime.now().add(const Duration(days: 3)),
       access: SubscriptionAccessModel(
         hasPremiumAccess: true,
-        isGracePeriod: true,
-        daysRemainingInGrace: 3,
-        renewalDue: true,
+        isGracePeriod: false,
+        daysRemainingInGrace: null,
+        renewalDue: false,
         cancelAtPeriodEnd: false,
       ),
     );
@@ -26,8 +26,20 @@ class _FakeSubscriptionService extends SubscriptionService {
     return [
       SubscriptionPlanModel(
         code: 'PREMIUM',
-        name: 'Premium',
-        amount: 25,
+        name: 'Premium Membership',
+        amount: 500,
+        billingInterval: 'MONTHLY',
+      ),
+      SubscriptionPlanModel(
+        code: 'BASIC_MONTHLY',
+        name: 'Basic Monthly',
+        amount: 9.99,
+        billingInterval: 'MONTHLY',
+      ),
+      SubscriptionPlanModel(
+        code: 'PARTNER',
+        name: 'Partner',
+        amount: 19.99,
         billingInterval: 'MONTHLY',
       ),
     ];
@@ -35,7 +47,7 @@ class _FakeSubscriptionService extends SubscriptionService {
 }
 
 void main() {
-  testWidgets('subscription screen shows grace-period messaging', (tester) async {
+  testWidgets('subscription screen shows WOPP Premium without obsolete plans', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SubscriptionScreen(service: _FakeSubscriptionService()),
@@ -45,9 +57,12 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.text('Subscription'), findsOneWidget);
-    expect(find.text('Premium'), findsWidgets);
-    expect(find.textContaining('Payment issue detected'), findsOneWidget);
-    expect(find.text('Renew Membership'), findsOneWidget);
+    expect(find.text('WOPP Premium'), findsWidgets);
+    expect(find.text('Choose the plan that works best for you.'), findsOneWidget);
+    expect(find.text('Basic Monthly'), findsNothing);
+    expect(find.text('Partner'), findsNothing);
+    expect(find.textContaining('₦500'), findsNothing);
+    expect(find.text('Premium Membership'), findsNothing);
+    expect(find.text('Subscribe Now'), findsOneWidget);
   });
 }

@@ -9,7 +9,6 @@ import '../core/subscriptions/mobile_billing_service.dart';
 import '../core/subscriptions/subscription_models.dart';
 import '../core/subscriptions/subscription_service.dart';
 import '../core/theme/app_colors.dart';
-import '../widgets/membership_status_card.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/trial_banner.dart';
 
@@ -38,11 +37,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   bool _submitting = false;
   String? _error;
   SubscriptionStatusModel? _status;
-  MobileStoreSubscriptionModel? _storeStatus;
-  List<SubscriptionPlanModel> _plans = const [];
-  ProductDetails? _storeProduct;
+  String? _selectedProductId;
 
   bool get _usesNativeBilling => _mobileBilling.isSupported;
+
+  List<WoppPremiumOffer> get _offers => _mobileBilling.availableOffers;
 
   @override
   void initState() {
@@ -72,17 +71,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           });
         },
       );
-      _storeProduct = _mobileBilling.premiumProduct;
     }
 
     await _loadStatus();
     if (!mounted) return;
     final setupMessage = _mobileBilling.storeSetupMessage;
-    if (_usesNativeBilling && _storeProduct == null && setupMessage != null) {
+    if (_usesNativeBilling && _offers.isEmpty && setupMessage != null) {
       setState(() {
         _error ??= setupMessage;
       });
     }
+    _selectedProductId ??= _offers.isEmpty ? null : _offers.first.productId;
   }
 
   Future<void> _loadStatus() async {
@@ -92,24 +91,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _service.getStatus(),
-        _service.getPlans(),
-        if (_usesNativeBilling) _service.getMobileStatus(),
-      ]);
+      SubscriptionStatusModel? status = await _service.getStatus();
+      if (_usesNativeBilling) {
+        final mobileStatus = await _service.getMobileStatus();
+        status = mobileStatus.subscription ?? status;
+      }
 
       if (!mounted) return;
-
       setState(() {
-        _status = results[0] as SubscriptionStatusModel?;
-        _plans = results[1] as List<SubscriptionPlanModel>;
-        if (_usesNativeBilling && results.length > 2) {
-          final mobileStatus = results[2] as MobileSubscriptionStatusResult;
-          _storeStatus = mobileStatus.store;
-          if (mobileStatus.subscription != null) {
-            _status = mobileStatus.subscription;
-          }
-        }
+        _status = status;
+        _selectedProductId ??= _offers.isEmpty ? null : _offers.first.productId;
       });
     } catch (error, stackTrace) {
       _logBillingError('load subscription status', error, stackTrace);
@@ -118,9 +109,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         _error = _safeErrorMessage(error, 'Failed to load subscription status.');
       });
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -154,7 +143,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         _submitting = false;
         _error = purchase.error?.message.trim().isNotEmpty == true
             ? 'Purchase failed: ${purchase.error!.message}'
-            : 'The App Store could not complete this purchase. Please try again.';
+            : 'The store could not complete this purchase. Please try again.';
       });
       return;
     }
@@ -170,7 +159,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         SubscriptionScope.maybeOf(context)?.refresh();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Subscription activated successfully.')),
+          const SnackBar(content: Text('WOPP Premium activated successfully.')),
         );
       } catch (error, stackTrace) {
         _logBillingError('purchase verification', error, stackTrace);
@@ -192,33 +181,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
-  Future<void> _subscribe(MembershipPlan plan) async {
+  Future<void> _subscribeSelected() async {
     setState(() {
       _submitting = true;
       _error = null;
     });
 
     try {
-      if (plan == MembershipPlan.free) {
-        await _service.subscribe(plan: plan);
-        if (!mounted) return;
-        await _loadStatus();
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Free membership activated.')),
-        );
-        return;
-      }
-
       if (!_usesNativeBilling) {
         setState(() {
           _error =
-              'Premium subscriptions are available through the App Store or Google Play on a mobile device.';
+              'WOPP Premium is billed through the App Store or Google Play on a mobile device.';
         });
         return;
       }
 
-      await _mobileBilling.purchasePremium();
+      final productId = _selectedProductId ??
+          (_offers.isEmpty ? MobileBillingConfig.premiumProductId : _offers.first.productId);
+      await _mobileBilling.purchaseOffer(productId);
     } catch (error, stackTrace) {
       _logBillingError('subscribe', error, stackTrace);
       if (!mounted) return;
@@ -229,10 +209,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           'Subscription update failed. Please try again.',
         );
       });
-    } finally {
-      if (mounted && (!_usesNativeBilling || plan == MembershipPlan.free)) {
-        setState(() => _submitting = false);
-      }
     }
   }
 
@@ -265,47 +241,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
-  Future<void> _cancelSubscription() async {
-    setState(() => _submitting = true);
-    try {
-      await _service.cancel(immediate: false, reason: 'Cancelled from mobile app');
-      if (!mounted) return;
-      await _loadStatus();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _usesNativeBilling
-                ? 'Cancellation must be managed in ${Platform.isIOS ? 'App Store' : 'Google Play'} settings.'
-                : 'Subscription will cancel at period end.',
-          ),
-        ),
-      );
-    } catch (error, stackTrace) {
-      _logBillingError('cancel subscription', error, stackTrace);
-      if (!mounted) return;
-      setState(() => _error = _safeErrorMessage(error, 'Unable to cancel subscription.'));
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  String? _formatStoreExpiry() {
-    final expiry = _storeStatus?.expiryDate ?? _status?.endDate;
-    if (expiry == null) return null;
-    return '${expiry.day}/${expiry.month}/${expiry.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final status = _status;
-    final canRenew = status?.isGracePeriod == true || status?.access?.renewalDue == true;
-    final storePrice = _storeProduct?.price;
-    final expiryLabel = _formatStoreExpiry();
+    final offers = _offers;
+    final hasPremium = _status?.hasPremiumAccess ?? false;
 
     return Scaffold(
       appBar: AppBar(
-        title: const MinistryAppBarTitle(title: 'Subscription'),
+        title: const MinistryAppBarTitle(title: 'WOPP Premium'),
         actions: [
           if (_usesNativeBilling)
             TextButton(
@@ -322,18 +265,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    MembershipStatusCard(status: status),
-                    if (expiryLabel != null) ...[
+                    Text(
+                      'WOPP Premium',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: AppColors.primaryPurple,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose the plan that works best for you.',
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                    ),
+                    if (hasPremium) ...[
                       const SizedBox(height: 12),
-                      Card(
-                        child: ListTile(
-                          leading: const Icon(Icons.event_available_outlined),
-                          title: const Text('Subscription expiry'),
-                          subtitle: Text(expiryLabel),
-                          trailing: _storeStatus?.autoRenewStatus == true
-                              ? const Text('Auto-renewing')
-                              : const Text('Cancelled'),
-                        ),
+                      Text(
+                        'You already have WOPP Premium access. Manage billing in ${Platform.isIOS ? 'App Store' : Platform.isAndroid ? 'Google Play' : 'your store'} settings.',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -347,95 +297,54 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       ),
                       const SizedBox(height: 16),
                     ],
-                    if (status?.hasPremiumAccess ?? false) ...[
-                      OutlinedButton(
-                        onPressed: _submitting ? null : _cancelSubscription,
-                        child: Text(
-                          _usesNativeBilling
-                              ? 'Manage subscription in store'
-                              : 'Cancel at period end',
+                    if (offers.isEmpty)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            _usesNativeBilling
+                                ? (_mobileBilling.storeSetupMessage ??
+                                    'WOPP Premium options will appear here when they are available from the store.')
+                                : 'WOPP Premium is billed through the App Store or Google Play on a mobile device.',
+                          ),
+                        ),
+                      )
+                    else
+                      ...offers.map(
+                        (offer) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _OfferCard(
+                            offer: offer,
+                            selected: _selectedProductId == offer.productId,
+                            billedThrough: Platform.isIOS
+                                ? 'Billed through the App Store'
+                                : 'Billed through Google Play',
+                            onSelect: () => setState(() => _selectedProductId = offer.productId),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                    ],
-                    Text(
-                      canRenew ? 'Renew Membership' : 'Premium Membership',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    _PremiumMembershipCard(
-                      submitting: _submitting,
-                      onSubscribe: () => _subscribe(MembershipPlan.premium),
-                      plan: _premiumPlan,
-                      storePrice: storePrice,
-                      usesNativeBilling: _usesNativeBilling,
-                      canSubscribe: !_usesNativeBilling || _storeProduct != null,
-                      unavailableMessage: _usesNativeBilling
-                          ? _mobileBilling.storeSetupMessage
-                          : null,
-                    ),
-                    if (_plans.any((plan) => plan.code.toUpperCase() == 'FREE')) ...[
-                      const SizedBox(height: 16),
-                      _PlanTile(
-                        title: 'Free',
-                        subtitle: 'Access free eBooks only.',
-                        onTap: _submitting ? null : () => _subscribe(MembershipPlan.free),
+                    const SizedBox(height: 8),
+                    Text('Benefits', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    const _BenefitLine(text: 'Complete eBook library'),
+                    const _BenefitLine(text: 'Daily devotionals'),
+                    const _BenefitLine(text: 'Premium messages'),
+                    const _BenefitLine(text: 'Video library'),
+                    const _BenefitLine(text: 'Live events'),
+                    const _BenefitLine(text: 'Member-only resources'),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: _submitting || offers.isEmpty ? null : _subscribeSelected,
+                        child: Text(_submitting ? 'Processing...' : 'Subscribe Now'),
                       ),
-                    ],
-                    if (_plans.length > 1)
-                      ..._plans
-                          .where((plan) => !plan.code.toUpperCase().contains('PREMIUM'))
-                          .map(
-                            (plan) => Padding(
-                              padding: const EdgeInsets.only(top: 12),
-                              child: _PlanTile(
-                                title: plan.name,
-                                subtitle: _formatPlanPrice(plan),
-                                onTap: _submitting
-                                    ? null
-                                    : () => _subscribe(_planFromCode(plan.code)),
-                              ),
-                            ),
-                          ),
-                    if (_plans.isEmpty) ...[
-                      const SizedBox(height: 12),
-                      _PlanTile(
-                        title: 'Premium Membership',
-                        subtitle: storePrice ?? '₦500 / Month',
-                        onTap: _submitting ? null : () => _subscribe(MembershipPlan.premium),
-                      ),
-                    ],
+                    ),
                   ],
                 ),
               ),
       ),
     );
-  }
-
-  MembershipPlan _planFromCode(String code) {
-    final normalized = code.toUpperCase();
-    if (normalized.contains('FREE')) return MembershipPlan.free;
-    if (normalized.contains('PARTNER')) return MembershipPlan.partner;
-    if (normalized.contains('PREMIUM') || normalized.contains('BASIC')) {
-      return MembershipPlan.premium;
-    }
-    return MembershipPlan.unknown;
-  }
-
-  SubscriptionPlanModel? get _premiumPlan {
-    for (final plan in _plans) {
-      if (plan.code.toUpperCase().contains('PREMIUM')) {
-        return plan;
-      }
-    }
-    return null;
-  }
-
-  String _formatPlanPrice(SubscriptionPlanModel plan) {
-    final currency = plan.code.toUpperCase().contains('PREMIUM') ? '₦' : '\$';
-    return '${plan.billingInterval} • $currency${plan.amount.toStringAsFixed(0)}';
   }
 
   String _safeErrorMessage(Object error, String fallback) {
@@ -451,94 +360,66 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 }
 
-class _PremiumMembershipCard extends StatelessWidget {
-  const _PremiumMembershipCard({
-    required this.submitting,
-    required this.onSubscribe,
-    required this.usesNativeBilling,
-    this.canSubscribe = true,
-    this.unavailableMessage,
-    this.plan,
-    this.storePrice,
+class _OfferCard extends StatelessWidget {
+  const _OfferCard({
+    required this.offer,
+    required this.selected,
+    required this.billedThrough,
+    required this.onSelect,
   });
 
-  final bool submitting;
-  final VoidCallback onSubscribe;
-  final bool usesNativeBilling;
-  final bool canSubscribe;
-  final String? unavailableMessage;
-  final SubscriptionPlanModel? plan;
-  final String? storePrice;
+  final WoppPremiumOffer offer;
+  final bool selected;
+  final String billedThrough;
+  final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final amount = plan?.amount ?? 500;
-    final currencySymbol = plan == null || plan!.amount >= 100 ? '₦' : '\$';
-    final priceLabel = storePrice ?? '$currencySymbol${amount.toStringAsFixed(0)} / Month';
-
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              plan?.name ?? 'Premium Membership',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w700,
+      color: selected ? AppColors.lightPurple : null,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onSelect,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(
+                selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                color: AppColors.primaryPurple,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              priceLabel,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            if (usesNativeBilling) ...[
-              const SizedBox(height: 8),
-              Text(
-                Platform.isIOS
-                    ? 'Billed through the App Store. Includes the complete eBook library.'
-                    : 'Billed through Google Play. Includes the complete eBook library.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ] else ...[
-              const SizedBox(height: 8),
-              Text(
-                'Premium unlocks the complete eBook library. Purchase on iOS or Android.',
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-            const SizedBox(height: 16),
-            Text('Benefits', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            const _BenefitLine(text: 'Complete eBook library'),
-            const _BenefitLine(text: 'Daily devotionals'),
-            const _BenefitLine(text: 'Premium messages'),
-            const _BenefitLine(text: 'Video library'),
-            const _BenefitLine(text: 'Live events'),
-            const _BenefitLine(text: 'Member-only resources'),
-            if (unavailableMessage != null && !canSubscribe) ...[
-              const SizedBox(height: 12),
-              Text(
-                unavailableMessage!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      offer.displayName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryPurple,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      offer.priceLabel,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      billedThrough,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: submitting || !canSubscribe ? null : onSubscribe,
-                child: Text(submitting ? 'Processing...' : 'Subscribe Now'),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -556,60 +437,10 @@ class _BenefitLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20),
+          const Icon(Icons.check_circle, color: AppColors.accentGold, size: 20),
           const SizedBox(width: 8),
           Expanded(child: Text(text)),
         ],
-      ),
-    );
-  }
-}
-
-class _PlanTile extends StatelessWidget {
-  const _PlanTile({
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isPremium = title.toLowerCase().contains('premium') ||
-        title.toLowerCase().contains('partner');
-
-    return Card(
-      child: ListTile(
-        title: Row(
-          children: [
-            Expanded(child: Text(title)),
-            if (isPremium)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.accentGold,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: const Text(
-                  'Premium',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        subtitle: Text(subtitle),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        onTap: onTap,
       ),
     );
   }

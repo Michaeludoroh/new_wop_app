@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
+import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../core/ebooks/models/ebook_models.dart';
 import 'ebook_details_screen.dart';
@@ -22,10 +24,13 @@ class MyLibraryScreen extends StatefulWidget {
 
 class _MyLibraryScreenState extends State<MyLibraryScreen> {
   late final EbookService _service = widget.service ?? EbookService();
+  final EbookDownloadStore _downloadStore = const EbookDownloadStore();
 
   bool _loading = true;
   String? _error;
   LibraryResponse? _library;
+  final Set<String> _downloadedIds = {};
+  final Map<String, double> _downloadProgress = {};
 
   @override
   void initState() {
@@ -41,7 +46,12 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
     try {
       final data = await _service.getMyLibrary();
       if (!mounted) return;
-      setState(() => _library = data);
+      setState(() {
+        _library = data;
+        _downloadedIds
+          ..clear()
+          ..addAll(data.downloads.map((item) => item.ebookId));
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() => _error = messageFromDio(error, fallback: 'Failed to load your library.'));
@@ -82,6 +92,44 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
         ),
       );
     }
+  }
+
+  Future<void> _download(EbookItem ebook) async {
+    setState(() => _downloadProgress[ebook.id] = 0);
+    try {
+      await _service.downloadAuthorizedEbook(
+        ebookId: ebook.id,
+        store: _downloadStore,
+        onProgress: (value) {
+          if (!mounted) return;
+          setState(() => _downloadProgress[ebook.id] = value);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _downloadProgress.remove(ebook.id);
+        _downloadedIds.add(ebook.id);
+      });
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _downloadProgress.remove(ebook.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(messageFromDio(error, fallback: 'Unable to download this eBook.')),
+        ),
+      );
+    }
+  }
+
+  EbookDownloadUiState _downloadState(String ebookId) {
+    if (_downloadProgress.containsKey(ebookId)) {
+      return EbookDownloadUiState.downloading;
+    }
+    if (_downloadedIds.contains(ebookId)) {
+      return EbookDownloadUiState.downloaded;
+    }
+    return EbookDownloadUiState.available;
   }
 
   void _openDetails(EbookItem ebook) {
@@ -139,7 +187,7 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const Text(
-                                'Your library is empty. Subscribe to Premium or browse titles to get started.',
+                                'Your library is empty. Subscribe to WOPP Premium or browse titles to get started.',
                               ),
                               const SizedBox(height: 12),
                               FilledButton(
@@ -174,7 +222,10 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                         ...library.purchased.map((e) => _EbookTile(
                               title: e.title,
                               subtitle: e.author,
+                              downloadState: _downloadState(e.id),
+                              downloadProgress: _downloadProgress[e.id],
                               onTap: () => _openDetails(e),
+                              onDownload: () => _download(e),
                             )),
                       const _Header('Subscription eBooks'),
                       if (library.subscription.isEmpty)
@@ -183,7 +234,10 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                         ...library.subscription.map((e) => _EbookTile(
                               title: e.title,
                               subtitle: e.author,
+                              downloadState: _downloadState(e.id),
+                              downloadProgress: _downloadProgress[e.id],
                               onTap: () => _openDetails(e),
+                              onDownload: () => _download(e),
                             )),
                       const _Header('Downloads'),
                       if (library.downloads.isEmpty)
@@ -246,11 +300,17 @@ class _EbookTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    required this.onDownload,
+    required this.downloadState,
+    this.downloadProgress,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final VoidCallback onDownload;
+  final EbookDownloadUiState downloadState;
+  final double? downloadProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +318,17 @@ class _EbookTile extends StatelessWidget {
       child: ListTile(
         title: Text(title),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EbookDownloadButton(
+              state: downloadState,
+              progress: downloadProgress,
+              onPressed: onDownload,
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
         onTap: onTap,
       ),
     );

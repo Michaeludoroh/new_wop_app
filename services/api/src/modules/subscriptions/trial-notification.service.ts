@@ -74,7 +74,7 @@ export class TrialNotificationService {
 
     const daysLabel = stage === 'three_days' ? '3 days' : '1 day';
     const title = 'Free trial ending soon';
-    const body = `Your WOPP free trial ends in ${daysLabel}. Subscribe for only ₦500/month to keep premium access.`;
+    const body = `Your WOPP free trial ends in ${daysLabel}. Subscribe to WOPP Premium to continue enjoying Premium benefits.`;
 
     await this.dispatch(subscription.userId, title, body, `trial:${stage}:${subscription.id}`, now);
 
@@ -98,7 +98,7 @@ export class TrialNotificationService {
     }
 
     const title = 'Your free trial has ended';
-    const body = 'Subscribe for only ₦500/month to continue using WOPP premium content.';
+    const body = 'Subscribe to WOPP Premium to continue enjoying Premium benefits.';
 
     await this.dispatch(subscription.userId, title, body, `trial:expired:${subscription.id}`, now);
 

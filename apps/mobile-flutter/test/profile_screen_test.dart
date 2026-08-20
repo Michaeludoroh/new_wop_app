@@ -7,7 +7,10 @@ import 'package:ministry_mobile/core/auth/auth_service.dart';
 import 'package:ministry_mobile/core/auth/auth_state.dart';
 import 'package:ministry_mobile/core/auth/models/auth_models.dart';
 import 'package:ministry_mobile/core/auth/token_storage_service.dart';
+import 'package:ministry_mobile/core/subscriptions/subscription_models.dart';
+import 'package:ministry_mobile/core/subscriptions/subscription_provider.dart';
 import 'package:ministry_mobile/screens/profile_screen.dart';
+import 'package:ministry_mobile/widgets/trial_banner.dart';
 
 class _FakeAuthService extends AuthService {
   _FakeAuthService() : super();
@@ -58,6 +61,25 @@ class _TestAuthProvider extends AuthProvider {
   AuthState get state => _testState;
 }
 
+class _FakeSubscriptionProvider extends SubscriptionProvider {
+  @override
+  SubscriptionStatusModel? get status => SubscriptionStatusModel(
+        plan: MembershipPlan.premium,
+        status: 'PENDING',
+        access: SubscriptionAccessModel(
+          hasPremiumAccess: true,
+          isGracePeriod: false,
+          renewalDue: false,
+          cancelAtPeriodEnd: false,
+          isTrial: true,
+          daysRemaining: 4,
+        ),
+      );
+
+  @override
+  Future<void> refresh() async {}
+}
+
 void main() {
   testWidgets('profile screen renders account and policies section', (tester) async {
     tester.view.physicalSize = const Size(400, 1600);
@@ -75,13 +97,20 @@ void main() {
       MaterialApp(
         home: AuthScope(
           notifier: provider,
-          child: const ProfileScreen(),
+          child: SubscriptionScope(
+            notifier: _FakeSubscriptionProvider(),
+            child: const ProfileScreen(),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Account'), findsOneWidget);
+    expect(find.text('WOPP Premium'), findsOneWidget);
+    expect(find.text('Status: Free Trial'), findsOneWidget);
+    expect(find.text('4 days remaining'), findsOneWidget);
+    expect(find.text('Manage subscription'), findsOneWidget);
     expect(find.text('Policies & Governance'), findsOneWidget);
     expect(find.text('Terms of Use'), findsOneWidget);
     // Appears in Policies & Governance and again in StoreLegalLinks.

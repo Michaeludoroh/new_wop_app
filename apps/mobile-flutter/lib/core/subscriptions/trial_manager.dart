@@ -20,35 +20,10 @@ class TrialManager {
     return !hasPremiumAccess(status);
   }
 
-  static String? bannerTitle(SubscriptionStatusModel? status) {
-    if (isTrialActive(status)) {
-      return 'Welcome!';
+  static int? remainingTrialDays(SubscriptionStatusModel? status) {
+    if (!isTrialActive(status)) {
+      return null;
     }
-    if (subscriptionRequired(status) && !(status?.isSubscribed ?? false)) {
-      return 'Trial ended';
-    }
-    return null;
-  }
-
-  static String bannerMessage(SubscriptionStatusModel? status) {
-    if (isTrialActive(status)) {
-      final days = status?.trialDaysRemaining ?? 0;
-      final dayLabel = days == 1 ? 'day' : 'days';
-      return 'You are enjoying a FREE 7-day trial.\n'
-          '$days $dayLabel remaining.\n'
-          'Subscribe for only ₦500/month before your trial expires.';
-    }
-
-    if (subscriptionRequired(status)) {
-      return 'Your free trial has ended.\n'
-          'Subscribe for only ₦500/month to continue using WOPP.';
-    }
-
-    return '';
-  }
-
-  static bool showTrialBanner(SubscriptionStatusModel? status) {
-    return isTrialActive(status) ||
-        (subscriptionRequired(status) && !(status?.isSubscribed ?? false));
+    return status?.trialDaysRemaining ?? status?.access?.daysRemaining;
   }
 }

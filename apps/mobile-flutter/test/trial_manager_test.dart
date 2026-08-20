@@ -25,7 +25,7 @@ SubscriptionStatusModel _status({
 
 void main() {
   group('TrialManager', () {
-    test('shows banner during active trial', () {
+    test('reports remaining trial days from the backend status', () {
       final status = _status(
         hasPremium: true,
         isTrial: true,
@@ -34,8 +34,7 @@ void main() {
       );
 
       expect(TrialManager.isTrialActive(status), isTrue);
-      expect(TrialManager.showTrialBanner(status), isTrue);
-      expect(TrialManager.bannerMessage(status), contains('5 days remaining'));
+      expect(TrialManager.remainingTrialDays(status), 5);
     });
 
     test('requires subscription after trial expiry', () {
@@ -45,14 +44,14 @@ void main() {
       );
 
       expect(TrialManager.shouldGatePremiumContent(status), isTrue);
-      expect(TrialManager.bannerMessage(status), contains('trial has ended'));
+      expect(TrialManager.remainingTrialDays(status), isNull);
     });
 
     test('allows premium content for subscribers', () {
       final status = _status(hasPremium: true, subscriptionRequired: false);
 
       expect(TrialManager.shouldGatePremiumContent(status), isFalse);
-      expect(TrialManager.showTrialBanner(status), isFalse);
+      expect(TrialManager.isTrialActive(status), isFalse);
     });
   });
 }

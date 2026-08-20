@@ -13,7 +13,17 @@ class _FakeEbookService extends EbookService {
     bool? featured,
     bool? recent,
   }) async {
-    return EbookListResponse(data: [], featured: [], recent: []);
+    final free = EbookItem(
+      id: 'ebook-free',
+      title: 'Faith Walk',
+      author: 'Ada',
+      description: 'A free title.',
+      category: 'Faith',
+      coverImage: '',
+      price: 0,
+      isPremium: false,
+    );
+    return EbookListResponse(data: [free], featured: const [], recent: [free]);
   }
 
   @override
@@ -47,8 +57,8 @@ void main() {
 
     expect(find.text('eBooks'), findsOneWidget);
     expect(find.text('No featured eBooks yet.'), findsOneWidget);
-    expect(find.text('No recent eBooks yet.'), findsOneWidget);
-    expect(find.text('No eBooks match your filters.'), findsOneWidget);
+    expect(find.text('Faith Walk'), findsWidgets);
+    expect(find.byTooltip('Download'), findsWidgets);
   });
 
   testWidgets('my library screen renders empty state', (tester) async {

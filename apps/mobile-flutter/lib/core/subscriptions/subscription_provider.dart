@@ -18,7 +18,6 @@ class SubscriptionProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   bool get hasPremiumAccess => TrialManager.hasPremiumAccess(_status);
-  bool get showTrialBanner => TrialManager.showTrialBanner(_status);
 
   SubscriptionService get service => _service;
 

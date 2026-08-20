@@ -1,4 +1,4 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, UnauthorizedException } from '@nestjs/common';
 import {
   MobilePlatform,
   PaymentProvider,
@@ -76,6 +76,9 @@ function createService(overrides?: {
 
   const googlePlayVerification = {
     getConfiguredProductId: jest.fn().mockReturnValue('wopp_premium_monthly'),
+    isAllowedProductId: jest.fn((productId: string) =>
+      ['wopp_premium_monthly', 'wopp_premium_quarterly', 'wopp_premium_yearly'].includes(productId),
+    ),
     verifySubscriptionPurchase: jest.fn().mockResolvedValue({
       productId: 'wopp_premium_monthly',
       purchaseToken: 'token_abc',
@@ -94,6 +97,9 @@ function createService(overrides?: {
 
   const appleReceiptVerification = {
     getConfiguredProductId: jest.fn().mockReturnValue('wopp_premium_monthly'),
+    isAllowedProductId: jest.fn((productId: string) =>
+      ['wopp_premium_monthly', 'wopp_premium_quarterly', 'wopp_premium_yearly'].includes(productId),
+    ),
     verifySubscriptionReceipt: jest.fn().mockResolvedValue({
       productId: 'wopp_premium_monthly',
       transactionId: '1000000123456789',
@@ -246,6 +252,81 @@ describe('MobileSubscriptionsService', () => {
     expect(result.data.store?.provider).toBe(StoreProvider.APPLE);
   });
 
+  it('accepts an in-group Apple SKU switch and persists the latest PREMIUM product', async () => {
+    const { service, tx } = createService({
+      appleVerification: { productId: 'wopp_premium_yearly' },
+    });
+
+    const result = await service.verifyApplePurchase('user_1', {
+      receiptData: 'base64-receipt',
+      productId: 'wopp_premium_monthly',
+    });
+
+    expect(tx.storeSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ productId: 'wopp_premium_yearly' }),
+        update: expect.objectContaining({ productId: 'wopp_premium_yearly' }),
+      }),
+    );
+    expect(result.data.store?.productId).toBe('wopp_premium_yearly');
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('rejects unknown Apple product IDs that are not WOPP Premium', async () => {
+    const { service } = createService({
+      appleVerification: { productId: 'wopp_premium_yearly' },
+    });
+
+    await expect(
+      service.verifyApplePurchase('user_1', {
+        receiptData: 'base64-receipt',
+        productId: 'com.other.app.coins',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('restores mixed Apple SKUs and keeps PREMIUM from the latest receipt product', async () => {
+    const { service } = createService({
+      appleVerification: { productId: 'wopp_premium_yearly' },
+    });
+
+    const result = await service.restorePurchases('user_1', {
+      platform: MobilePlatform.IOS,
+      purchases: [
+        { productId: 'wopp_premium_monthly', receiptData: 'base64-receipt' },
+        { productId: 'wopp_premium_quarterly', receiptData: 'base64-receipt' },
+        { productId: 'wopp_premium_yearly', receiptData: 'base64-receipt' },
+      ],
+    });
+
+    expect(result.data.results).toEqual([
+      { productId: 'wopp_premium_monthly', restored: true },
+      { productId: 'wopp_premium_quarterly', restored: true },
+      { productId: 'wopp_premium_yearly', restored: true },
+    ]);
+    expect(result.data.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('persists a yearly-to-monthly Apple change as the latest PREMIUM product', async () => {
+    const { service, tx } = createService({
+      appleVerification: { productId: 'wopp_premium_monthly' },
+    });
+
+    const result = await service.verifyApplePurchase('user_1', {
+      receiptData: 'base64-receipt',
+      productId: 'wopp_premium_yearly',
+    });
+
+    expect(tx.storeSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ productId: 'wopp_premium_monthly' }),
+        update: expect.objectContaining({ productId: 'wopp_premium_monthly' }),
+      }),
+    );
+    expect(result.data.store?.productId).toBe('wopp_premium_monthly');
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
   it('restores Android purchases and returns status summary', async () => {
     const { service } = createService();
 
@@ -263,5 +344,23 @@ describe('MobileSubscriptionsService', () => {
       { productId: 'wopp_premium_monthly', restored: true },
     ]);
     expect(result.data.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('maps a quarterly Google product to the same PREMIUM entitlement', async () => {
+    const { service, tx, googlePlayVerification } = createService({
+      googleVerification: { productId: 'wopp_premium_quarterly' },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_quarterly',
+      purchaseToken: 'token_abc',
+    });
+
+    expect(googlePlayVerification.verifySubscriptionPurchase).toHaveBeenCalledWith(
+      'wopp_premium_quarterly',
+      'token_abc',
+    );
+    expect(tx.userSubscription.create).toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
   });
 });

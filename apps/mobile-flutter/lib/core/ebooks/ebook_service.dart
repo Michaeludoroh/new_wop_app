@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../http/authenticated_dio.dart';
 import '../http/public_asset_url.dart';
 import '../subscriptions/subscription_service.dart';
+import 'ebook_download_store.dart';
 import 'models/ebook_models.dart';
 
 class EbookService {
@@ -102,7 +103,10 @@ class EbookService {
     await _authorizedPost('/ebooks/$ebookId/download');
   }
 
-  Future<Response<List<int>>> downloadPdfBytes(String contentUrl) async {
+  Future<Response<List<int>>> downloadPdfBytes(
+    String contentUrl, {
+    void Function(int received, int total)? onProgress,
+  }) async {
     final url = rewritePublicAssetUrl(contentUrl);
     if (url.isEmpty || !isPlayableNetworkUrl(url)) {
       throw Exception('Missing or invalid eBook stream URL');
@@ -112,7 +116,41 @@ class EbookService {
       options: Options(
         responseType: ResponseType.bytes,
       ),
+      onReceiveProgress: onProgress,
     );
+  }
+
+  Future<void> downloadAuthorizedEbook({
+    required String ebookId,
+    required EbookDownloadStore store,
+    void Function(double progress)? onProgress,
+  }) async {
+    final access = await getAccess(ebookId);
+    if (!access.authorized || access.contentUrl.isEmpty) {
+      throw Exception('Purchase to download');
+    }
+
+    final response = await downloadPdfBytes(
+      access.contentUrl,
+      onProgress: (received, total) {
+        if (onProgress == null || total <= 0) return;
+        onProgress((received / total).clamp(0, 1));
+      },
+    );
+    final bytes = response.data;
+    if (bytes == null || bytes.isEmpty) {
+      throw Exception('Empty eBook download');
+    }
+
+    final contentType = response.headers.value('content-type') ?? '';
+    if (contentType.contains('application/json') ||
+        (bytes.isNotEmpty && bytes.first == 0x7B)) {
+      throw Exception('The server did not return a PDF. Check your access and try again.');
+    }
+
+    await store.save(ebookId, bytes);
+    await recordDownload(ebookId);
+    await updateReadingProgress(ebookId: ebookId, currentPage: 1, downloaded: true);
   }
 
   Future<Response<dynamic>> _authorizedGet(

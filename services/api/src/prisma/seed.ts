@@ -62,7 +62,7 @@ async function main() {
     {
       code: 'PREMIUM',
       name: 'Premium Membership',
-      description: 'Full premium ministry access — ₦500/month after free trial',
+      description: 'Full WOPP Premium ministry access after free trial',
       amount: '500',
       currency: 'NGN',
       billingInterval: 'MONTHLY',

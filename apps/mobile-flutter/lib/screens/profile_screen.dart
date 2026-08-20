@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../core/auth/auth_scope.dart';
 import '../core/policies/models/policy_models.dart';
 import '../core/users/users_service.dart';
+import '../widgets/membership_status_card.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/store_legal_links.dart';
+import '../widgets/trial_banner.dart';
 import 'policy_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = AuthScope.of(context).state.user;
       _nameController.text = user?.name ?? '';
       _initialized = true;
+      SubscriptionScope.maybeOf(context)?.refresh();
     }
   }
 
@@ -90,6 +93,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text('Account', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
+          MembershipStatusCard(
+            status: SubscriptionScope.maybeOf(context)?.status,
+            showManageAction: true,
+          ),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),

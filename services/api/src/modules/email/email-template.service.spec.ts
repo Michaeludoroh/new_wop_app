@@ -41,7 +41,7 @@ describe('EmailTemplateService', () => {
     const email = service.subscriptionConfirmationEmail({
       fullName: 'Jane Doe',
       planName: 'Premium',
-      amountLabel: 'NGN 500.00',
+      amountLabel: 'billed through Apple App Store',
       expiresAt: new Date('2026-08-01T00:00:00.000Z'),
       providerLabel: 'Google Play',
     });

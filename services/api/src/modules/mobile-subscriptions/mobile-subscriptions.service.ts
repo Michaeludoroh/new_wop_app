@@ -66,8 +66,7 @@ export class MobileSubscriptionsService {
   ) {}
 
   async verifyGooglePurchase(userId: string, dto: VerifyGooglePurchaseDto) {
-    const expectedProductId = this.googlePlayVerification.getConfiguredProductId();
-    if (dto.productId !== expectedProductId) {
+    if (!this.googlePlayVerification.isAllowedProductId(dto.productId)) {
       throw new BadRequestException({
         code: 'INVALID_PRODUCT_ID',
         message: 'Unexpected Google Play product identifier',
@@ -117,7 +116,11 @@ export class MobileSubscriptionsService {
       dto.receiptData,
     );
 
-    if (dto.productId && dto.productId !== verification.productId) {
+    if (
+      dto.productId &&
+      dto.productId !== verification.productId &&
+      !this.appleReceiptVerification.isAllowedProductId(dto.productId)
+    ) {
       throw new BadRequestException({
         code: 'INVALID_PRODUCT_ID',
         message: 'Unexpected Apple product identifier',
@@ -392,6 +395,7 @@ export class MobileSubscriptionsService {
         },
         update: {
           userSubscriptionId,
+          productId: verified.productId,
           transactionId: verified.transactionId,
           receiptData: verified.receiptData,
           purchaseDate: verified.purchaseDate,
@@ -495,6 +499,7 @@ export class MobileSubscriptionsService {
       const storeSubscription = await tx.storeSubscription.update({
         where: { id: existing.id },
         data: {
+          productId: verified.productId,
           transactionId: verified.transactionId,
           purchaseDate: verified.purchaseDate,
           expiryDate: verified.expiryDate,
@@ -636,12 +641,9 @@ export class MobileSubscriptionsService {
         where: { code: DEFAULT_PREMIUM_PLAN_CODE },
       });
 
-      const amountLabel = plan
-        ? `${plan.currency} ${Number(plan.amount).toFixed(2)}`
-        : verified.productId;
-
       const providerLabel =
         verified.provider === StoreProvider.GOOGLE_PLAY ? 'Google Play' : 'Apple App Store';
+      const amountLabel = `billed through ${providerLabel}`;
 
       const content = this.emailTemplateService.subscriptionConfirmationEmail({
         fullName: user.fullName,

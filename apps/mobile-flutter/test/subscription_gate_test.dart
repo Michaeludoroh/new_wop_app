@@ -86,7 +86,6 @@ void main() {
       final status = _status(hasPremium: true, subscriptionRequired: false);
 
       expect(TrialManager.shouldGatePremiumContent(status), isFalse);
-      expect(TrialManager.showTrialBanner(status), isFalse);
     });
   });
 }

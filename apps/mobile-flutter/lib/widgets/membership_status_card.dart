@@ -1,22 +1,28 @@
 import 'package:flutter/material.dart';
 
 import '../core/subscriptions/subscription_models.dart';
+import '../core/subscriptions/trial_manager.dart';
 import '../core/theme/app_colors.dart';
+import '../screens/subscription_screen.dart';
 
 class MembershipStatusCard extends StatelessWidget {
   const MembershipStatusCard({
     super.key,
     required this.status,
+    this.showManageAction = false,
   });
 
   final SubscriptionStatusModel? status;
+  final bool showManageAction;
 
   @override
   Widget build(BuildContext context) {
     final resolved = status;
-    final plan = _planLabel(resolved?.plan ?? MembershipPlan.free);
-    final state = resolved?.status ?? 'INACTIVE';
     final theme = Theme.of(context);
+    final trial = TrialManager.isTrialActive(resolved);
+    final premium = TrialManager.hasPremiumAccess(resolved);
+    final remainingDays = TrialManager.remainingTrialDays(resolved);
+    final statusLabel = _statusLabel(resolved, trial: trial, premium: premium);
 
     return Card(
       child: Padding(
@@ -28,16 +34,17 @@ class MembershipStatusCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Membership Status',
+                    'WOPP Premium',
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                if (resolved?.hasPremiumAccess ?? false)
+                if (premium)
                   const Chip(
                     label: Text(
-                      'Premium',
+                      'Active',
                       style: TextStyle(
                         color: AppColors.white,
                         fontWeight: FontWeight.w700,
@@ -48,10 +55,15 @@ class MembershipStatusCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            Text('Plan: $plan'),
-            Text('Status: $state'),
-            if (resolved?.endDate != null)
-              Text('Renews/ends: ${resolved!.endDate!.toLocal()}'),
+            Text('Status: $statusLabel'),
+            if (trial && remainingDays != null)
+              Text(
+                remainingDays == 1
+                    ? '1 day remaining'
+                    : '$remainingDays days remaining',
+              )
+            else if (resolved?.endDate != null)
+              Text(_expiryLabel(resolved!)),
             if (resolved?.isGracePeriod ?? false) ...[
               const SizedBox(height: 12),
               Container(
@@ -63,21 +75,21 @@ class MembershipStatusCard extends StatelessWidget {
                 ),
                 child: Text(
                   resolved?.access?.daysRemainingInGrace != null
-                      ? 'Payment issue detected. Premium access continues for ${resolved!.access!.daysRemainingInGrace} more day(s). Renew now to avoid interruption.'
-                      : 'Payment issue detected. Renew now to keep premium access.',
+                      ? 'Payment issue detected. WOPP Premium continues for ${resolved!.access!.daysRemainingInGrace} more day(s). Renew now to avoid interruption.'
+                      : 'Payment issue detected. Renew now to keep WOPP Premium access.',
                 ),
               ),
-            ] else if (resolved?.access?.renewalDue ?? false) ...[
+            ],
+            if (showManageAction) ...[
               const SizedBox(height: 12),
-              Text(
-                'Your subscription period is ending soon.',
-                style: theme.textTheme.bodyMedium,
-              ),
-            ] else if (!(resolved?.hasPremiumAccess ?? false)) ...[
-              const SizedBox(height: 12),
-              Text(
-                'Upgrade to unlock premium eBooks and resources.',
-                style: theme.textTheme.bodyMedium,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pushNamed(
+                    SubscriptionScreen.routeName,
+                  ),
+                  child: Text(premium ? 'Manage subscription' : 'Subscribe'),
+                ),
               ),
             ],
           ],
@@ -86,12 +98,31 @@ class MembershipStatusCard extends StatelessWidget {
     );
   }
 
-  String _planLabel(MembershipPlan plan) {
-    return switch (plan) {
-      MembershipPlan.free => 'Free',
-      MembershipPlan.premium => 'Premium',
-      MembershipPlan.partner => 'Partner',
-      MembershipPlan.unknown => 'Unknown',
-    };
+  String _statusLabel(
+    SubscriptionStatusModel? status, {
+    required bool trial,
+    required bool premium,
+  }) {
+    if (trial) return 'Free Trial';
+    if (status?.isGracePeriod ?? false) return 'Grace period';
+    if (premium) return 'Active';
+    final raw = status?.status.toUpperCase();
+    if (raw == null || raw.isEmpty || raw == 'INACTIVE') {
+      return 'Inactive';
+    }
+    if (raw == 'EXPIRED' || raw == 'CANCELLED') {
+      return raw[0] + raw.substring(1).toLowerCase();
+    }
+    return raw[0] + raw.substring(1).toLowerCase();
+  }
+
+  String _expiryLabel(SubscriptionStatusModel status) {
+    final expiry = status.endDate!.toLocal();
+    final date =
+        '${expiry.day.toString().padLeft(2, '0')}/${expiry.month.toString().padLeft(2, '0')}/${expiry.year}';
+    if (status.cancelAtPeriodEnd) {
+      return 'Ends: $date';
+    }
+    return 'Renews/ends: $date';
   }
 }

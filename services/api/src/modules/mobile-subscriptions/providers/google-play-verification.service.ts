@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GoogleAuth } from 'google-auth-library';
 import { MobilePlatform, StoreProvider } from '@prisma/client';
+import { isAllowedPremiumProductId } from '../premium-store-products';
 
 export type GoogleSubscriptionVerification = {
   productId: string;
@@ -129,6 +130,10 @@ export class GooglePlayVerificationService {
       });
     }
     return productId;
+  }
+
+  isAllowedProductId(productId: string): boolean {
+    return isAllowedPremiumProductId(this.configService, productId);
   }
 
   private getPackageName(): string {

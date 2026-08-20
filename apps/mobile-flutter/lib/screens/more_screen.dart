@@ -57,8 +57,8 @@ class MoreScreen extends StatelessWidget {
       routeName: MentorshipScreen.routeName,
     ),
     MoreMenuItem(
-      title: 'Subscription',
-      subtitle: 'Manage membership and premium access',
+      title: 'WOPP Premium',
+      subtitle: 'Manage your WOPP Premium subscription',
       icon: Icons.workspace_premium_outlined,
       routeName: SubscriptionScreen.routeName,
     ),

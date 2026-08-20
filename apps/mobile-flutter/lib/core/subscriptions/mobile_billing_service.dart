@@ -9,25 +9,11 @@ import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import '../http/api_error.dart';
 import 'apple_receipt_payload.dart';
 import 'mobile_billing_exception.dart';
+import 'premium_store_products.dart';
 import 'subscription_models.dart';
 import 'subscription_service.dart';
 
-class MobileBillingConfig {
-  static const String androidProductId = String.fromEnvironment(
-    'MOBILE_ANDROID_PREMIUM_PRODUCT_ID',
-    defaultValue: 'wopp_premium_monthly',
-  );
-
-  static const String iosProductId = String.fromEnvironment(
-    'MOBILE_IOS_PREMIUM_PRODUCT_ID',
-    defaultValue: 'wopp_premium_monthly',
-  );
-
-  static bool get isSupported => Platform.isAndroid || Platform.isIOS;
-
-  static String get premiumProductId =>
-      Platform.isAndroid ? androidProductId : iosProductId;
-}
+export 'premium_store_products.dart';
 
 class MobileBillingService {
   MobileBillingService({
@@ -41,6 +27,7 @@ class MobileBillingService {
   StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
   ProductDetails? _premiumProduct;
+  final Map<String, ProductDetails> _premiumProducts = {};
   bool _storeAvailable = false;
   List<String> _notFoundProductIds = const [];
   String? _lastQueryErrorCode;
@@ -52,19 +39,39 @@ class MobileBillingService {
 
   bool get isSupported => MobileBillingConfig.isSupported;
   bool get isStoreAvailable => _storeAvailable;
-  ProductDetails? get premiumProduct => _premiumProduct;
+  ProductDetails? get premiumProduct =>
+      _premiumProducts[MobileBillingConfig.premiumProductId] ?? _premiumProduct;
+
+  List<WoppPremiumOffer> get availableOffers {
+    final offers = _premiumProducts.values
+        .map(
+          (product) => WoppPremiumOffer(
+            productId: product.id,
+            displayName: MobileBillingConfig.displayNameFor(product.id),
+            priceLabel: product.price,
+          ),
+        )
+        .toList()
+      ..sort(
+        (a, b) => MobileBillingConfig.sortOrderFor(a.productId).compareTo(
+          MobileBillingConfig.sortOrderFor(b.productId),
+        ),
+      );
+    return offers;
+  }
+
   List<String> get notFoundProductIds => List.unmodifiable(_notFoundProductIds);
 
   String? get storeSetupMessage {
     if (!isSupported) {
-      return 'Premium subscriptions are available through the App Store or Google Play on a mobile device.';
+      return 'WOPP Premium is billed through the App Store or Google Play on a mobile device.';
     }
     if (!_storeAvailable) {
       return Platform.isIOS
           ? 'In-App Purchases are unavailable on this device. Sign in to the App Store and check Screen Time restrictions.'
           : 'Google Play Billing is unavailable on this device.';
     }
-    if (_premiumProduct == null) {
+    if (_premiumProducts.isEmpty) {
       return _productMissingMessage();
     }
     return null;
@@ -106,7 +113,7 @@ class MobileBillingService {
       return;
     }
 
-    await _queryPremiumProduct();
+    await _queryPremiumProducts();
   }
 
   Future<void> dispose() async {
@@ -115,15 +122,19 @@ class MobileBillingService {
   }
 
   Future<void> purchasePremium() async {
+    await purchaseOffer(MobileBillingConfig.premiumProductId);
+  }
+
+  Future<void> purchaseOffer(String productId) async {
     if (!isSupported) {
       throw MobileBillingException(
-        'Premium subscriptions are available through the App Store or Google Play on a mobile device.',
+        'WOPP Premium is available through the App Store or Google Play on a mobile device.',
         code: 'PLATFORM_UNSUPPORTED',
       );
     }
 
     _storeAvailable = await _inAppPurchase.isAvailable();
-    _log('purchasePremium isAvailable=$_storeAvailable');
+    _log('purchaseOffer isAvailable=$_storeAvailable productId=$productId');
     if (!_storeAvailable) {
       throw MobileBillingException(
         Platform.isIOS
@@ -133,11 +144,12 @@ class MobileBillingService {
       );
     }
 
-    if (_premiumProduct == null) {
-      await _queryPremiumProduct();
+    if (_premiumProducts.isEmpty) {
+      await _queryPremiumProducts();
     }
 
-    final product = _premiumProduct;
+    final product = _premiumProducts[productId] ??
+        (productId == MobileBillingConfig.premiumProductId ? _premiumProduct : null);
     if (product == null) {
       throw MobileBillingException(
         _productMissingMessage(),
@@ -226,7 +238,7 @@ class MobileBillingService {
     }
 
     _streamPurchases.clear();
-    _log('restorePurchases started productId=${MobileBillingConfig.premiumProductId}');
+    _log('restorePurchases started productIds=${MobileBillingConfig.premiumProductIds}');
     await _inAppPurchase.restorePurchases();
 
     final deadline = DateTime.now().add(const Duration(seconds: 8));
@@ -235,7 +247,7 @@ class MobileBillingService {
       restoredPurchases = _streamPurchases
           .where(
             (purchase) =>
-                purchase.productID == MobileBillingConfig.premiumProductId &&
+                MobileBillingConfig.isPremiumProductId(purchase.productID) &&
                 purchase.status != PurchaseStatus.error &&
                 purchase.status != PurchaseStatus.canceled,
           )
@@ -350,25 +362,26 @@ class MobileBillingService {
     }
   }
 
-  Future<void> _queryPremiumProduct() async {
-    final productId = MobileBillingConfig.premiumProductId;
-    final response = await _inAppPurchase.queryProductDetails({productId});
+  Future<void> _queryPremiumProducts() async {
+    final productIds = MobileBillingConfig.premiumProductIds;
+    final response = await _inAppPurchase.queryProductDetails(productIds);
     _notFoundProductIds = response.notFoundIDs.toList();
     _lastQueryErrorCode = response.error?.code;
     _lastQueryErrorMessage = response.error?.message;
-
-    if (response.productDetails.isNotEmpty) {
-      _premiumProduct = response.productDetails.firstWhere(
-        (item) => item.id == productId,
-        orElse: () => response.productDetails.first,
+    _premiumProducts
+      ..clear()
+      ..addEntries(
+        response.productDetails
+            .where((item) => MobileBillingConfig.isPremiumProductId(item.id))
+            .map((item) => MapEntry(item.id, item)),
       );
-    } else {
-      _premiumProduct = null;
-    }
+
+    _premiumProduct = _premiumProducts[MobileBillingConfig.premiumProductId] ??
+        (_premiumProducts.isEmpty ? null : _premiumProducts.values.first);
 
     final product = _premiumProduct;
     _log(
-      'queryProductDetails requested=$productId found=${response.productDetails.map((item) => item.id).toList()} notFoundIDs=$_notFoundProductIds title=${product?.title} price=${product?.price} queryError=$_lastQueryErrorCode $_lastQueryErrorMessage',
+      'queryProductDetails requested=$productIds found=${response.productDetails.map((item) => item.id).toList()} notFoundIDs=$_notFoundProductIds title=${product?.title} price=${product?.price} queryError=$_lastQueryErrorCode $_lastQueryErrorMessage',
     );
   }
 
@@ -414,15 +427,14 @@ class MobileBillingService {
   }
 
   String _productMissingMessage() {
-    final productId = MobileBillingConfig.premiumProductId;
     final storeName = Platform.isIOS ? 'App Store' : 'Google Play';
     if (_lastQueryErrorMessage != null && _lastQueryErrorMessage!.trim().isNotEmpty) {
-      return 'Could not load the premium subscription from $storeName (${_lastQueryErrorCode ?? 'error'}). Please try again.';
+      return 'Could not load WOPP Premium from $storeName (${_lastQueryErrorCode ?? 'error'}). Please try again.';
     }
-    if (_notFoundProductIds.contains(productId) || _notFoundProductIds.isNotEmpty) {
-      return 'The premium subscription ($productId) is not available from $storeName on this build yet. It must be an auto-renewable subscription in a submitted subscription group.';
+    if (_notFoundProductIds.isNotEmpty || _premiumProducts.isEmpty) {
+      return 'WOPP Premium is not available from $storeName on this build yet. Each option must be an auto-renewable subscription in a submitted subscription group.';
     }
-    return 'Premium subscription product is unavailable in the store.';
+    return 'WOPP Premium is unavailable in the store.';
   }
 
   String _purchaseKey(PurchaseDetails purchase) {

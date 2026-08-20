@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
+import '../core/http/api_error.dart';
+import '../core/subscriptions/trial_manager.dart';
+import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/trial_banner.dart';
 import 'ebook_details_screen.dart';
 import 'pdf_reader_screen.dart';
 
@@ -19,6 +24,7 @@ class EbookScreen extends StatefulWidget {
 
 class _EbookScreenState extends State<EbookScreen> {
   late final EbookService _service = widget.service ?? EbookService();
+  final EbookDownloadStore _downloadStore = const EbookDownloadStore();
   final TextEditingController _searchController = TextEditingController();
 
   bool _loading = true;
@@ -26,6 +32,9 @@ class _EbookScreenState extends State<EbookScreen> {
   EbookListResponse? _response;
   List<ReadingProgressItem> _recentlyRead = const [];
   String _category = '';
+  final Set<String> _purchasedIds = {};
+  final Set<String> _downloadedIds = {};
+  final Map<String, double> _downloadProgress = {};
 
   @override
   void initState() {
@@ -46,19 +55,39 @@ class _EbookScreenState extends State<EbookScreen> {
     });
 
     try {
-      final results = await Future.wait([
-        _service.getEbooks(
-          search: _searchController.text.trim().isEmpty
-              ? null
-              : _searchController.text.trim(),
-          category: _category.isEmpty ? null : _category,
-        ),
-        _service.getRecentlyRead(limit: 5),
-      ]);
+      final catalog = await _service.getEbooks(
+        search: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
+        category: _category.isEmpty ? null : _category,
+      );
+      final recentlyRead = await _service.getRecentlyRead(limit: 5);
+      LibraryResponse library;
+      try {
+        library = await _service.getMyLibrary();
+      } catch (_) {
+        library = LibraryResponse(
+          purchased: const [],
+          subscription: const [],
+          continueReading: const [],
+          downloads: const [],
+          history: const [],
+          recentlyRead: const [],
+        );
+      }
+      final downloaded = <String>{
+        ...library.downloads.map((item) => item.ebookId),
+      };
       if (!mounted) return;
       setState(() {
-        _response = results[0] as EbookListResponse;
-        _recentlyRead = (results[1] as RecentlyReadResponse).data;
+        _response = catalog;
+        _recentlyRead = recentlyRead.data;
+        _purchasedIds
+          ..clear()
+          ..addAll(library.purchased.map((item) => item.id));
+        _downloadedIds
+          ..clear()
+          ..addAll(downloaded);
       });
     } catch (_) {
       if (!mounted) return;
@@ -75,6 +104,71 @@ class _EbookScreenState extends State<EbookScreen> {
       EbookDetailsScreen.routeName,
       arguments: ebook.id,
     );
+  }
+
+  bool get _hasPremiumAccess {
+    return TrialManager.hasPremiumAccess(SubscriptionScope.maybeOf(context)?.status);
+  }
+
+  bool _isDownloadable(EbookItem ebook) {
+    if (!ebook.isPremium || ebook.price <= 0) {
+      return true;
+    }
+    if (_purchasedIds.contains(ebook.id)) {
+      return true;
+    }
+    return _hasPremiumAccess;
+  }
+
+  EbookDownloadUiState _downloadState(EbookItem ebook) {
+    if (_downloadProgress.containsKey(ebook.id)) {
+      return EbookDownloadUiState.downloading;
+    }
+    if (_downloadedIds.contains(ebook.id)) {
+      return EbookDownloadUiState.downloaded;
+    }
+    if (_isDownloadable(ebook)) {
+      return EbookDownloadUiState.available;
+    }
+    return EbookDownloadUiState.notPurchased;
+  }
+
+  Future<void> _handleDownload(EbookItem ebook) async {
+    if (!_isDownloadable(ebook)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase to download')),
+      );
+      _openDetails(ebook);
+      return;
+    }
+
+    setState(() => _downloadProgress[ebook.id] = 0);
+    try {
+      await _service.downloadAuthorizedEbook(
+        ebookId: ebook.id,
+        store: _downloadStore,
+        onProgress: (value) {
+          if (!mounted) return;
+          setState(() => _downloadProgress[ebook.id] = value);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _downloadProgress.remove(ebook.id);
+        _downloadedIds.add(ebook.id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${ebook.title} downloaded.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _downloadProgress.remove(ebook.id));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(messageFromDio(error, fallback: 'Unable to download this eBook.')),
+        ),
+      );
+    }
   }
 
   Future<void> _resumeReading(ReadingProgressItem item) async {
@@ -178,7 +272,10 @@ class _EbookScreenState extends State<EbookScreen> {
                       else
                         ...data.featured.map((e) => _EbookTile(
                               ebook: e,
+                              downloadState: _downloadState(e),
+                              downloadProgress: _downloadProgress[e.id],
                               onTap: () => _openDetails(e),
+                              onDownload: () => _handleDownload(e),
                             )),
                       const SizedBox(height: 12),
                       const _SectionHeader(title: 'Recently Added'),
@@ -187,7 +284,10 @@ class _EbookScreenState extends State<EbookScreen> {
                       else
                         ...data.recent.map((e) => _EbookTile(
                               ebook: e,
+                              downloadState: _downloadState(e),
+                              downloadProgress: _downloadProgress[e.id],
                               onTap: () => _openDetails(e),
+                              onDownload: () => _handleDownload(e),
                             )),
                       const SizedBox(height: 12),
                       const _SectionHeader(title: 'All eBooks'),
@@ -196,7 +296,10 @@ class _EbookScreenState extends State<EbookScreen> {
                       else
                         ...data.data.map((e) => _EbookTile(
                               ebook: e,
+                              downloadState: _downloadState(e),
+                              downloadProgress: _downloadProgress[e.id],
                               onTap: () => _openDetails(e),
+                              onDownload: () => _handleDownload(e),
                             )),
                     ],
                   ],
@@ -238,11 +341,17 @@ class _EmptySection extends StatelessWidget {
 class _EbookTile extends StatelessWidget {
   const _EbookTile({
     required this.ebook,
+    required this.downloadState,
     required this.onTap,
+    required this.onDownload,
+    this.downloadProgress,
   });
 
   final EbookItem ebook;
+  final EbookDownloadUiState downloadState;
   final VoidCallback onTap;
+  final VoidCallback onDownload;
+  final double? downloadProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -265,8 +374,18 @@ class _EbookTile extends StatelessWidget {
             : const Icon(Icons.menu_book_outlined),
         title: Text(ebook.title),
         subtitle: Text(subtitle),
-        trailing: Text(
-          ebook.isPremium ? '\$${ebook.price.toStringAsFixed(2)}' : 'Free',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              ebook.isPremium ? '\$${ebook.price.toStringAsFixed(2)}' : 'Free',
+            ),
+            EbookDownloadButton(
+              state: downloadState,
+              progress: downloadProgress,
+              onPressed: onDownload,
+            ),
+          ],
         ),
       ),
     );

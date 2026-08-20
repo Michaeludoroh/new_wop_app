@@ -286,23 +286,15 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const TrialBanner(),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: KeyedSubtree(
-                  key: ValueKey<int>(_selectedIndex),
-                  child: _buildTabContent(
-                    context: context,
-                    userDisplayName: userDisplayName,
-                  ),
-                ),
-              ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: KeyedSubtree(
+            key: ValueKey<int>(_selectedIndex),
+            child: _buildTabContent(
+              context: context,
+              userDisplayName: userDisplayName,
             ),
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: NavigationBar(

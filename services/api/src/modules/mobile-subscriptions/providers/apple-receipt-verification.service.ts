@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { MobilePlatform, StoreProvider } from '@prisma/client';
 import { verify, X509Certificate } from 'crypto';
+import { getAllowedPremiumProductIds, isAllowedPremiumProductId } from '../premium-store-products';
 
 const APPLE_PRODUCTION_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -96,7 +97,8 @@ export class AppleReceiptVerificationService {
     );
 
     const expectedProductId = this.getConfiguredProductId();
-    const latest = this.selectLatestReceiptInfo(collectReceiptInfo(response), expectedProductId);
+    const allowedProductIds = getAllowedPremiumProductIds(this.configService);
+    const latest = this.selectLatestReceiptInfo(collectReceiptInfo(response), allowedProductIds);
 
     if (!latest) {
       throw new UnauthorizedException({
@@ -123,6 +125,10 @@ export class AppleReceiptVerificationService {
       });
     }
     return productId;
+  }
+
+  isAllowedProductId(productId: string | undefined): boolean {
+    return isAllowedPremiumProductId(this.configService, productId);
   }
 
   private async verifyReceiptWithApple(
@@ -171,7 +177,7 @@ export class AppleReceiptVerificationService {
       });
     }
 
-    if (productId && productId !== expectedProductId) {
+    if (productId && !isAllowedPremiumProductId(this.configService, productId)) {
       throw new UnauthorizedException({
         code: 'INVALID_PRODUCT_ID',
         message: 'Unexpected Apple product identifier',
@@ -261,9 +267,10 @@ export class AppleReceiptVerificationService {
 
   private selectLatestReceiptInfo(
     entries: AppleReceiptInfo[],
-    expectedProductId: string,
+    allowedProductIds: string[],
   ): AppleReceiptInfo | null {
-    const matching = entries.filter((entry) => entry.product_id === expectedProductId);
+    const allowed = new Set(allowedProductIds);
+    const matching = entries.filter((entry) => allowed.has(String(entry.product_id ?? '')));
     if (matching.length === 0) {
       return null;
     }

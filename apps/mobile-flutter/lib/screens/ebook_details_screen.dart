@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
 import '../core/http/api_error.dart';
 import '../core/subscriptions/trial_manager.dart';
+import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/trial_banner.dart';
 import 'pdf_reader_screen.dart';
@@ -22,15 +24,27 @@ class EbookDetailsScreen extends StatefulWidget {
 
 class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   final EbookService _service = EbookService();
+  final EbookDownloadStore _downloadStore = const EbookDownloadStore();
 
   bool _loading = true;
   bool _submitting = false;
   String? _error;
   EbookItem? _ebook;
+  AccessResponse? _access;
+  bool _downloaded = false;
+  double? _downloadProgress;
 
   bool get _hasPremiumAccess {
     final status = SubscriptionScope.maybeOf(context)?.status;
     return TrialManager.hasPremiumAccess(status);
+  }
+
+  bool get _canDownload {
+    final ebook = _ebook;
+    if (ebook == null) return false;
+    if (_access?.authorized == true) return true;
+    if (!ebook.isPremium || ebook.price <= 0) return true;
+    return _hasPremiumAccess;
   }
 
   @override
@@ -47,9 +61,22 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
 
     try {
       final details = await _service.getEbookDetails(widget.ebookId);
+      AccessResponse? access;
+      try {
+        access = await _service.getAccess(widget.ebookId);
+      } catch (_) {
+        access = null;
+      }
+      var downloaded = false;
+      try {
+        final progress = await _service.getReadingProgress(widget.ebookId);
+        downloaded = progress.data?.downloaded ?? false;
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
         _ebook = details.data;
+        _access = access;
+        _downloaded = downloaded;
       });
     } catch (error) {
       if (!mounted) return;
@@ -65,10 +92,11 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
     await Navigator.of(context).pushNamed(SubscriptionScreen.routeName);
     if (!mounted) return;
     SubscriptionScope.maybeOf(context)?.refresh();
+    await _load();
   }
 
   Future<void> _readNow() async {
-    if (!_hasPremiumAccess && (_ebook?.isPremium ?? true)) {
+    if (!_canDownload && (_ebook?.isPremium ?? true)) {
       await _openSubscription();
       return;
     }
@@ -112,10 +140,55 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
     }
   }
 
+  Future<void> _download() async {
+    if (!_canDownload) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Purchase to download')),
+      );
+      await _openSubscription();
+      return;
+    }
+
+    setState(() => _downloadProgress = 0);
+    try {
+      await _service.downloadAuthorizedEbook(
+        ebookId: widget.ebookId,
+        store: _downloadStore,
+        onProgress: (value) {
+          if (!mounted) return;
+          setState(() => _downloadProgress = value);
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _downloaded = true;
+        _downloadProgress = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('eBook downloaded.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _downloadProgress = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(messageFromDio(error, fallback: 'Unable to download this eBook.')),
+        ),
+      );
+    }
+  }
+
+  EbookDownloadUiState get _downloadState {
+    if (_downloadProgress != null) return EbookDownloadUiState.downloading;
+    if (_downloaded) return EbookDownloadUiState.downloaded;
+    if (_canDownload) return EbookDownloadUiState.available;
+    return EbookDownloadUiState.notPurchased;
+  }
+
   @override
   Widget build(BuildContext context) {
     final ebook = _ebook;
-    final premium = _hasPremiumAccess;
+    final canRead = _canDownload;
 
     return Scaffold(
       appBar: AppBar(title: const MinistryAppBarTitle(title: 'eBook Details')),
@@ -154,11 +227,11 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                       Text(ebook.description),
                       const SizedBox(height: 16),
                       Text(
-                        premium
-                            ? 'Included with Premium'
-                            : ebook.isPremium
-                                ? 'Requires Premium subscription'
-                                : 'Available to read',
+                        canRead
+                            ? (ebook.isPremium
+                                ? 'Included with WOPP Premium'
+                                : 'Available to read and download')
+                            : 'WOPP Premium is required to read and download this eBook.',
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 16),
@@ -167,23 +240,23 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                         child: Text(
                           _submitting
                               ? 'Opening...'
-                              : premium || !ebook.isPremium
+                              : canRead
                                   ? 'Read Now'
                                   : 'Subscribe to Read',
                         ),
                       ),
-                      if (!premium) ...[
+                      const SizedBox(height: 8),
+                      EbookDownloadButton(
+                        state: _downloadState,
+                        compact: false,
+                        progress: _downloadProgress,
+                        onPressed: _downloadProgress != null ? null : _download,
+                      ),
+                      if (!canRead) ...[
                         const SizedBox(height: 8),
                         OutlinedButton(
                           onPressed: _submitting ? null : _openSubscription,
-                          child: const Text('Subscribe'),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'A Premium subscription unlocks the complete eBook library.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                          child: const Text('Subscribe to WOPP Premium'),
                         ),
                       ],
                     ],

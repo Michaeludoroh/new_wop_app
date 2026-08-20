@@ -68,9 +68,11 @@ describe('TrialNotificationService', () => {
       'user_1',
       expect.objectContaining({
         category: 'SUBSCRIPTION',
+        body: expect.stringContaining('Subscribe to WOPP Premium'),
         data: expect.objectContaining({ route: '/subscriptions' }),
       }),
     );
+    expect(pushService.sendToUser.mock.calls[0][1].body).not.toMatch(/₦500|500\/month/);
     expect(prisma.userSubscription.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -100,7 +102,9 @@ describe('TrialNotificationService', () => {
       'user_2',
       expect.objectContaining({
         title: 'Your free trial has ended',
+        body: expect.stringContaining('Subscribe to WOPP Premium'),
       }),
     );
+    expect(pushService.sendToUser.mock.calls[0][1].body).not.toMatch(/₦500|500\/month/);
   });
 });

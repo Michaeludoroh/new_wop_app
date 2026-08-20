@@ -127,7 +127,7 @@ class SubscriptionRequiredScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Your free trial has ended. Subscribe for only ₦500/month to continue using WOPP premium content.',
+                'WOPP Premium is required to continue using this content. Subscribe on this device through the App Store or Google Play.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge,
               ),

@@ -19,7 +19,7 @@ void main() {
     expect(find.text('Announcements'), findsOneWidget);
     expect(find.text('Programs'), findsOneWidget);
     expect(find.text('Mentorship'), findsOneWidget);
-    expect(find.text('Subscription'), findsOneWidget);
+    expect(find.text('WOPP Premium'), findsOneWidget);
     expect(find.text(AppConstants.aboutTitle), findsOneWidget);
   });
 
@@ -103,7 +103,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Subscription'));
+    await tester.tap(find.text('WOPP Premium'));
     await tester.pumpAndSettle();
     expect(find.text('Subscription Screen'), findsOneWidget);
   });
