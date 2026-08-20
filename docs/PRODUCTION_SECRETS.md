@@ -37,8 +37,8 @@
 |--------|---------------|-------------------|
 | `FIREBASE_SERVICE_ACCOUNT_JSON` or `FCM_*` | Push notifications | FCM disabled; API starts |
 | `SMTP_HOST` + auth | Email delivery | MOCK_SMTP (logs only) |
-| `FLUTTERWAVE_SECRET_KEY` | Payments | Checkout returns not configured |
-| `FLUTTERWAVE_WEBHOOK_SECRET` | Webhook verification | Webhooks rejected |
+| `APPLE_SHARED_SECRET` | iOS In-App Purchase receipt verification | Apple IAP verify fails |
+| `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Android Play Billing verification | Google Play verify fails |
 
 ## GitHub Actions secrets (production environment)
 

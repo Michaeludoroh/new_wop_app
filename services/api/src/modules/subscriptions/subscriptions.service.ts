@@ -266,7 +266,7 @@ export class SubscriptionsService {
 
         code: 'CHECKOUT_REQUIRED',
 
-        message: 'Paid subscriptions must be activated through verified Flutterwave checkout',
+        message: 'Paid subscriptions must be activated through Apple In-App Purchase or Google Play Billing',
 
       });
 

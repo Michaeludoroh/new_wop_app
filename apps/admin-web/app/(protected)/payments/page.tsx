@@ -16,7 +16,7 @@ export default function PaymentsPage() {
       <div style={{ display: "grid", gap: 24 }}>
         <section>
           <h1>Payments</h1>
-          <p>View Flutterwave transactions, payment states, and webhook reconciliation events.</p>
+          <p>View historical payment transactions, payment states, and webhook reconciliation events.</p>
           <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12 }}>
             <label htmlFor="payment-status">Status</label>
             <select

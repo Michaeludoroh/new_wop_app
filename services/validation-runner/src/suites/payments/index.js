@@ -133,32 +133,22 @@ async function runPaymentsSuite({ config }) {
     payload: { amount: 1000, currency: 'USD' },
   };
 
-  const flutterwaveSuccessPayload = {
-    provider: 'FLUTTERWAVE',
-    eventId: `evt-fw-success-${runId}`,
-    eventType: 'charge.completed',
-    signature: 'fw-signature-valid-12345',
-    providerReference: 'fw-lifecycle-ref-001',
-    payload: { amount: 2999, currency: 'USD', status: 'successful' },
-  };
-
-  const flutterwaveFailedPayload = {
-    provider: 'FLUTTERWAVE',
-    eventId: `evt-fw-failed-${runId}`,
-    eventType: 'charge.failed',
-    signature: 'fw-signature-valid-12345',
-    providerReference: 'fw-lifecycle-ref-001',
-    payload: { amount: 2999, currency: 'USD', status: 'failed', failureMessage: 'declined' },
-  };
-
-  const flutterwaveCancelledPayload = {
-    provider: 'FLUTTERWAVE',
-    eventId: `evt-fw-cancelled-${runId}`,
-    eventType: 'charge.cancelled',
-    signature: 'fw-signature-valid-12345',
-    providerReference: 'fw-lifecycle-ref-001',
-    payload: { amount: 2999, currency: 'USD', status: 'cancelled' },
-  };
+  await executeWebhookCase({
+    id: 'payments-card-checkout-disabled',
+    name: 'Legacy card provider webhooks are rejected',
+    body: {
+      provider: 'FLUTTERWAVE',
+      eventId: `evt-fw-disabled-${runId}`,
+      eventType: 'charge.completed',
+      signature: 'fw-signature-valid-12345',
+      providerReference: 'fw-lifecycle-ref-001',
+      payload: { amount: 2999, currency: 'USD', status: 'successful' },
+    },
+    evaluator: (_okRes, errRes) => ({
+      status: errRes?.status === 410 || errRes?.status === 404 ? 'PASS' : 'FAIL',
+      details: { expectedStatusCode: 410, validationArea: 'card_checkout_disabled' },
+    }),
+  });
 
   await executeWebhookCase({
     id: 'payments-webhook-signature-invalid',
@@ -188,42 +178,6 @@ async function runPaymentsSuite({ config }) {
       status: errRes?.status === 400 ? 'PASS' : 'FAIL',
       details: { expectedStatusCode: 400, validationArea: 'payment_provider_error' },
     }),
-  });
-
-  await executeWebhookCase({
-    id: 'payments-flutterwave-success',
-    name: 'Flutterwave end-to-end payment success path is accepted',
-    body: flutterwaveSuccessPayload,
-    evaluator: (okRes) => ({
-      status: okRes?.status === 201 || okRes?.status === 200 ? 'PASS' : 'WARNING',
-      details: { validationArea: 'flutterwave_success' },
-    }),
-  });
-
-  await executeWebhookCase({
-    id: 'payments-flutterwave-failed',
-    name: 'Flutterwave end-to-end payment failure path is handled',
-    body: flutterwaveFailedPayload,
-    evaluator: (okRes, errRes) => {
-      const status = okRes?.status || errRes?.status;
-      return {
-        status: status && status >= 200 && status < 500 ? 'PASS' : 'WARNING',
-        details: { validationArea: 'flutterwave_failure' },
-      };
-    },
-  });
-
-  await executeWebhookCase({
-    id: 'payments-flutterwave-cancelled',
-    name: 'Flutterwave cancelled payment path is handled',
-    body: flutterwaveCancelledPayload,
-    evaluator: (okRes, errRes) => {
-      const status = okRes?.status || errRes?.status;
-      return {
-        status: status && status >= 200 && status < 500 ? 'PASS' : 'WARNING',
-        details: { validationArea: 'flutterwave_cancelled' },
-      };
-    },
   });
 
   const duplicateEventId = `evt-dup-${runId}`;

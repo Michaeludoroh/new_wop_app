@@ -5,6 +5,19 @@ import 'package:ministry_mobile/core/auth/auth_scope.dart';
 import 'package:ministry_mobile/core/auth/auth_service.dart';
 import 'package:ministry_mobile/core/auth/models/auth_models.dart';
 import 'package:ministry_mobile/core/auth/token_storage_service.dart';
+import 'package:ministry_mobile/core/homepage/homepage_feed_sources.dart';
+import 'package:ministry_mobile/core/announcements/announcement_service.dart';
+import 'package:ministry_mobile/core/announcements/models/announcement_models.dart';
+import 'package:ministry_mobile/core/clips/clip_service.dart';
+import 'package:ministry_mobile/core/clips/models/clip_models.dart';
+import 'package:ministry_mobile/core/ebooks/ebook_service.dart';
+import 'package:ministry_mobile/core/ebooks/models/ebook_models.dart';
+import 'package:ministry_mobile/core/events/event_service.dart';
+import 'package:ministry_mobile/core/events/models/event_models.dart';
+import 'package:ministry_mobile/core/mentorship/mentorship_service.dart';
+import 'package:ministry_mobile/core/mentorship/models/mentorship_models.dart';
+import 'package:ministry_mobile/core/programs/program_service.dart';
+import 'package:ministry_mobile/core/programs/models/program_models.dart';
 import 'package:ministry_mobile/screens/home_screen.dart';
 
 class _FakeAuthService extends AuthService {
@@ -57,12 +70,98 @@ class _TestAuthProvider extends AuthProvider {
   }
 }
 
+class _EmptyAnnouncementService extends AnnouncementService {
+  @override
+  Future<AnnouncementListResponse> getAnnouncements({
+    String? search,
+    String? category,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    return const AnnouncementListResponse(data: [], total: 0, page: 1, limit: 20);
+  }
+}
+
+class _EmptyClipService extends ClipService {
+  @override
+  Future<ClipListResponse> getClips({
+    String? search,
+    String? category,
+    bool? featured,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    return const ClipListResponse(data: [], total: 0, limit: 20, offset: 0);
+  }
+}
+
+class _EmptyEventService extends EventService {
+  @override
+  Future<EventListResponse> getEvents({
+    String? search,
+    String? category,
+    bool? featured,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    return const EventListResponse(data: [], total: 0, limit: 20, offset: 0);
+  }
+}
+
+class _EmptyEbookService extends EbookService {
+  @override
+  Future<EbookListResponse> getEbooks({
+    String? search,
+    String? category,
+    bool? featured,
+    bool? recent,
+  }) async {
+    return EbookListResponse(data: const [], featured: const [], recent: const []);
+  }
+}
+
+class _EmptyProgramService extends ProgramService {
+  @override
+  Future<ProgramListResponse> getPrograms({
+    String? search,
+    String? category,
+    bool? featured,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    return const ProgramListResponse(data: [], total: 0, limit: 20, offset: 0);
+  }
+}
+
+class _EmptyMentorshipService extends MentorshipService {
+  @override
+  Future<MentorshipListResponse> getClasses({
+    String? search,
+    String? category,
+    bool? featured,
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    return const MentorshipListResponse(data: [], total: 0, limit: 20, offset: 0);
+  }
+}
+
 void main() {
   Widget buildTestApp(_TestAuthProvider provider) {
     return MaterialApp(
       home: AuthScope(
         notifier: provider,
-        child: const HomeScreen(authStatusLabel: 'Authenticated'),
+        child: HomeScreen(
+          authStatusLabel: 'Authenticated',
+          homepageSources: HomepageFeedSources(
+            announcements: _EmptyAnnouncementService(),
+            clips: _EmptyClipService(),
+            events: _EmptyEventService(),
+            ebooks: _EmptyEbookService(),
+            programs: _EmptyProgramService(),
+            mentorship: _EmptyMentorshipService(),
+          ),
+        ),
       ),
     );
   }

@@ -13,7 +13,7 @@ Validate end-to-end platform behavior with a limited tester cohort before public
 
 1. Core user journeys (auth, content, subscriptions, admin operations)
 2. Infrastructure reliability (deploy, health, persistence, realtime)
-3. External integrations scoped for beta (SMTP, Flutterwave, FCM)
+3. External integrations scoped for beta (SMTP, Apple IAP, Google Play, FCM)
 4. Mobile + admin + API consistency under real network conditions
 
 ---
@@ -32,7 +32,7 @@ Validate end-to-end platform behavior with a limited tester cohort before public
 
 ### Out of scope (unless explicitly enabled)
 
-- Stripe / Paystack (Flutterwave is primary)
+- Stripe / Paystack (stubs only; live billing is Apple IAP + Google Play)
 - Multi-region failover
 - Load testing beyond ~50 concurrent beta users
 - App store public release
@@ -43,7 +43,7 @@ Document any waived integrations before testing:
 
 | Integration | Beta status | Fallback behavior |
 |-------------|---------------|-------------------|
-| Flutterwave | ☐ Enabled ☐ Waived | Checkout disabled |
+| Apple IAP / Google Play | ☐ Enabled ☐ Waived | Card checkout disabled |
 | SMTP | ☐ Enabled ☐ Waived | Mock email (no delivery) |
 | FCM push | ☐ Enabled ☐ Waived | In-app notifications only |
 
@@ -86,7 +86,7 @@ node scripts/beta/build-mobile-staging.mjs https://staging-api.<domain>/api/v1
 | INF-A1 | API health | `curl $API/api/v1/health` | 200, dependencies OK | DevOps |
 | INF-A2 | Admin health | Load admin URL | Login page renders | DevOps |
 | INF-A3 | Email health | `GET /api/v1/health/email` | configured or mock documented | Backend |
-| INF-A4 | Flutterwave health | `GET /api/v1/health/flutterwave` | configured or waived | Backend |
+| INF-A4 | Store billing | Apple IAP + Google Play product `wopp_premium_monthly` | configured or waived | Backend |
 | INF-A5 | Postgres backup | `node scripts/backup/postgres-backup.mjs` | Non-empty `.sql.gz` | DevOps |
 | INF-A6 | Upload persistence | Upload clip → restart `api` → asset URL loads | Asset survives restart | Backend |
 | INF-A7 | WebSocket connect | Admin open realtime panel; mobile login | Connect without errors | Full-stack |
@@ -125,13 +125,13 @@ Reference: `DEVICE_SMOKE_TEST_PLAN.md`
 
 | ID | Journey | Steps | Pass criteria |
 |----|---------|-------|---------------|
-| PAY-D1 | Subscription checkout | Start checkout from mobile/web | Redirect to Flutterwave hosted page |
-| PAY-D2 | Successful payment | Complete sandbox payment | Webhook received; subscription ACTIVE |
-| PAY-D3 | Failed payment | Cancel or fail payment | Transaction FAILED; no entitlement |
-| PAY-D4 | Ebook purchase | One-time ebook checkout | Entitlement granted after verify |
-| PAY-D5 | Webhook replay | Duplicate webhook | Idempotent; no double entitlement |
+| PAY-D1 | Subscription checkout | Start Apple IAP or Google Play purchase | Store sheet; product `wopp_premium_monthly` |
+| PAY-D2 | Successful payment | Complete sandbox/test purchase | PREMIUM entitlement ACTIVE |
+| PAY-D3 | Failed payment | Cancel store sheet | No entitlement |
+| PAY-D4 | Card checkout | `POST /payments/checkout/subscription` | `410 CARD_CHECKOUT_DISABLED` |
+| PAY-D5 | Legacy webhook | `POST /payments/webhooks/flutterwave` | `410`; no state change |
 
-Use Flutterwave **sandbox** keys for beta unless explicitly approved for live.
+Use App Store sandbox testers and Google Play license testers for beta.
 
 ### Phase E — Email (if enabled, Day 2)
 
@@ -180,7 +180,7 @@ Use Flutterwave **sandbox** keys for beta unless explicitly approved for live.
 |--------|--------|------------------|
 | API 5xx rate | Logs / metrics (`METRICS_AUTH_TOKEN`) | >1% over 15 min → investigate |
 | Health endpoints | Cron or uptime check | Any non-200 → page on-call |
-| Flutterwave webhooks | API logs + dashboard | Missing webhooks >30 min after payment |
+| Store purchase failures | API + store console | Failed IAP/Play verify spike |
 | FCM failures | `PushNotification` logs | Spike in invalid token revocations |
 | Disk / uploads volume | Host monitoring | >80% capacity → expand or prune |
 

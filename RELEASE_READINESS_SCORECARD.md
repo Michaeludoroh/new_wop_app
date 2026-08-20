@@ -76,7 +76,7 @@ Mark each implemented module: **Ready · Partial · Not Ready · N/A**
 | Clips | ☐ | ☐ | ☐ | ☐ | | |
 | eBooks / Library | ☐ | ☐ | ☐ | ☐ | | |
 | Subscriptions | ☐ | ☐ | ☐ | ☐ | | |
-| Payments (Flutterwave) | ☐ | ☐ | ☐ | ☐ | | |
+| Payments (history / IAP) | ☐ | ☐ | ☐ | ☐ | | |
 | Notifications (in-app) | ☐ | ☐ | ☐ | ☐ | | |
 | Push (FCM) | ☐ | ☐ | N/A | ☐ | | |
 | Programs | ☐ | ☐ | ☐ | ☐ | | |
@@ -120,7 +120,7 @@ Mark each implemented module: **Ready · Partial · Not Ready · N/A**
 | JWT secrets | ☐ | ☐ |
 | `REDIS_URL` | ☐ | ☐ |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | ☐ | ☐ |
-| `FLUTTERWAVE_*` (sandbox) | ☐ | ☐ |
+| `APPLE_SHARED_SECRET` / `GOOGLE_PLAY_*` | ☐ | ☐ |
 | `SMTP_*` | ☐ | ☐ |
 | `NEXT_PUBLIC_API_BASE_URL` | ☐ | ☐ |
 | Mobile `API_BASE_URL` dart-define | ☐ | ☐ |

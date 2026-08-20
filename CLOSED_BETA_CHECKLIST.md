@@ -20,7 +20,7 @@ Complete every **Gate** item before inviting closed beta testers. **Track** item
 | 2 | Rollback runbook | ☑ Complete | ☐ No evidenced rollback drill | **Gate** |
 | 3 | Backup & restore | ☑ Scripts + docs | ☐ No restore drill logged | **Gate** |
 | 4 | Production env vars | ☑ Templates + validation | ☐ Real secrets not provisioned | **Gate** |
-| 5 | Payment (Flutterwave) | ☑ Code + tests | ☐ Credentials not configured live | **Gate** |
+| 5 | Payment (Apple IAP + Google Play) | ☑ Code + tests | ☐ Store credentials not configured live | **Gate** |
 | 6 | Firebase / FCM | ☑ Code + mobile plumbing | ☐ Prod credentials unset | **Gate** |
 | 7 | SMTP | ☑ Code + health endpoint | ☐ Uses MockSmtp without SMTP_HOST | **Gate** |
 | 8 | Upload storage persistence | ☑ Volume in compose | ☐ Verify after first deploy | **Track** |
@@ -106,23 +106,22 @@ Complete every **Gate** item before inviting closed beta testers. **Track** item
 
 ---
 
-## 5. Payment configuration (Flutterwave)
+## 5. Payment configuration (Apple IAP + Google Play)
 
-**Verdict:** ☑ Implementation ready · ☐ Live config FAIL
+**Verdict:** ☑ Implementation ready · ☐ Live store credentials
 
 | ID | Check | Status | Evidence / notes |
 |----|-------|--------|------------------|
-| PAY-01 | Checkout, webhook, entitlement flows implemented | ☑ | `FLUTTERWAVE_READINESS_REPORT.md` |
-| PAY-02 | Unit tests pass | ☑ | 17/17 payment tests |
-| PAY-03 | Health endpoint `GET /api/v1/health/flutterwave` | ☑ | |
-| PAY-04 | `FLUTTERWAVE_SECRET_KEY` configured | ☐ | |
-| PAY-05 | `FLUTTERWAVE_WEBHOOK_SECRET` configured | ☐ | |
-| PAY-06 | `PAYMENT_REDIRECT_BASE_URL` points to public HTTPS URL | ☐ | |
-| PAY-07 | Webhook URL registered in Flutterwave dashboard | ☐ | `{API_PUBLIC_URL}/api/v1/payments/webhooks/flutterwave` |
-| PAY-08 | Sandbox checkout + webhook end-to-end test | ☐ | |
+| PAY-01 | Native IAP/Play subscribe + receipt verification implemented | ☑ | `mobile-subscriptions` |
+| PAY-02 | Card checkout / Flutterwave removed | ☑ | `410 CARD_CHECKOUT_DISABLED` |
+| PAY-03 | Product ID `wopp_premium_monthly` | ☑ | env examples |
+| PAY-04 | `APPLE_SHARED_SECRET` configured | ☐ | |
+| PAY-05 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` configured | ☐ | |
+| PAY-06 | Sandbox Apple purchase end-to-end | ☐ | |
+| PAY-07 | Google Play test purchase end-to-end | ☐ | |
 
-**Gate:** If beta includes paid subscriptions or ebook purchases, PAY-04 through PAY-08 are mandatory.  
-**Waive:** If beta is free-tier only, document waiver and disable checkout CTAs in release notes.
+**Gate:** If beta includes paid subscriptions, PAY-04 through PAY-07 are mandatory.  
+**Waive:** If beta is free-tier only, document waiver.
 
 ---
 
@@ -228,7 +227,7 @@ All must be ☑ before sending beta invites:
 - [ ] WebSocket smoke on staging (`WS-08`)
 - [ ] Mobile beta build pointed at staging API (`MOB-05`, `MOB-06`)
 - [ ] SMTP configured if password reset in scope (`SMTP-03`, `SMTP-05`)
-- [ ] Flutterwave configured if payments in scope (`PAY-04`–`PAY-08`)
+- [ ] Apple IAP / Google Play configured if payments in scope (`PAY-04`–`PAY-07`)
 - [ ] FCM configured if push in scope (`FCM-06`, `FCM-08`)
 
 ---

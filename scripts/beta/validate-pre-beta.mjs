@@ -50,24 +50,24 @@ add(
   smtpOk ? `SMTP_HOST=${env.SMTP_HOST}` : 'Set SMTP_HOST, SMTP_FROM, SMTP_USER, SMTP_PASS in services/api/.env',
 );
 
-const flutterwaveKeys = ['FLUTTERWAVE_SECRET_KEY', 'FLUTTERWAVE_WEBHOOK_SECRET', 'PAYMENT_REDIRECT_BASE_URL'];
-const flutterwaveMissing = flutterwaveKeys.filter((key) => !env[key]);
+const storeBillingKeys = ['MOBILE_IOS_PREMIUM_PRODUCT_ID', 'MOBILE_ANDROID_PREMIUM_PRODUCT_ID'];
+const storeBillingMissing = storeBillingKeys.filter((key) => !env[key]);
 add(
-  'p0-flutterwave',
-  'Flutterwave env vars configured',
+  'p0-store-billing',
+  'Apple IAP and Google Play product IDs configured',
   'Configuration change',
-  flutterwaveMissing.length === 0 ? 'PASS' : 'FAIL',
-  flutterwaveMissing.length === 0
-    ? 'Flutterwave secret, webhook secret, and redirect base URL present'
-    : `Missing: ${flutterwaveMissing.join(', ')}`,
+  storeBillingMissing.length === 0 ? 'PASS' : 'FAIL',
+  storeBillingMissing.length === 0
+    ? `Product IDs: ${env.MOBILE_IOS_PREMIUM_PRODUCT_ID} / ${env.MOBILE_ANDROID_PREMIUM_PRODUCT_ID}`
+    : `Missing: ${storeBillingMissing.join(', ')}`,
 );
 
 add(
-  'p0-flutterwave-webhook',
-  'Flutterwave webhook registered to staging URL',
+  'p0-store-billing-manual',
+  'Apple receipt verification and Google Play billing validated',
   'Manual validation step',
   'MANUAL',
-  `Register ${env.PAYMENT_REDIRECT_BASE_URL ? env.PAYMENT_REDIRECT_BASE_URL.replace(/\/api\/v1.*$/, '') : 'https://staging-api.example.com'}/api/v1/payments/webhooks/flutterwave in Flutterwave dashboard; send test event`,
+  'Complete one Apple IAP sandbox purchase and one Google Play test purchase for wopp_premium_monthly; confirm PREMIUM entitlement',
 );
 
 const streamOk =
@@ -208,7 +208,7 @@ add(
   'Manual E2E staging flow',
   'Manual validation step',
   'MANUAL',
-  'Register → welcome email → accept policies → Flutterwave purchase → eBook stream read; direct /uploads/ebooks/file/ returns 403',
+  'Register → welcome email → accept policies → Apple IAP or Google Play subscribe → eBook stream read; direct /uploads/ebooks/file/ returns 403',
 );
 
 // --- Report ---

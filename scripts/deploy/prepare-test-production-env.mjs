@@ -44,7 +44,6 @@ NEXT_PUBLIC_WEBSOCKET_URL=http://ws.localhost
 NEXT_PUBLIC_API_BASE_URL=http://api.localhost/api/v1
 
 SMTP_FROM=noreply@test.local
-PAYMENT_REDIRECT_BASE_URL=http://api.localhost/api/v1
 IMAGE_TAG=local-test
 `;
 

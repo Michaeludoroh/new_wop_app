@@ -1,12 +1,9 @@
 import { PaymentProvider } from '@prisma/client';
 import { IsEnum, IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
-const PaymentProviderValues = ['FLUTTERWAVE'] as const;
-type PaymentProviderValue = (typeof PaymentProviderValues)[number];
-
 export class PaymentWebhookDto {
-  @IsEnum(PaymentProviderValues)
-  provider!: PaymentProviderValue;
+  @IsEnum(PaymentProvider)
+  provider!: PaymentProvider;
 
   @IsString()
   @IsNotEmpty()

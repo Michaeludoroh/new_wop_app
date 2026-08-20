@@ -33,7 +33,6 @@ Complete all **Blocker** items before production cutover.
 - [ ] `METRICS_AUTH_TOKEN` — random token for `/metrics`
 - [ ] `CONTENT_ACCESS_SECRET` — ≥32 chars (eBook streaming)
 - [ ] `API_PUBLIC_URL=https://woppandmopp.com`
-- [ ] `PAYMENT_REDIRECT_BASE_URL=https://woppandmopp.com/api/v1`
 
 Validate:
 ```bash
@@ -46,7 +45,8 @@ node scripts/env/validate-env.mjs --target=api
 
 - [ ] **Firebase:** `FIREBASE_SERVICE_ACCOUNT_JSON` OR `FCM_PROJECT_ID` + `FCM_CLIENT_EMAIL` + `FCM_PRIVATE_KEY`
 - [ ] **SMTP:** `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`
-- [ ] **Flutterwave:** `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_SECRET`
+- [ ] **Apple IAP:** `APPLE_SHARED_SECRET`, `MOBILE_IOS_PREMIUM_PRODUCT_ID=wopp_premium_monthly`
+- [ ] **Google Play:** `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`, `MOBILE_ANDROID_PREMIUM_PRODUCT_ID=wopp_premium_monthly`
 - [ ] **Optional Sentry:** `SENTRY_DSN`, `SENTRY_ENVIRONMENT=production`
 
 ### Rate limiting (use correct names)
@@ -134,14 +134,14 @@ docker build -t ministry-admin:prod ./apps/admin-web
 
 ---
 
-## 7. Flutterwave
+## 7. Store billing (Apple IAP + Google Play)
 
-- [ ] Production or live sandbox keys in secret store
-- [ ] `GET /api/v1/health/flutterwave` → `status: ready`
-- [ ] Webhook URL registered: `https://woppandmopp.com/api/v1/payments/webhook/flutterwave`
-- [ ] `PAYMENT_REDIRECT_BASE_URL` points to public API
-- [ ] End-to-end: subscription checkout → redirect → entitlement active
-- [ ] Webhook signature validation tested
+- [ ] App Store product `wopp_premium_monthly` live or sandbox-ready
+- [ ] Apple receipt verification succeeds against `APPLE_SHARED_SECRET`
+- [ ] Google Play product `wopp_premium_monthly` live or license-test-ready
+- [ ] Google Play purchase verification uses `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- [ ] End-to-end: native subscribe → `PREMIUM` entitlement active
+- [ ] Card checkout endpoints return `410 CARD_CHECKOUT_DISABLED`
 
 ---
 
@@ -243,7 +243,7 @@ Execute in this order:
 - [ ] Login / refresh token (mobile + admin)
 - [ ] Accept policies gate (mobile)
 - [ ] Create announcement (admin) → appears on mobile
-- [ ] Subscription checkout (Flutterwave test/live)
+- [ ] Subscription purchase (Apple IAP / Google Play test)
 - [ ] Push notification received (device)
 - [ ] Forgot password email received
 - [ ] Realtime notification (websocket connected)

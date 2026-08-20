@@ -35,7 +35,7 @@
 | QA user (USER role) | Staging test data sheet |
 | QA admin (for push tests) | Staging test data sheet |
 | Published announcement, event, clip, ebook | Admin pre-seeded or created during admin smoke |
-| Flutterwave sandbox (subscriptions/ebooks) | `PAYMENT_VALIDATION_CHECKLIST.md` |
+| Apple IAP / Google Play sandbox (subscriptions) | `PAYMENT_VALIDATION_CHECKLIST.md` |
 
 ---
 
@@ -109,7 +109,7 @@
 | M-LIB-01 | Library tab → catalog | eBooks listed | High | eBooks list | ☐ |
 | M-LIB-02 | Open free ebook | Reader opens | High | Reader view | ☐ |
 | M-LIB-03 | Open paid ebook (no purchase) | Purchase prompt or access denied | High | Paywall / denied | ☐ |
-| M-LIB-04 | Complete purchase (Flutterwave test) | eBook in My Library; reader opens | Critical | Library + reader | ☐ |
+| M-LIB-04 | Open paid ebook without premium | Access denied or purchase not via card checkout | High | Paywall | ☐ |
 | M-LIB-05 | Read partial; close; reopen | Progress restored | Medium | Progress indicator | ☐ |
 | M-LIB-06 | My Library shelf | Purchased items listed | High | My Library | ☐ |
 
@@ -120,7 +120,7 @@
 | ID | Validation steps | Expected result | Severity | Screenshot | Pass |
 |----|------------------|-----------------|----------|------------|------|
 | M-SUB-01 | More → Subscriptions | Plans displayed with prices | High | Plans screen | ☐ |
-| M-SUB-02 | Subscribe (Flutterwave test card) | Redirect → success → active status | Critical | Checkout + active badge | ☐ |
+| M-SUB-02 | Subscribe via Apple IAP or Google Play (`wopp_premium_monthly`) | Store sheet → success → PREMIUM active | Critical | Checkout + active badge | ☐ |
 | M-SUB-03 | Access premium-gated content | Content unlocked while active | Critical | Before/after access | ☐ |
 | M-SUB-04 | Cancel subscription | Status shows cancelled/pending expiry | High | Cancel confirmation | ☐ |
 | M-SUB-05 | After expiry (simulated or waited) | Gated content blocked | High | Access denied | ☐ |

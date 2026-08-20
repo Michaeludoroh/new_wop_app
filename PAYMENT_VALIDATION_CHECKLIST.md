@@ -1,9 +1,9 @@
 # Payment Validation Checklist — WOPP
 
-**Provider:** Flutterwave (only registered provider)  
-**Webhook:** `POST /api/v1/payments/webhooks/flutterwave`  
-**Checkout:** Subscription + eBook  
-**Companion:** `PAYMENT_IMPLEMENTATION_REPORT.md`, `PAYMENT_TEST_REPORT.md`, `WEBHOOK_SECURITY_REPORT.md`
+**Providers:** Apple In-App Purchase (iOS) and Google Play Billing (Android)  
+**Product ID:** `wopp_premium_monthly`  
+**Plan code:** `PREMIUM`  
+**Card checkout:** Disabled (`410 CARD_CHECKOUT_DISABLED`)
 
 ---
 
@@ -22,23 +22,17 @@
 
 | ID | Requirement | Expected | Severity | Pass |
 |----|-------------|----------|----------|------|
-| PAY-00 | `FLUTTERWAVE_SECRET_KEY` set (sandbox for staging) | API boots; checkout creates session | Critical | ☐ |
-| PAY-01 | `FLUTTERWAVE_WEBHOOK_SECRET` set | Webhook verification enabled | Critical | ☐ |
-| PAY-02 | `PAYMENT_REDIRECT_BASE_URL` matches staging API | Redirect after payment succeeds | Critical | ☐ |
-| PAY-03 | Flutterwave dashboard webhook URL configured | Points to staging webhook endpoint | Critical | ☐ |
-| PAY-04 | Test USER account logged in on mobile | JWT available for checkout | High | ☐ |
-| PAY-05 | Active subscription plan in DB | `GET /subscriptions/plans` returns plan | High | ☐ |
+| PAY-00 | `APPLE_SHARED_SECRET` set | iOS receipt verification enabled | Critical | ☐ |
+| PAY-01 | `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` set | Android purchase verification enabled | Critical | ☐ |
+| PAY-02 | Product ID `wopp_premium_monthly` in App Store and Play Console | Store product matches API env | Critical | ☐ |
+| PAY-03 | Card checkout disabled | `POST /payments/checkout/subscription` returns `410` | Critical | ☐ |
+| PAY-04 | Test USER account logged in on mobile | JWT available for subscribe | High | ☐ |
+| PAY-05 | Active `PREMIUM` plan in DB | `GET /subscriptions/plans` returns plan | High | ☐ |
 | PAY-06 | Paid ebook published | Catalog shows paid item | High | ☐ |
 
-### Flutterwave test cards (sandbox)
+### Store test accounts
 
-Reference [Flutterwave test documentation](https://developer.flutterwave.com/docs/test-cards). Record card used on sign-off.
-
-| Scenario | Card behavior | Use for |
-|----------|---------------|---------|
-| Successful payment | Approved test card | PAY-SUB-01, PAY-EBK-01 |
-| Declined payment | Decline test card | PAY-NEG-01 |
-| Insufficient funds | Decline variant | PAY-NEG-02 |
+Use App Store sandbox testers and Google Play license testers. Record account used on sign-off.
 
 ---
 
@@ -46,14 +40,13 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 
 | ID | Validation steps | Expected result | Severity | Evidence | Pass |
 |----|------------------|-----------------|----------|----------|------|
-| PAY-SUB-01 | Mobile: Subscriptions → select plan → checkout | Redirect to Flutterwave hosted page | Critical | Screenshot: checkout page | ☐ |
-| PAY-SUB-02 | Complete payment with success test card | Redirect back; success message | Critical | Success screen | ☐ |
-| PAY-SUB-03 | `GET /payments/status?providerReference=` | `status: successful` (or equivalent) | Critical | API response JSON | ☐ |
-| PAY-SUB-04 | `GET /subscriptions/me` | Active subscription with plan code | Critical | API response JSON | ☐ |
-| PAY-SUB-05 | `GET /subscriptions/status` | Active / trialing status | Critical | API response | ☐ |
-| PAY-SUB-06 | Access premium-gated content | `content/validate` returns entitled | Critical | Before/after access | ☐ |
-| PAY-SUB-07 | Admin `/payments` history | Transaction row with matching reference | High | Admin screenshot | ☐ |
-| PAY-SUB-08 | Webhook event logged | Entry in `webhook-events` admin view | High | Admin webhook log | ☐ |
+| PAY-SUB-01 | Mobile: Subscriptions → subscribe with store billing | Apple/Google purchase sheet | Critical | Screenshot: checkout page | ☐ |
+| PAY-SUB-02 | Complete sandbox/test purchase for `wopp_premium_monthly` | Success message; PREMIUM active | Critical | Success screen | ☐ |
+| PAY-SUB-03 | `GET /subscriptions/me` | Active subscription with plan code `PREMIUM` | Critical | API response JSON | ☐ |
+| PAY-SUB-04 | `GET /subscriptions/status` | Active / trialing status | Critical | API response | ☐ |
+| PAY-SUB-05 | Access premium-gated content | `content/validate` returns entitled | Critical | Before/after access | ☐ |
+| PAY-SUB-06 | Admin `/payments` history | Historical transaction rows still visible | High | Admin screenshot | ☐ |
+| PAY-SUB-07 | `POST /payments/checkout/subscription` | `410 CARD_CHECKOUT_DISABLED` | Critical | API response | ☐ |
 
 ---
 
@@ -61,12 +54,12 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 
 | ID | Validation steps | Expected result | Severity | Evidence | Pass |
 |----|------------------|-----------------|----------|----------|------|
-| PAY-EBK-01 | Mobile: open paid ebook → purchase | Checkout URL returned | Critical | Checkout redirect | ☐ |
-| PAY-EBK-02 | Complete Flutterwave payment | Success redirect | Critical | Success screen | ☐ |
-| PAY-EBK-03 | `GET /ebooks/:id/access` | Access granted | Critical | API 200 | ☐ |
-| PAY-EBK-04 | My Library | eBook appears on shelf | High | Library screenshot | ☐ |
+| PAY-EBK-01 | Mobile: open paid ebook → purchase | Card checkout is not offered | Critical | Store billing / access rules | ☐ |
+| PAY-EBK-02 | `POST /payments/checkout/ebook` | `410 CARD_CHECKOUT_DISABLED` | Critical | API response | ☐ |
+| PAY-EBK-03 | Open free ebook | Access granted | Critical | API 200 | ☐ |
+| PAY-EBK-04 | My Library | Owned/free eBooks appear on shelf | High | Library screenshot | ☐ |
 | PAY-EBK-05 | Open reader | PDF/stream loads | High | Reader screenshot | ☐ |
-| PAY-EBK-06 | `GET /payments/history` | eBook transaction listed | Medium | API response | ☐ |
+| PAY-EBK-06 | `GET /payments/history` | Historical transactions listed | Medium | API response | ☐ |
 
 ---
 
@@ -87,10 +80,10 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 
 | ID | Validation steps | Expected result | Severity | Evidence | Pass |
 |----|------------------|-----------------|----------|----------|------|
-| PAY-REN-01 | Subscription with `autoRenew: true` | Flag stored correctly | High | DB / API inspect | ☐ |
-| PAY-REN-02 | Simulate renewal webhook (Flutterwave sandbox) | Subscription end date extended | High | Webhook payload + DB | ☐ |
-| PAY-REN-03 | Failed renewal webhook | Grace period or expired per policy | High | Status transition log | ☐ |
-| PAY-REN-04 | User disables auto-renew | No renewal at period end | Medium | Settings UI | ☐ |
+| PAY-REN-01 | Subscription with store auto-renew | Flag stored correctly | High | DB / API inspect | ☐ |
+| PAY-REN-02 | Store-managed renewal (Apple/Google) | Subscription end date extended | High | Store + DB | ☐ |
+| PAY-REN-03 | Failed store renewal | Grace period or expired per policy | High | Status transition log | ☐ |
+| PAY-REN-04 | User disables auto-renew in store | No renewal at period end | Medium | Settings UI | ☐ |
 
 ---
 
@@ -98,11 +91,9 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 
 | ID | Validation steps | Expected result | Severity | Evidence | Pass |
 |----|------------------|-----------------|----------|----------|------|
-| PAY-WH-01 | POST webhook with valid `verif-hash` | `200`; payment processed | Critical | Server log | ☐ |
-| PAY-WH-02 | POST webhook with invalid hash | `401/403`; no state change | Critical | Server log | ☐ |
-| PAY-WH-03 | Replay same webhook payload twice | Idempotent; single entitlement grant | Critical | DB count unchanged | ☐ |
-| PAY-WH-04 | Webhook for unknown reference | Logged; no crash | Medium | Error log | ☐ |
-| PAY-WH-05 | Webhook delayed (poll succeeds first) | No duplicate entitlement | High | Status + webhook order test | ☐ |
+| PAY-WH-01 | POST `/payments/webhooks/flutterwave` | `410 CARD_CHECKOUT_DISABLED`; no state change | Critical | API response | ☐ |
+| PAY-WH-02 | GET `/payments/complete?tx_ref=` | `410 CARD_CHECKOUT_DISABLED` | Critical | API response | ☐ |
+| PAY-WH-03 | Admin historical webhook-events | Existing rows remain readable | Medium | Admin view | ☐ |
 
 **Evidence:** Redacted webhook payload + `push_delivery_log`-style payment audit row.
 
@@ -112,11 +103,11 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 
 | ID | Validation steps | Expected result | Severity | Evidence | Pass |
 |----|------------------|-----------------|----------|----------|------|
-| PAY-NEG-01 | Declined test card at checkout | User returned with failure; no entitlement | High | Failure screen | ☐ |
-| PAY-NEG-02 | Abandon checkout (close browser) | No entitlement; can retry | Medium | Status remains inactive | ☐ |
+| PAY-NEG-01 | Cancel store purchase sheet | No entitlement | High | Failure screen | ☐ |
+| PAY-NEG-02 | Abandon store checkout | No entitlement; can retry | Medium | Status remains inactive | ☐ |
 | PAY-NEG-03 | Checkout without JWT | `401` | Critical | API response | ☐ |
-| PAY-NEG-04 | Checkout for inactive plan | `400/404` | High | API response | ☐ |
-| PAY-NEG-05 | eBook already purchased → checkout again | Prevented or idempotent | High | API response | ☐ |
+| PAY-NEG-04 | Direct `POST /subscriptions/subscribe` for PREMIUM | `400 CHECKOUT_REQUIRED` | High | API response | ☐ |
+| PAY-NEG-05 | eBook purchase without payment reference | `400 CHECKOUT_REQUIRED` | High | API response | ☐ |
 
 ---
 
@@ -126,7 +117,7 @@ Reference [Flutterwave test documentation](https://developer.flutterwave.com/doc
 |----|------------------|-----------------|----------|----------|------|
 | PAY-ADM-01 | Admin payments list loads | All staging transactions visible | High | Admin screenshot | ☐ |
 | PAY-ADM-02 | Filter by failed status | Correct subset | Medium | Filter applied | ☐ |
-| PAY-ADM-03 | Webhook events audit trail | Matches Flutterwave dashboard | High | Side-by-side compare | ☐ |
+| PAY-ADM-03 | Webhook events audit trail | Historical events remain visible | High | Admin screenshot | ☐ |
 
 ---
 
@@ -160,7 +151,7 @@ SELECT * FROM "EbookPurchase" WHERE "userId" = '<qa-user-id>' ORDER BY "createdA
 | Tester | |
 | Date | |
 | Environment | ☐ Sandbox ☐ Production smoke |
-| Flutterwave mode | |
+| Store billing mode | Apple IAP + Google Play |
 | Critical FAILs | |
 | Financial reconciliation | ☐ Approved by finance delegate |
 | Recommendation | ☐ Proceed ☐ Block |

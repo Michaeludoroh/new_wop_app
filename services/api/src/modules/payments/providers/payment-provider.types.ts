@@ -46,7 +46,6 @@ export type TransactionVerificationResult = {
   providerReference: string;
   amount?: number | null;
   currency?: string | null;
-  flutterwaveToken?: string | null;
   normalizedPayload: Record<string, unknown>;
   failureMessage?: string | null;
 };
@@ -65,6 +64,5 @@ export type TokenizedChargeResult = {
   mappedStatus: PaymentStatus;
   rawPayload: Record<string, unknown>;
   normalizedPayload: Record<string, unknown>;
-  flutterwaveToken?: string | null;
   failureMessage?: string | null;
 };

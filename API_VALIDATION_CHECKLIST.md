@@ -150,17 +150,17 @@ Maintain tokens for: `USER`, `MODERATOR`, `ADMIN`, `SUPER_ADMIN`.
 
 ---
 
-## 9. Payments (Flutterwave)
+## 9. Payments (store billing)
 
 | ID | Method | Endpoint | Auth | Expected | Severity | Pass |
 |----|--------|----------|------|----------|----------|------|
-| API-PAY-01 | POST | `/payments/checkout/subscription` | USER | `201`, checkout URL + reference | Critical | ☐ |
-| API-PAY-02 | POST | `/payments/checkout/ebook` | USER | `201`, checkout URL | Critical | ☐ |
-| API-PAY-03 | GET | `/payments/status?providerReference=` | USER | `200`, status | Critical | ☐ |
+| API-PAY-01 | POST | `/payments/checkout/subscription` | USER | `410 CARD_CHECKOUT_DISABLED` | Critical | ☐ |
+| API-PAY-02 | POST | `/payments/checkout/ebook` | USER | `410 CARD_CHECKOUT_DISABLED` | Critical | ☐ |
+| API-PAY-03 | GET | `/payments/status?providerReference=` | USER | `200`, historical status | Critical | ☐ |
 | API-PAY-04 | GET | `/payments/history` | USER | `200`, transactions | High | ☐ |
-| API-PAY-05 | POST | `/payments/webhooks/flutterwave` | `verif-hash` header | `200`, idempotent processing | Critical | ☐ |
-| API-PAY-06 | POST | `/payments/webhooks/flutterwave` | Invalid hash | `401/403` | Critical | ☐ |
-| API-PAY-07 | GET | `/payments/webhook-events` | ADMIN | `200`, audit log | High | ☐ |
+| API-PAY-05 | POST | `/payments/webhooks/:provider` | none | `410 CARD_CHECKOUT_DISABLED` | Critical | ☐ |
+| API-PAY-06 | GET | `/payments/complete` | none | `410 CARD_CHECKOUT_DISABLED` | High | ☐ |
+| API-PAY-07 | GET | `/payments/webhook-events` | ADMIN | `200`, historical audit log | High | ☐ |
 
 See `PAYMENT_VALIDATION_CHECKLIST.md` for full payment E2E.
 

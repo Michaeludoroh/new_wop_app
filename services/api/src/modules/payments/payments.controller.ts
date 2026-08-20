@@ -1,5 +1,5 @@
-import { Controller, Get, Headers, Param, Post, Body, Query, Req, Res, UseGuards } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Controller, Get, Headers, Param, Post, Body, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -7,7 +7,6 @@ import { InitiateEbookCheckoutDto } from './dto/initiate-ebook-checkout.dto';
 import { InitiateSubscriptionCheckoutDto } from './dto/initiate-subscription-checkout.dto';
 import { PaymentHistoryQueryDto } from './dto/payment-history-query.dto';
 import { PaymentStatusQueryDto } from './dto/payment-status-query.dto';
-import { PaymentWebhookDto } from './dto/payment-webhook.dto';
 import { PaymentsService } from './payments.service';
 
 type AuthRequest = Request & {
@@ -71,17 +70,7 @@ export class PaymentsController {
   }
 
   @Get('complete')
-  async complete(
-    @Query('tx_ref') txRef: string,
-    @Query('format') format: string | undefined,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const result = await this.service.completeCheckout(txRef ?? '');
-    if (format === 'json') {
-      return result;
-    }
-
-    res.type('html');
-    return this.service.buildCompletionHtml(result);
+  complete(@Query('tx_ref') txRef: string) {
+    return this.service.completeCheckout(txRef ?? '');
   }
 }

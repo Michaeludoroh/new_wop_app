@@ -1,22 +1,11 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { EmailModule } from '../email/email.module';
-import { FlutterwaveHealthController } from './flutterwave-health.controller';
-import { FlutterwaveReadinessService } from './flutterwave-readiness.service';
-import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { Module } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
-import { FlutterwaveProviderAdapter } from './providers/flutterwave.provider';
 import { PaymentProviderRegistry } from './providers/payment-provider.registry';
 
 @Module({
-  imports: [forwardRef(() => SubscriptionsModule), EmailModule],
-  controllers: [PaymentsController, FlutterwaveHealthController],
-  providers: [
-    PaymentsService,
-    PaymentProviderRegistry,
-    FlutterwaveProviderAdapter,
-    FlutterwaveReadinessService,
-  ],
-  exports: [PaymentsService, PaymentProviderRegistry, FlutterwaveReadinessService],
+  controllers: [PaymentsController],
+  providers: [PaymentsService, PaymentProviderRegistry],
+  exports: [PaymentsService, PaymentProviderRegistry],
 })
 export class PaymentsModule {}

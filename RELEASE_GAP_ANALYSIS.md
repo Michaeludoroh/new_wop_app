@@ -55,18 +55,16 @@ Legend: ✅ Implemented · ⚠️ Partial · ❌ Missing · 🔧 Config-only · 
 
 ---
 
-## 4. Flutterwave payment flow
+## 4. Store billing payment flow
 
 | Checklist ref | Requirement | Observed state | Gap | Severity |
 |---------------|-------------|----------------|-----|----------|
-| RB-PAY-01 | Credentials configured | ❌ Empty in env templates | 🔧 Deployment | **Critical** |
-| PAY-SUB-01–03 | Checkout + status + entitlement | ⚠️ Code complete; unit tested | Plan codes + env + redirect | **Critical** |
-| PAY-WH-01–03 | Webhook verify + idempotency | ⚠️ Event-ID dedup only | No tx SUCCESS guard | High |
-| PAY-WH-05 | Poll before webhook | ❌ No Flutterwave verify API | Stuck PENDING risk | High |
-| — | `/payments/complete` redirect | ❌ URL generated, no route | Post-pay 404 | **Critical** |
-| PAY-EBK-01–04 | eBook checkout | ⚠️ Same as subscription | Env + currency hardcoded USD | High |
+| RB-PAY-01 | Store credentials configured | Apple IAP + Google Play | Live secrets at deploy | **Critical** |
+| PAY-SUB-01–03 | Native subscribe + entitlement | Code complete | Device sandbox E2E | **Critical** |
+| PAY-WH-01 | Legacy card webhooks | Disabled with `410` | None | — |
+| PAY-EBK | Card eBook checkout | Disabled with `410` | None | — |
 
-**Files:** `payments.service.ts` (`checkoutRedirectUrl`), `flutterwave.provider.ts`, `subscription_service.dart` (`_planCode` → `PREMIUM`), `seed.ts` (`BASIC_MONTHLY`).
+**Files:** `mobile-subscriptions`, `subscription_service.dart`, product ID `wopp_premium_monthly`.
 
 ---
 
@@ -87,11 +85,11 @@ Legend: ✅ Implemented · ⚠️ Partial · ❌ Missing · 🔧 Config-only · 
 
 | Source | Issue | Severity |
 |--------|-------|----------|
-| `.env.staging.example` vs `.env.production.example` | FCM, Flutterwave, SMTP empty in both | **Critical** (expected — must set at deploy) |
+| `.env.staging.example` vs `.env.production.example` | FCM, SMTP, store billing secrets empty in both | **Critical** (expected — must set at deploy) |
 | `apps/mobile-flutter/.env.example` | Port 4000 documented | Medium |
 | `auth_service.dart` default | Port **3000** on `10.0.2.2` | Medium — doc/code drift |
 | `CONTENT_ACCESS_SECRET` | Dev fallback to JWT secret in code | High if unset in prod |
-| `PAYMENT_REDIRECT_BASE_URL` | Points to API path; `/payments/complete` missing | **Critical** |
+| `API_PUBLIC_URL` | Public API origin for stream URLs | High |
 | Docker prod compose | Overrides `DATABASE_URL`, `REDIS_URL` internally | ✅ Consistent |
 | Admin `NEXT_PUBLIC_*` | Build-time embed | Must match deployed API/WS URLs | High |
 
@@ -198,7 +196,7 @@ Legend: ✅ Implemented · ⚠️ Partial · ❌ Missing · 🔧 Config-only · 
 | API_VALIDATION | 80+ | Partial (automated unit) | 140 tests | Plan code E2E | Staging creds |
 | ADMIN_SMOKE | 60+ | 0 | — | — | — |
 | MOBILE_SMOKE | 50+ | 0 | — | — | — |
-| PAYMENT_VALIDATION | 30+ | 0 | — | — | Flutterwave env |
+| PAYMENT_VALIDATION | 30+ | 0 | — | — | Store billing E2E |
 
 **Primary gap:** Validation **framework exists** but **manual/staging execution has not been completed**.
 

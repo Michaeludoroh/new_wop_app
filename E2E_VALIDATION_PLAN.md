@@ -23,7 +23,7 @@ This document defines the **master end-to-end (E2E) validation framework** for s
 | Data | PostgreSQL + Prisma |
 | Cache | Redis |
 | Notifications | Firebase FCM + in-app notifications |
-| Payments | Flutterwave (subscription + ebook checkout) |
+| Payments | Apple IAP (iOS) and Google Play Billing (Android) |
 
 ### Implemented modules (validation required)
 
@@ -43,7 +43,7 @@ Authentication · Users · Announcements · Events · Clips · eBooks/Library ·
 | `MOBILE_SMOKE_TEST_CHECKLIST.md` | Device-level mobile validation |
 | `ADMIN_SMOKE_TEST_CHECKLIST.md` | Admin dashboard validation |
 | `API_VALIDATION_CHECKLIST.md` | REST API contract & RBAC validation |
-| `PAYMENT_VALIDATION_CHECKLIST.md` | Flutterwave checkout, webhooks, entitlements |
+| `PAYMENT_VALIDATION_CHECKLIST.md` | Apple IAP / Google Play subscribe, entitlements |
 | `RELEASE_BLOCKERS_CHECKLIST.md` | Hard gates that block release |
 | `RELEASE_READINESS_SCORECARD.md` | Weighted scoring for go/no-go |
 | `BROADCAST_PUSH_VERIFICATION_CHECKLIST.md` | Admin broadcast → FCM deep-dive |
@@ -111,7 +111,7 @@ Maintain a **Staging Test Data Sheet** (spreadsheet or secure doc) with:
 | Published clip | 2 | 1 featured; valid video URL |
 | Published ebook | 2 | 1 free, 1 paid |
 | Subscription plans | 2 | 1 active monthly, 1 inactive (for negative test) |
-| Flutterwave test cards | Per Flutterwave sandbox docs | Success + decline scenarios |
+| Store sandbox testers | App Store sandbox + Play license testers | Success + cancel scenarios |
 | FCM-registered devices | 2 | 1 Android + 1 iOS (iOS deferred if APNs not ready) |
 | Policy documents | 4 | Terms, Privacy, Community, Content Sharing |
 
@@ -127,8 +127,8 @@ Reference: `.env.staging.example`
 | `REDIS_URL` | Sessions, rate limit, WS adapter |
 | `SMTP_*` | Password reset email |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` or `FCM_*` | Push delivery |
-| `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_SECRET` | Payments |
-| `PAYMENT_REDIRECT_BASE_URL`, `API_PUBLIC_URL` | Checkout redirect |
+| `APPLE_SHARED_SECRET`, `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` | Store billing |
+| `API_PUBLIC_URL` | Public API origin |
 | `CONTENT_ACCESS_SECRET` | eBook stream tokens |
 | `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_WEBSOCKET_URL` | Admin web |
 
@@ -249,7 +249,7 @@ flowchart LR
 | ID | Flow | Steps | Expected | Severity |
 |----|------|-------|----------|----------|
 | SUB-E2E-01 | View plans | Mobile subscriptions screen | Active plans with pricing | High |
-| SUB-E2E-02 | Purchase | Checkout via Flutterwave test | Subscription active; `GET /subscriptions/me` confirms | Critical |
+| SUB-E2E-02 | Purchase | Apple IAP or Google Play (`wopp_premium_monthly`) | Subscription active; `GET /subscriptions/me` confirms PREMIUM | Critical |
 | SUB-E2E-03 | Entitlement | Access premium-gated content | Content unlocked | Critical |
 | SUB-E2E-04 | Cancel | Cancel subscription | Status updated; access revoked at period end | High |
 | SUB-E2E-05 | Expiration | Simulate/lapse subscription | Gated content blocked | High |

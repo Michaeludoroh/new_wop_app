@@ -1,10 +1,7 @@
 import { PaymentProvider, PaymentStatus, Prisma, SubscriptionStatus, TransactionType } from '@prisma/client';
 import { SubscriptionLifecycleService } from './subscription-lifecycle.service';
 
-function createLifecycleService(overrides?: {
-  retryCandidates?: Record<string, unknown>[];
-  chargeResult?: Record<string, unknown>;
-}) {
+function createLifecycleService(overrides?: { retryCandidates?: Record<string, unknown>[] }) {
   const prismaMock: any = {
     userSubscription: {
       findMany: jest.fn(async (args: { where?: { nextRetryAt?: unknown } }) => {
@@ -24,29 +21,12 @@ function createLifecycleService(overrides?: {
   };
   prismaMock.$transaction = jest.fn(async (callback: any) => callback(prismaMock));
 
-  const paymentProviderRegistry = {
-    resolve: jest.fn().mockReturnValue({
-      chargeTokenizedPayment: jest.fn().mockResolvedValue(
-        overrides?.chargeResult ?? {
-          mappedStatus: PaymentStatus.SUCCESS,
-          providerReference: 'wop_retry_test',
-          normalizedPayload: { status: PaymentStatus.SUCCESS },
-          failureMessage: null,
-        },
-      ),
-    }),
-  };
-
   const trialNotificationService = {
     processTrialReminders: jest.fn().mockResolvedValue({ sent: 0 }),
   };
 
-  const service = new SubscriptionLifecycleService(
-    prismaMock as never,
-    paymentProviderRegistry as never,
-    trialNotificationService as never,
-  );
-  return { service, prisma: prismaMock, paymentProviderRegistry };
+  const service = new SubscriptionLifecycleService(prismaMock as never, trialNotificationService as never);
+  return { service, prisma: prismaMock };
 }
 
 describe('SubscriptionLifecycleService', () => {
@@ -105,7 +85,6 @@ describe('SubscriptionLifecycleService', () => {
 
     const service = new SubscriptionLifecycleService(
       prismaMock as never,
-      { resolve: jest.fn() } as never,
       trialNotificationService as never,
     );
 
@@ -134,7 +113,7 @@ describe('SubscriptionLifecycleService', () => {
     );
   });
 
-  it('charges Flutterwave tokenized renewal with plan amount instead of placeholder zero', async () => {
+  it('does not charge leftover card tokens and records a failed manual retry', async () => {
     const retrySubscription = {
       id: 'sub_retry_1',
       userId: 'user_1',
@@ -151,32 +130,54 @@ describe('SubscriptionLifecycleService', () => {
         billingInterval: 'MONTHLY',
       },
       user: { id: 'user_1', email: 'user@example.com' },
+      storeSubscription: null,
     };
 
-    const { service, prisma, paymentProviderRegistry } = createLifecycleService({
+    const { service, prisma } = createLifecycleService({
       retryCandidates: [retrySubscription],
     });
 
     const result = await service.processDueLifecycleEvents();
-    const adapter = paymentProviderRegistry.resolve.mock.results[0]?.value;
 
     expect(result.processed).toBe(1);
-    expect(adapter.chargeTokenizedPayment).toHaveBeenCalledWith(
-      expect.objectContaining({
-        amount: '9.99',
-        currency: 'USD',
-        email: 'user@example.com',
-        token: 'flw-token-123',
-      }),
-    );
     expect(prisma.paymentTransaction.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
           amount: new Prisma.Decimal('9.99'),
           transactionType: TransactionType.RETRY_CHARGE,
-          status: PaymentStatus.SUCCESS,
+          status: PaymentStatus.FAILED,
+          provider: PaymentProvider.MANUAL,
+          failureMessage: expect.stringContaining('Apple In-App Purchase'),
         }),
       }),
     );
+  });
+
+  it('skips store-managed Apple and Google Play subscriptions during card retry', async () => {
+    const storeManaged = {
+      id: 'sub_store_1',
+      userId: 'user_1',
+      status: SubscriptionStatus.GRACE,
+      retryCount: 0,
+      maxRetryCount: 3,
+      storeSubscription: { id: 'store_sub_1' },
+      plan: {
+        id: 'plan_1',
+        code: 'PREMIUM',
+        amount: new Prisma.Decimal('9.99'),
+        currency: 'USD',
+        billingInterval: 'MONTHLY',
+      },
+      user: { id: 'user_1', email: 'user@example.com' },
+    };
+
+    const { service, prisma } = createLifecycleService({
+      retryCandidates: [storeManaged],
+    });
+
+    const result = await service.processDueLifecycleEvents();
+
+    expect(result.processed).toBe(1);
+    expect(prisma.paymentTransaction.create).not.toHaveBeenCalled();
   });
 });

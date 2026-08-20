@@ -1,8 +1,7 @@
-import { INestApplication, ValidationPipe, Type } from '@nestjs/common';
+import { GoneException, INestApplication, ValidationPipe, Type } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
-import { PaymentProvider } from '@prisma/client';
 const request = require('supertest');
 import { AuthController } from '../modules/auth/auth.controller';
 import { AuthService } from '../modules/auth/auth.service';
@@ -112,13 +111,21 @@ describe('Beta launch smoke integration', () => {
     });
   });
 
-  describe('Subscription purchase checkout', () => {
+  describe('Disabled card checkout', () => {
     let app: INestApplication;
+    const disabled = () => {
+      throw new GoneException({
+        code: 'CARD_CHECKOUT_DISABLED',
+        message:
+          'Card checkout is no longer available. Subscribe with Apple In-App Purchase on iOS or Google Play Billing on Android.',
+      });
+    };
     const paymentsService = {
-      initiateSubscriptionCheckout: jest.fn(async () => ({
-        checkoutUrl: 'https://checkout.flutterwave.com/v3/hosted/pay/sub',
-        providerReference: 'wop_sub_smoke_1',
-      })),
+      initiateSubscriptionCheckout: jest.fn(async () => disabled()),
+      initiateEbookCheckout: jest.fn(async () => disabled()),
+      createWebhookDto: jest.fn(() => disabled()),
+      processWebhook: jest.fn(async () => disabled()),
+      completeCheckout: jest.fn(async () => disabled()),
     };
 
     beforeAll(async () => {
@@ -129,84 +136,26 @@ describe('Beta launch smoke integration', () => {
       await app.close();
     });
 
-    it('initiates subscription checkout', async () => {
-      const response = await request(app.getHttpServer())
+    it('rejects subscription card checkout with 410', async () => {
+      await request(app.getHttpServer())
         .post('/api/v1/payments/checkout/subscription')
-        .send({ planCode: 'PREMIUM_MONTHLY' })
-        .expect(201);
-
-      expect(response.body.checkoutUrl).toContain('flutterwave');
-      expect(response.body.providerReference).toBe('wop_sub_smoke_1');
-    });
-  });
-
-  describe('eBook purchase checkout', () => {
-    let app: INestApplication;
-    const paymentsService = {
-      initiateEbookCheckout: jest.fn(async () => ({
-        checkoutUrl: 'https://checkout.flutterwave.com/v3/hosted/pay/ebook',
-        providerReference: 'wop_ebook_smoke_1',
-      })),
-    };
-
-    beforeAll(async () => {
-      app = await createApp(PaymentsController, PaymentsService, paymentsService);
+        .send({ planCode: 'PREMIUM' })
+        .expect(410);
     });
 
-    afterAll(async () => {
-      await app.close();
-    });
-
-    it('initiates eBook checkout', async () => {
-      const response = await request(app.getHttpServer())
+    it('rejects eBook card checkout with 410', async () => {
+      await request(app.getHttpServer())
         .post('/api/v1/payments/checkout/ebook')
         .send({ ebookId: 'ebook-smoke-1' })
-        .expect(201);
-
-      expect(response.body.providerReference).toBe('wop_ebook_smoke_1');
-    });
-  });
-
-  describe('Flutterwave webhook processing', () => {
-    let app: INestApplication;
-    const paymentsService = {
-      createWebhookDto: jest.fn((_provider, signature, payload) => ({
-        provider: PaymentProvider.FLUTTERWAVE,
-        eventId: 'evt_smoke_1',
-        eventType: 'charge.completed',
-        signature,
-        providerReference: 'wop_sub_smoke_1',
-        payload,
-      })),
-      processWebhook: jest.fn(async () => ({
-        processed: true,
-        status: 'SUCCESS',
-        subscriptionActivated: true,
-      })),
-    };
-
-    beforeAll(async () => {
-      app = await createApp(PaymentsController, PaymentsService, paymentsService);
+        .expect(410);
     });
 
-    afterAll(async () => {
-      await app.close();
-    });
-
-    it('accepts Flutterwave webhook at POST /payments/webhooks/flutterwave', async () => {
-      const payload = {
-        event: 'charge.completed',
-        data: { id: 1, tx_ref: 'wop_sub_smoke_1', status: 'successful', amount: 25 },
-      };
-
-      const response = await request(app.getHttpServer())
+    it('rejects card provider webhooks with 410', async () => {
+      await request(app.getHttpServer())
         .post('/api/v1/payments/webhooks/flutterwave')
         .set('verif-hash', 'staging-webhook-secret')
-        .send(payload)
-        .expect(201);
-
-      expect(response.body.processed).toBe(true);
-      expect(paymentsService.processWebhook).toHaveBeenCalled();
+        .send({ event: 'charge.completed', data: { tx_ref: 'wop_sub_smoke_1' } })
+        .expect(410);
     });
   });
 

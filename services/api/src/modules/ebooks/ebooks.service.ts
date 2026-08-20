@@ -636,7 +636,7 @@ export class EbooksService {
 
         code: 'CHECKOUT_REQUIRED',
 
-        message: 'eBook purchases must be completed through verified Flutterwave checkout',
+        message: 'Paid eBook card checkout is no longer available',
 
       });
 

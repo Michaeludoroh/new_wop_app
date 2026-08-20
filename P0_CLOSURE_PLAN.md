@@ -1,6 +1,6 @@
 # P0 Closure Plan — Beta Launch
 
-**Date:** June 11, 2026  
+**Note (2026-08-19):** Flutterwave is no longer used. Paid subscriptions use Apple IAP and Google Play Billing. Ignore Flutterwave credential tasks in this dated plan.
 **Source reports:** [PRE_BETA_COMPLETION_REPORT.md](PRE_BETA_COMPLETION_REPORT.md), [BETA_GO_NO_GO_REPORT.md](BETA_GO_NO_GO_REPORT.md)  
 **Setup reference:** [docs/pre-beta/EXTERNAL_SETUP.md](docs/pre-beta/EXTERNAL_SETUP.md)  
 **Phase A runbook (copy-paste):** [docs/pre-beta/PHASE_A_RUNBOOK.md](docs/pre-beta/PHASE_A_RUNBOOK.md)

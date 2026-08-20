@@ -146,7 +146,6 @@ validateUrl('REDIS_URL', process.env.REDIS_URL);
 validateUrl('NEXT_PUBLIC_API_BASE_URL', process.env.NEXT_PUBLIC_API_BASE_URL);
 validateUrl('NEXT_PUBLIC_WEBSOCKET_URL', process.env.NEXT_PUBLIC_WEBSOCKET_URL);
 validateUrl('API_BASE_URL', process.env.API_BASE_URL);
-validateUrl('PAYMENT_REDIRECT_BASE_URL', process.env.PAYMENT_REDIRECT_BASE_URL);
 validateDuration('JWT_ACCESS_EXPIRES_IN', process.env.JWT_ACCESS_EXPIRES_IN);
 validateDuration('JWT_REFRESH_EXPIRES_IN', process.env.JWT_REFRESH_EXPIRES_IN);
 

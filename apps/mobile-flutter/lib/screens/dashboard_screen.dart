@@ -4,9 +4,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../core/auth/auth_scope.dart';
+import '../core/homepage/homepage_feed_sources.dart';
 import '../core/notifications/push_notification_router.dart';
 import '../core/notifications/providers/notifications_provider.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/homepage/homepage_feed.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import 'notifications_screen.dart';
 import 'ebook_screen.dart';
@@ -23,10 +25,12 @@ class DashboardScreen extends StatefulWidget {
     super.key,
     required this.authStatusLabel,
     this.authError,
+    this.homepageSources,
   });
 
   final String authStatusLabel;
   final String? authError;
+  final HomepageFeedSources? homepageSources;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -41,9 +45,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   static const List<_DashboardTabItem> _tabs = [
     _DashboardTabItem(
-      label: 'Dashboard',
-      icon: Icons.dashboard_outlined,
-      selectedIcon: Icons.dashboard,
+      label: 'Home',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
     ),
     _DashboardTabItem(
       label: 'Events',
@@ -156,12 +160,25 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     switch (_selectedIndex) {
       case 0:
-        return _TabScaffold(
-          title: 'Welcome, $userDisplayName',
-          subtitle:
-              'You are on the $selectedLabel tab. Auth status: ${widget.authStatusLabel}',
-          authError: widget.authError,
-          icon: Icons.dashboard_customize_outlined,
+        return Column(
+          children: [
+            if (widget.authError != null && widget.authError!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Text(
+                  'Auth error: ${widget.authError}',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+              ),
+            Expanded(
+              child: HomepageFeed(
+                sources: widget.homepageSources,
+                memberName: userDisplayName,
+              ),
+            ),
+          ],
         );
       case 1:
         return _TabScaffold(

@@ -3,7 +3,7 @@
 **Date:** 2026-06-17  
 **Target:** Beta on staging → Production readiness  
 **Companion:** `RELEASE_AUDIT_REPORT.md`, `RELEASE_GAP_ANALYSIS.md`  
-**Principle:** Fix code/config blockers first; execute checklists second; no new features.
+**Note (2026-08-19):** Flutterwave card checkout has been removed. Ignore Flutterwave-specific actions below; paid subscriptions use Apple IAP and Google Play Billing.
 
 ---
 

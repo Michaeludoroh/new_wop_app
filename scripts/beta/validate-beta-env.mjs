@@ -84,22 +84,22 @@ const checks = [
     },
   },
   {
-    id: 'flutterwave',
-    label: 'Flutterwave configuration',
-    required: ['FLUTTERWAVE_SECRET_KEY', 'FLUTTERWAVE_WEBHOOK_SECRET', 'PAYMENT_REDIRECT_BASE_URL'],
+    id: 'store-billing',
+    label: 'Store billing configuration',
+    required: ['MOBILE_IOS_PREMIUM_PRODUCT_ID', 'MOBILE_ANDROID_PREMIUM_PRODUCT_ID'],
     validate(values) {
-      const missing = ['FLUTTERWAVE_SECRET_KEY', 'FLUTTERWAVE_WEBHOOK_SECRET', 'PAYMENT_REDIRECT_BASE_URL'].filter(
+      const missing = ['MOBILE_IOS_PREMIUM_PRODUCT_ID', 'MOBILE_ANDROID_PREMIUM_PRODUCT_ID'].filter(
         (key) => !values[key],
       );
       if (missing.length > 0) {
         return {
           status: 'FAIL',
-          detail: `Missing Flutterwave env vars: ${missing.join(', ')}`,
+          detail: `Missing store billing env vars: ${missing.join(', ')}`,
         };
       }
       return {
         status: 'PASS',
-        detail: 'Flutterwave secret, webhook secret, and redirect base URL are configured.',
+        detail: `Apple/Google product IDs configured (${values.MOBILE_IOS_PREMIUM_PRODUCT_ID} / ${values.MOBILE_ANDROID_PREMIUM_PRODUCT_ID}).`,
       };
     },
   },

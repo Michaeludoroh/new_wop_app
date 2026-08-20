@@ -39,40 +39,30 @@ curl -X POST https://staging-api.example.com/api/v1/auth/register \
 
 ---
 
-## 2. Flutterwave
+## 2. Apple IAP and Google Play Billing
 
 **Type:** External credential + configuration change + manual validation
 
+WOPP does not use card checkout. Paid subscriptions use Apple In-App Purchases on iOS and Google Play Billing on Android. Canonical plan code: `PREMIUM`. Product ID: `wopp_premium_monthly`.
+
 ### Steps
 
-1. Log into [Flutterwave Dashboard](https://dashboard.flutterwave.com) → **Settings → API Keys**.
-2. Copy **Secret Key** (use test/sandbox key for staging).
-3. Go to **Settings → Webhooks** → set secret hash for webhook verification.
-4. Add to `services/api/.env`:
+1. Add to `services/api/.env`:
 
 ```env
-FLUTTERWAVE_SECRET_KEY=FLWSECK_TEST-xxxxxxxx
-FLUTTERWAVE_WEBHOOK_SECRET=your-webhook-secret-hash
-PAYMENT_REDIRECT_BASE_URL=https://staging-api.example.com/api/v1
+APPLE_SHARED_SECRET=your-app-store-shared-secret
+APPLE_USE_SANDBOX=true
+MOBILE_IOS_PREMIUM_PRODUCT_ID=wopp_premium_monthly
+GOOGLE_PLAY_PACKAGE_NAME=com.ministrymobile.app
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=
+MOBILE_ANDROID_PREMIUM_PRODUCT_ID=wopp_premium_monthly
 ```
 
-5. Register webhook URL in Flutterwave dashboard:
+2. Configure App Store Connect with product ID `wopp_premium_monthly` and enable receipt verification.
+3. Configure Google Play Console with the same product ID and a service account for purchase verification.
+4. Complete one sandbox/test purchase on iOS and Android; confirm `PREMIUM` entitlement.
 
-```
-https://staging-api.example.com/api/v1/payments/webhooks/flutterwave
-```
-
-6. Enable events: `charge.completed` (or equivalent successful payment event).
-
-7. Verify:
-
-```bash
-cd services/api && npm test -- --testPathPatterns=beta-smoke
-```
-
-8. Complete one test checkout in browser; confirm webhook updates subscription or eBook purchase.
-
-9. Re-run: `node scripts/beta/validate-beta-env.mjs` — Flutterwave must show **PASS**.
+5. Re-run: `node scripts/beta/validate-beta-env.mjs` — store billing must show **PASS**.
 
 ---
 

@@ -101,7 +101,7 @@
 - `.gitignore` excludes `.env`, service account files
 - Pino redacts `Authorization` and `Cookie` headers
 - Metrics endpoint token-gated in production
-- Flutterwave webhook signature validation (unit tested)
+- Apple receipt and Google Play purchase verification
 
 ### Findings
 
@@ -180,22 +180,21 @@
 
 ---
 
-## 10. Flutterwave / payment security
+## 10. Store billing / payment security
 
 ### Controls in place
 
-- Webhook HMAC validation (`FLUTTERWAVE_WEBHOOK_SECRET`)
-- Amount/currency verification on reconcile
-- Idempotent payment reconciliation
-- Provider reference stored for audit trail
+- Apple receipt verification for iOS In-App Purchases
+- Google Play purchase token verification for Android
+- Card checkout and legacy Flutterwave webhooks return `410 Gone`
+- Historical `PaymentTransaction` rows retained for audit
 
 ### Findings
 
 | ID | Finding | Severity | Remediation |
 |----|---------|----------|-------------|
-| PAY-01 | Live keys not configured — payments non-functional | **High** | Configure before accepting real payments |
-| PAY-02 | Webhook endpoint must be HTTPS-only publicly | Medium | Enforce at LB |
-| PAY-03 | `PAYMENT_REDIRECT_BASE_URL` must not point to admin origin | Medium | Validate in deploy checklist |
+| PAY-01 | Store credentials must be live before accepting paid traffic | **High** | Configure Apple shared secret and Google Play service account |
+| PAY-02 | Mobile subscribe endpoints must be HTTPS-only publicly | Medium | Enforce at LB |
 
 ---
 
@@ -282,7 +281,7 @@
 | BLK: CI deploy placeholder | **No** (if using CI deploy) | Manual deploy OK with sign-off |
 | HIGH: MOCK_SMTP | Yes | If email not required day-1 |
 | HIGH: FCM unconfigured | Yes | If push not required day-1 |
-| HIGH: Flutterwave unconfigured | Yes | If payments not required day-1 |
+| HIGH: Store billing unconfigured | Yes | If paid subscriptions not required day-1 |
 | HIGH: Admin localStorage tokens | Yes | With XSS prevention awareness |
 | HIGH: No backups | **No** | Risk acceptance not recommended |
 

@@ -11,7 +11,7 @@ Cross-platform product stack:
 - **Backend API**: NestJS + Prisma + PostgreSQL
 - **Queue/Cache**: Redis
 - **Auth/Push**: Firebase Auth + FCM (integration-ready)
-- **Payments**: Native mobile IAP + Flutterwave website checkout
+- **Payments**: Apple In-App Purchases (iOS) and Google Play Billing (Android)
 
 ## Repository Structure
 

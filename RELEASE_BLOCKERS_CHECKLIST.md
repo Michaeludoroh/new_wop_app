@@ -53,12 +53,10 @@ Any **Critical** blocker = **NO-GO** until resolved or formally accepted in writ
 
 | ID | Gate | Validation | Expected | Pass | Owner |
 |----|------|------------|----------|------|-------|
-| RB-PAY-01 | Flutterwave credentials configured | Env check | Keys present (prod keys in prod only) | ☐ | Backend |
-| RB-PAY-02 | Subscription checkout E2E | Sandbox purchase | Entitlement active | ☐ | QA |
-| RB-PAY-03 | eBook checkout E2E | Sandbox purchase | Access granted | ☐ | QA |
-| RB-PAY-04 | Webhook signature verification | Invalid hash test | Rejected | ☐ | Backend |
-| RB-PAY-05 | Webhook idempotency | Duplicate delivery | Single entitlement | ☐ | Backend |
-| RB-PAY-06 | No double-charge on retry | Replay checkout success | One payment row | ☐ | Backend |
+| RB-PAY-01 | Apple/Google store credentials configured | Env check | `APPLE_SHARED_SECRET` / Play service account present | ☐ | Backend |
+| RB-PAY-02 | Subscription purchase E2E | Sandbox IAP / Play test | PREMIUM entitlement active | ☐ | QA |
+| RB-PAY-03 | Card checkout disabled | `POST /payments/checkout/subscription` | `410 CARD_CHECKOUT_DISABLED` | ☐ | Backend |
+| RB-PAY-04 | Legacy Flutterwave webhook rejected | `POST /payments/webhooks/flutterwave` | `410`; no state change | ☐ | Backend |
 
 **Evidence:** `PAYMENT_VALIDATION_CHECKLIST.md` sign-off.
 

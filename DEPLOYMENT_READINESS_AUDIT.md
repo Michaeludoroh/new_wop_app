@@ -16,7 +16,7 @@
 | Prisma schema consistency | Validation script + migrate status OK | Pass |
 | Firebase / FCM | Code ready; credentials not in prod env | High |
 | SMTP | Code ready; falls back to MOCK_SMTP | High |
-| Flutterwave | Code ready; credentials not validated live | High |
+| Store billing | Apple IAP + Google Play; Flutterwave removed | High |
 | Admin-web production build | **PASS** (`next build`) | Pass |
 | Mobile production config | Staging script only; dart-define required | Medium |
 | Security headers (API) | Helmet enabled in prod-like mode | Pass |
@@ -66,7 +66,7 @@
 | ENV-01 | `.env.production.example` missing `CONTENT_ACCESS_SECRET`, `API_PUBLIC_URL` (present in staging template) — eBook streaming breaks in prod if omitted | **High** |
 | ENV-02 | Template uses `THROTTLE_TTL` / `THROTTLE_LIMIT` but API reads `RATE_LIMIT_TTL_MS` / `RATE_LIMIT_LIMIT` — rate limit tuning silently ignored | Medium |
 | ENV-03 | No `SENTRY_DSN` in production template; error tracking optional but undocumented | Low |
-| ENV-04 | Production integration secrets (Firebase, SMTP, Flutterwave) are empty placeholders — must be set in secret store before cutover | **High** |
+| ENV-04 | Production integration secrets (Firebase, SMTP, Apple/Google store billing) are empty placeholders — must be set in secret store before cutover | **High** |
 | ENV-05 | `docker-compose.prod.yml` expects `.env.production` file at repo root — not committed (correct) but must be created pre-deploy | Medium |
 
 ---
@@ -159,17 +159,16 @@
 
 ---
 
-## 8. Flutterwave configuration
+## 8. Store billing configuration
 
-- Primary payment provider; checkout, redirect, verify, webhooks implemented
-- Health: `GET /api/v1/health/flutterwave`
-- Required: `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_WEBHOOK_SECRET`, `PAYMENT_REDIRECT_BASE_URL`
+- Live subscription billing is Apple In-App Purchase (iOS) and Google Play Billing (Android)
+- Product ID: `wopp_premium_monthly`; plan code: `PREMIUM`
+- Card checkout and Flutterwave webhooks are disabled (`410 CARD_CHECKOUT_DISABLED`)
 
 | ID | Finding | Severity |
 |----|---------|----------|
-| PAY-01 | Production Flutterwave keys not configured or live-validated | **High** |
-| PAY-02 | Webhook URL must be registered in Flutterwave dashboard pointing to public API | Medium |
-| PAY-03 | `PAYMENT_REDIRECT_BASE_URL` must be public API base (not admin URL) | Medium |
+| PAY-01 | Apple/Google store credentials must be live-validated before taking paid traffic | **High** |
+| PAY-02 | Historical `PaymentTransaction` rows may still show provider `FLUTTERWAVE`; enum retained, no migration | Low |
 
 ---
 
@@ -261,7 +260,7 @@ app.enableCors({ origin: buildCorsOrigin(), credentials: true, ... });
 | Metrics | Prometheus at `/metrics` (token-gated in prod) |
 | Sentry | Optional via `SENTRY_DSN` |
 | Observability stack | `infrastructure/prometheus`, Grafana, Alertmanager configs present |
-| Health endpoints | `/api/v1/health`, `/health/email`, `/health/flutterwave`, realtime health |
+| Health endpoints | `/api/v1/health`, `/health/email`, realtime health |
 | Deploy verification | `scripts/deploy/verify-health.mjs` |
 
 | ID | Finding | Severity |
@@ -358,7 +357,6 @@ node scripts/deploy/run-migrations.mjs
 3. Verify:
    - `GET /api/v1/health` → 200
    - `GET /api/v1/health/email` → expected status
-   - `GET /api/v1/health/flutterwave` → expected status
    - `GET /metrics` with `METRICS_AUTH_TOKEN`
 
 ### Phase 4 — Admin dashboard
@@ -384,5 +382,5 @@ node scripts/deploy/run-migrations.mjs
 - `PRODUCTION_CHECKLIST.md` — operator checklist
 - `SECURITY_REVIEW.md` — deployment security review
 - `RELEASE_READINESS_REPORT.md` — defect posture (P0/P1/P2)
-- `FCM_SETUP_REPORT.md`, `SMTP_READINESS_REPORT.md`, `FLUTTERWAVE_READINESS_REPORT.md`
+- `FCM_SETUP_REPORT.md`, `SMTP_READINESS_REPORT.md`
 - `docs/disaster-recovery.md`

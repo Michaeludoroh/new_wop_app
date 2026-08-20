@@ -1,412 +1,90 @@
-import { BadRequestException } from '@nestjs/common';
-import { PaymentProvider, PaymentStatus, Prisma, SubscriptionStatus, TransactionType, WebhookProcessingStatus } from '@prisma/client';
+import { GoneException, NotFoundException } from '@nestjs/common';
+import { PaymentStatus } from '@prisma/client';
 import { PaymentsService } from './payments.service';
 
-const successfulWebhookDto = {
-  provider: PaymentProvider.FLUTTERWAVE,
-  eventId: 'evt_1',
-  eventType: 'charge.completed',
-  signature: 'valid-secret',
-  providerReference: 'wop_ref_1',
-  payload: {
-    event: 'charge.completed',
-    data: {
-      id: 1001,
-      tx_ref: 'wop_ref_1',
-      status: 'successful',
-      amount: 25,
-      currency: 'USD',
-    },
-  },
-};
-
-const emailService = {
-  send: jest.fn().mockResolvedValue({ provider: 'MOCK_SMTP', attempts: [] }),
-};
-
-const emailTemplateService = {
-  subscriptionConfirmationEmail: jest.fn().mockReturnValue({
-    subject: 'Subscription confirmed',
-    body: 'body',
-    html: '<p>body</p>',
-  }),
-};
-
 function createService(overrides?: {
-  transaction?: Record<string, unknown>;
-  existingWebhook?: Record<string, unknown> | null;
-  signatureValid?: boolean;
+  transactions?: Record<string, unknown>[];
+  transaction?: Record<string, unknown> | null;
+  webhookEvents?: Record<string, unknown>[];
 }) {
-  const transaction = {
-    id: 'tx_1',
-    userId: 'user_1',
-    userSubscriptionId: 'sub_1',
-    providerReference: 'wop_ref_1',
-    amount: new Prisma.Decimal(25),
-    currency: 'USD',
-    status: PaymentStatus.PENDING,
-    paidAt: null,
-    failedAt: null,
-    retryable: true,
-    retryCount: 0,
-    metadata: { purpose: 'SUBSCRIPTION', billingInterval: 'MONTHLY' },
-    ...overrides?.transaction,
-  };
-
-  const tx = {
-    paymentWebhookEvent: {
-      create: jest.fn().mockResolvedValue({ id: 'wh_1' }),
-      update: jest.fn().mockResolvedValue({ id: 'wh_1' }),
-    },
-    paymentTransaction: {
-      findUnique: jest.fn().mockResolvedValue(transaction),
-      update: jest.fn().mockResolvedValue({ ...transaction, status: PaymentStatus.SUCCESS }),
-    },
-    userSubscription: {
-      findUnique: jest.fn().mockResolvedValue({
-        id: 'sub_1',
-        userId: 'user_1',
-        status: SubscriptionStatus.PENDING,
-        maxRetryCount: 3,
-      }),
-      update: jest.fn().mockResolvedValue({ id: 'sub_1', status: SubscriptionStatus.ACTIVE }),
-    },
-    ebook: {
-      findUnique: jest.fn().mockResolvedValue({ id: 'ebook_1' }),
-    },
-    ebookPurchase: {
-      upsert: jest.fn().mockResolvedValue({ id: 'purchase_1' }),
-    },
-  };
-
   const prisma = {
-    paymentWebhookEvent: {
-      findUnique: jest.fn().mockResolvedValue(overrides?.existingWebhook ?? null),
-      update: jest.fn().mockResolvedValue({ id: 'wh_existing' }),
+    paymentTransaction: {
+      findMany: jest.fn().mockResolvedValue(overrides?.transactions ?? []),
+      findUnique: jest.fn().mockResolvedValue(overrides?.transaction ?? null),
     },
-    $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    paymentWebhookEvent: {
+      findMany: jest.fn().mockResolvedValue(overrides?.webhookEvents ?? []),
+    },
   };
 
-  const adapter = {
-    verifySignature: jest.fn().mockResolvedValue({
-      isValid: overrides?.signatureValid ?? true,
-      reason: overrides?.signatureValid === false ? 'Invalid Flutterwave webhook signature' : undefined,
-    }),
-    normalizeEvent: jest.fn().mockResolvedValue({
-      provider: PaymentProvider.FLUTTERWAVE,
-      externalEventId: 'evt_1',
-      eventType: 'charge.completed',
-      providerReference: 'wop_ref_1',
-      mappedStatus: PaymentStatus.SUCCESS,
-      retryable: false,
-      rawPayload: successfulWebhookDto.payload,
-      normalizedPayload: {
-        amount: 25,
-        currency: 'USD',
-        txRef: 'wop_ref_1',
-      },
-    }),
-  };
-
-  const lifecycleService = {
-    recordStatusChange: jest.fn().mockResolvedValue(undefined),
-    buildGraceEndsAt: jest.fn().mockReturnValue(new Date()),
-  };
-
-  const service = new PaymentsService(
-    prisma as never,
-    { resolve: jest.fn().mockReturnValue(adapter) } as never,
-    { recordPaymentFailure: jest.fn() } as never,
-    { get: jest.fn() } as never,
-    lifecycleService as never,
-    emailService as never,
-    emailTemplateService as never,
-  );
-
-  return { service, prisma, tx, adapter, lifecycleService };
+  const service = new PaymentsService(prisma as never);
+  return { service, prisma };
 }
 
-describe('PaymentsService Flutterwave webhooks', () => {
-  it('rejects invalid Flutterwave signatures before processing', async () => {
-    const { service, prisma } = createService({ signatureValid: false });
+describe('PaymentsService card checkout removal', () => {
+  it('rejects subscription checkout without creating a card session', async () => {
+    const { service } = createService();
 
-    await expect(service.processWebhook(successfulWebhookDto)).rejects.toBeInstanceOf(BadRequestException);
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    await expect(service.initiateSubscriptionCheckout('user_1', { planCode: 'PREMIUM' })).rejects.toBeInstanceOf(
+      GoneException,
+    );
   });
 
-  it('handles duplicate webhook events idempotently', async () => {
+  it('rejects eBook card checkout', async () => {
+    const { service } = createService();
+
+    await expect(service.initiateEbookCheckout('user_1', { ebookId: 'ebook_1' })).rejects.toBeInstanceOf(
+      GoneException,
+    );
+  });
+
+  it('rejects checkout completion and inbound card webhooks', async () => {
+    const { service } = createService();
+
+    await expect(service.completeCheckout('wop_ref_1')).rejects.toBeInstanceOf(GoneException);
+    expect(() => service.createWebhookDto('flutterwave', 'hash', {})).toThrow(GoneException);
+    await expect(
+      service.processWebhook({
+        provider: 'FLUTTERWAVE' as never,
+        eventId: 'evt_1',
+        eventType: 'charge.completed',
+        signature: 'hash',
+        payload: {},
+      }),
+    ).rejects.toBeInstanceOf(GoneException);
+  });
+});
+
+describe('PaymentsService history and status', () => {
+  it('returns persisted payment history', async () => {
     const { service, prisma } = createService({
-      existingWebhook: {
-        id: 'wh_existing',
-        externalEventId: 'evt_1',
-        processingStatus: WebhookProcessingStatus.PROCESSED,
-        processedAt: new Date(),
-      },
+      transactions: [{ id: 'tx_1', providerReference: 'wop_ref_1', status: PaymentStatus.SUCCESS }],
     });
 
-    await expect(service.processWebhook(successfulWebhookDto)).resolves.toMatchObject({
-      data: { duplicate: true, status: WebhookProcessingStatus.DUPLICATE },
+    await expect(service.getHistory('user_1', 'USER', {})).resolves.toMatchObject({
+      data: [{ id: 'tx_1' }],
     });
-    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.paymentTransaction.findMany).toHaveBeenCalled();
   });
 
-  it('activates subscriptions only after verified matching payment success', async () => {
-    const { service, tx } = createService();
-
-    await service.processWebhook(successfulWebhookDto);
-
-    expect(tx.paymentTransaction.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: PaymentStatus.SUCCESS,
-          paidAt: expect.any(Date),
-        }),
-      }),
-    );
-    expect(tx.userSubscription.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: SubscriptionStatus.ACTIVE,
-          currentPeriodEnd: expect.any(Date),
-        }),
-      }),
-    );
-  });
-
-  it('rejects successful webhooks when amount does not match the pending transaction', async () => {
+  it('returns payment status for the owning user', async () => {
     const { service } = createService({
-      transaction: { amount: new Prisma.Decimal(30) },
-    });
-
-    await expect(service.processWebhook(successfulWebhookDto)).rejects.toMatchObject({
-      response: expect.objectContaining({ code: 'WEBHOOK_AMOUNT_MISMATCH' }),
-    });
-  });
-
-  it('creates eBook purchase entitlement after verified payment success', async () => {
-    const { service, tx } = createService({
       transaction: {
-        userSubscriptionId: null,
-        transactionType: TransactionType.EBOOK_PURCHASE,
-        metadata: { purpose: 'EBOOK_PURCHASE', ebookId: 'ebook_1' },
+        id: 'tx_1',
+        userId: 'user_1',
+        providerReference: 'wop_ref_1',
+        status: PaymentStatus.SUCCESS,
       },
     });
 
-    await service.processWebhook(successfulWebhookDto);
-
-    expect(tx.ebookPurchase.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { userId_ebookId: { userId: 'user_1', ebookId: 'ebook_1' } },
-      }),
-    );
-  });
-});
-
-describe('PaymentsService checkout initiation', () => {
-  it('creates a pending eBook transaction before returning Flutterwave checkout URL', async () => {
-    const prisma = {
-      ebook: {
-        findFirst: jest.fn().mockResolvedValue({
-          id: 'ebook_1',
-          title: 'Paid eBook',
-          price: new Prisma.Decimal(10),
-          deletedAt: null,
-        }),
-      },
-      ebookPurchase: {
-        findUnique: jest.fn().mockResolvedValue(null),
-      },
-      user: {
-        findFirst: jest.fn().mockResolvedValue({
-          id: 'user_1',
-          email: 'user@example.com',
-          fullName: 'User One',
-        }),
-      },
-      paymentTransaction: {
-        create: jest.fn().mockResolvedValue({
-          id: 'tx_ebook_1',
-          amount: new Prisma.Decimal(10),
-          currency: 'USD',
-          providerReference: 'wop_ebook_123',
-        }),
-        update: jest.fn().mockResolvedValue({
-          id: 'tx_ebook_1',
-          status: PaymentStatus.PENDING,
-          providerReference: 'wop_ebook_123',
-        }),
-      },
-    };
-
-    const adapter = {
-      createCheckoutSession: jest.fn().mockResolvedValue({
-        checkoutUrl: 'https://checkout.flutterwave.com/pay/test',
-        providerReference: 'wop_ebook_123',
-        rawPayload: { status: 'success' },
-      }),
-    };
-
-    const lifecycleService = {
-      recordStatusChange: jest.fn().mockResolvedValue(undefined),
-      buildGraceEndsAt: jest.fn().mockReturnValue(new Date()),
-    };
-
-    const service = new PaymentsService(
-      prisma as never,
-      { resolve: jest.fn().mockReturnValue(adapter) } as never,
-      { recordPaymentFailure: jest.fn() } as never,
-      { get: jest.fn().mockReturnValue('https://woppandmopp.com/api/v1') } as never,
-      lifecycleService as never,
-      emailService as never,
-      emailTemplateService as never,
-    );
-
-    const result = await service.initiateEbookCheckout('user_1', { ebookId: 'ebook_1' });
-
-    expect(prisma.paymentTransaction.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: PaymentStatus.PENDING,
-          transactionType: TransactionType.EBOOK_PURCHASE,
-          provider: PaymentProvider.FLUTTERWAVE,
-        }),
-      }),
-    );
-    expect(adapter.createCheckoutSession).toHaveBeenCalled();
-    expect(result).toMatchObject({
-      data: {
-        checkoutUrl: 'https://checkout.flutterwave.com/pay/test',
-        providerReference: 'wop_ebook_123',
-      },
+    await expect(service.getStatus('user_1', 'USER', 'wop_ref_1')).resolves.toMatchObject({
+      data: { id: 'tx_1' },
     });
   });
-});
 
-describe('PaymentsService payment completion redirect', () => {
-  it('returns success when transaction is already completed', async () => {
-    const transaction = {
-      id: 'tx_1',
-      userId: 'user_1',
-      userSubscriptionId: 'sub_1',
-      providerReference: 'wop_ref_done',
-      amount: new Prisma.Decimal(25),
-      currency: 'USD',
-      status: PaymentStatus.SUCCESS,
-      failureMessage: null,
-      userSubscription: { status: SubscriptionStatus.ACTIVE },
-    };
+  it('rejects missing payment status lookups', async () => {
+    const { service } = createService({ transaction: null });
 
-    const prisma = {
-      paymentTransaction: {
-        findUnique: jest.fn().mockResolvedValue(transaction),
-      },
-    };
-
-    const service = new PaymentsService(
-      prisma as never,
-      { resolve: jest.fn() } as never,
-      { recordPaymentFailure: jest.fn() } as never,
-      { get: jest.fn() } as never,
-      { recordStatusChange: jest.fn(), buildGraceEndsAt: jest.fn() } as never,
-      emailService as never,
-      emailTemplateService as never,
-    );
-
-    const result = await service.completeCheckout('wop_ref_done');
-
-    expect(result.data.status).toBe('success');
-    expect(result.data.providerReference).toBe('wop_ref_done');
-  });
-
-  it('verifies pending payment with Flutterwave and activates entitlement', async () => {
-    const transaction = {
-      id: 'tx_1',
-      userId: 'user_1',
-      userSubscriptionId: 'sub_1',
-      providerReference: 'wop_ref_pending',
-      amount: new Prisma.Decimal(25),
-      currency: 'USD',
-      status: PaymentStatus.PENDING,
-      metadata: { purpose: 'SUBSCRIPTION', billingInterval: 'MONTHLY' },
-      retryCount: 0,
-      retryable: true,
-    };
-
-    const tx = {
-      paymentTransaction: {
-        update: jest.fn().mockResolvedValue({
-          ...transaction,
-          status: PaymentStatus.SUCCESS,
-          userSubscription: {
-            status: SubscriptionStatus.ACTIVE,
-            plan: {
-              code: 'PREMIUM',
-              name: 'Premium',
-              amount: new Prisma.Decimal(25),
-              currency: 'USD',
-            },
-          },
-        }),
-      },
-      userSubscription: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'sub_1',
-          userId: 'user_1',
-          status: SubscriptionStatus.PENDING,
-          metadata: {},
-        }),
-        update: jest.fn(),
-      },
-    };
-
-    const prisma = {
-      paymentTransaction: {
-        findUnique: jest.fn().mockResolvedValue(transaction),
-      },
-      user: {
-        findUnique: jest.fn().mockResolvedValue({
-          email: 'user@example.com',
-          fullName: 'Test User',
-        }),
-      },
-      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
-    };
-
-    const adapter = {
-      verifyTransactionByReference: jest.fn().mockResolvedValue({
-        isVerified: true,
-        mappedStatus: PaymentStatus.SUCCESS,
-        providerReference: 'wop_ref_pending',
-        amount: 25,
-        currency: 'USD',
-        flutterwaveToken: 'flw-token',
-        normalizedPayload: { amount: 25, currency: 'USD', txRef: 'wop_ref_pending' },
-      }),
-    };
-
-    const lifecycleService = {
-      recordStatusChange: jest.fn().mockResolvedValue(undefined),
-      buildGraceEndsAt: jest.fn().mockReturnValue(new Date()),
-    };
-
-    const service = new PaymentsService(
-      prisma as never,
-      { resolve: jest.fn().mockReturnValue(adapter) } as never,
-      { recordPaymentFailure: jest.fn() } as never,
-      { get: jest.fn() } as never,
-      lifecycleService as never,
-      emailService as never,
-      emailTemplateService as never,
-    );
-
-    const result = await service.completeCheckout('wop_ref_pending');
-
-    expect(adapter.verifyTransactionByReference).toHaveBeenCalledWith('wop_ref_pending');
-    expect(result.data.status).toBe('success');
-    expect(tx.userSubscription.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ status: SubscriptionStatus.ACTIVE }),
-      }),
-    );
+    await expect(service.getStatus('user_1', 'USER', 'missing')).rejects.toBeInstanceOf(NotFoundException);
   });
 });
