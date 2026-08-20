@@ -67,7 +67,10 @@ List<HomepageFeedItem> composeHomepageFeed({
   }
 
   if (clips.isNotEmpty) {
-    add(_clipItem(clips.first, now: now));
+    final playable = clips.where((clip) => clip.hasPlayableVideo).toList();
+    if (playable.isNotEmpty) {
+      add(_clipItem(playable.first, now: now));
+    }
   }
 
   final upcomingEvents = events

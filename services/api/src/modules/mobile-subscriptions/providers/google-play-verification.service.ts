@@ -8,7 +8,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { GoogleAuth } from 'google-auth-library';
 import { MobilePlatform, StoreProvider } from '@prisma/client';
-import { isAllowedPremiumProductId } from '../premium-store-products';
+import {
+  DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID,
+  isAllowedPremiumProductId,
+} from '../premium-store-products';
 
 export type GoogleSubscriptionVerification = {
   productId: string;
@@ -125,14 +128,10 @@ export class GooglePlayVerificationService {
   }
 
   getConfiguredProductId(): string {
-    const productId = this.configService.get<string>('MOBILE_ANDROID_PREMIUM_PRODUCT_ID')?.trim();
-    if (!productId) {
-      throw new BadRequestException({
-        code: 'GOOGLE_PRODUCT_NOT_CONFIGURED',
-        message: 'MOBILE_ANDROID_PREMIUM_PRODUCT_ID is not configured',
-      });
-    }
-    return productId;
+    return (
+      this.configService.get<string>('MOBILE_ANDROID_PREMIUM_PRODUCT_ID')?.trim() ||
+      DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID
+    );
   }
 
   isAllowedProductId(productId: string): boolean {

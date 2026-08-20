@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { EventLocationType, EventRsvpStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { persistableMediaKey } from '../../common/media-storage.util';
 import { toPublicAssetUrl } from '../../common/public-url.util';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
@@ -370,7 +371,7 @@ export class EventsService {
       slug,
       description: dto.description,
       category: dto.category?.trim().toUpperCase() ?? 'GENERAL',
-      bannerImageUrl: dto.bannerImageUrl,
+      bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl,
       locationType: dto.locationType,
       venue: dto.venue,
       meetingLink: dto.meetingLink,
@@ -389,7 +390,9 @@ export class EventsService {
       ...(slug !== undefined ? { slug } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.category !== undefined ? { category: dto.category.trim().toUpperCase() } : {}),
-      ...(dto.bannerImageUrl !== undefined ? { bannerImageUrl: dto.bannerImageUrl } : {}),
+      ...(dto.bannerImageUrl !== undefined
+        ? { bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl }
+        : {}),
       ...(dto.locationType !== undefined ? { locationType: dto.locationType } : {}),
       ...(dto.venue !== undefined ? { venue: dto.venue } : {}),
       ...(dto.meetingLink !== undefined ? { meetingLink: dto.meetingLink } : {}),

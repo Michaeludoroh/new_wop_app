@@ -7,7 +7,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { MobilePlatform, StoreProvider } from '@prisma/client';
 import { verify, X509Certificate } from 'crypto';
-import { getAllowedPremiumProductIds, isAllowedPremiumProductId } from '../premium-store-products';
+import {
+  DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID,
+  getAllowedPremiumProductIds,
+  isAllowedPremiumProductId,
+} from '../premium-store-products';
 
 const APPLE_PRODUCTION_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -117,14 +121,10 @@ export class AppleReceiptVerificationService {
   }
 
   getConfiguredProductId(): string {
-    const productId = this.configService.get<string>('MOBILE_IOS_PREMIUM_PRODUCT_ID')?.trim();
-    if (!productId) {
-      throw new BadRequestException({
-        code: 'APPLE_PRODUCT_NOT_CONFIGURED',
-        message: 'MOBILE_IOS_PREMIUM_PRODUCT_ID is not configured',
-      });
-    }
-    return productId;
+    return (
+      this.configService.get<string>('MOBILE_IOS_PREMIUM_PRODUCT_ID')?.trim() ||
+      DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID
+    );
   }
 
   isAllowedProductId(productId: string | undefined): boolean {

@@ -27,6 +27,7 @@ void main() {
     expect(parsed.data.single.id, 'clip-1');
     expect(parsed.data.single.videoUrl, 'https://cdn.example.com/clips/faith.mp4');
     expect(parsed.data.single.hasThumbnail, isTrue);
+    expect(parsed.data.single.hasPlayableVideo, isTrue);
   });
 
   test('accepts mediaUrl fallback and nested data wrappers', () {

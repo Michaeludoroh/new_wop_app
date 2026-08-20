@@ -214,4 +214,31 @@ void main() {
     expect(items.single.title, 'This Saturday');
     expect(items.single.eyebrow, 'Upcoming event');
   });
+
+  test('skips clips that are known not to have playable media', () {
+    final items = composeHomepageFeed(
+      announcements: const [],
+      clips: const [
+        ClipItem(
+          id: 'clip-missing',
+          title: 'Broken clip',
+          videoUrl: 'https://woppandmopp.com/api/v1/uploads/clips/media/missing.mp4',
+          category: 'TEACHING',
+          viewCount: 0,
+          featured: true,
+          isPublished: true,
+          tags: [],
+          scriptureReferences: [],
+          videoAvailable: false,
+        ),
+      ],
+      events: const [],
+      ebooks: const [],
+      programs: const [],
+      mentorship: const [],
+      now: now,
+    );
+
+    expect(items.where((item) => item.kind == HomepageFeedKind.clip), isEmpty);
+  });
 }

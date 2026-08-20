@@ -10,6 +10,8 @@ import {
   Role,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { persistableMediaKey } from '../../common/media-storage.util';
+import { toPublicAssetUrl } from '../../common/public-url.util';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ANNOUNCEMENT_CATEGORIES } from './dto/announcement-category.constants';
 import { AnnouncementQueryDto } from './dto/announcement-query.dto';
@@ -68,7 +70,7 @@ export class AnnouncementsService {
       title: item.title,
       content: item.body,
       category: item.category,
-      imageUrl: item.imageUrl,
+      imageUrl: toPublicAssetUrl(item.imageUrl),
       status: item.status,
       isPublished,
       pushNotificationSent: item.pushNotificationSent,
@@ -136,7 +138,7 @@ export class AnnouncementsService {
     return {
       title: dto.title,
       body: dto.content,
-      imageUrl: dto.imageUrl ?? null,
+      imageUrl: persistableMediaKey(dto.imageUrl) ?? dto.imageUrl ?? null,
       category: dto.category ?? AnnouncementCategory.GENERAL_UPDATE,
       status: shouldPublish ? ContentStatus.PUBLISHED : ContentStatus.DRAFT,
       isPublished: shouldPublish,
@@ -153,7 +155,9 @@ export class AnnouncementsService {
 
     if (dto.title !== undefined) data.title = dto.title;
     if (dto.content !== undefined) data.body = dto.content;
-    if (dto.imageUrl !== undefined) data.imageUrl = dto.imageUrl || null;
+    if (dto.imageUrl !== undefined) {
+      data.imageUrl = dto.imageUrl ? persistableMediaKey(dto.imageUrl) ?? dto.imageUrl : null;
+    }
     if (dto.category !== undefined) data.category = dto.category;
 
     if (dto.isPublished !== undefined) {

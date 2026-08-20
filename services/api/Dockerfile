@@ -27,17 +27,26 @@ FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=4000
+ENV MEDIA_ROOT=/app/uploads
 
 RUN apt-get update && apt-get install -y --no-install-recommends tini ca-certificates && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+# Pin UID/GID so the VPS bind mount can be chowned predictably.
+RUN groupadd -r -g 1001 appgroup && useradd -r -u 1001 -g appgroup appuser
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package*.json ./
 
-RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app
+RUN mkdir -p \
+      /app/uploads/ebooks \
+      /app/uploads/clips \
+      /app/uploads/programs \
+      /app/uploads/events \
+      /app/uploads/announcements \
+      /app/uploads/images \
+    && chown -R appuser:appgroup /app
 USER appuser
 
 EXPOSE 4000

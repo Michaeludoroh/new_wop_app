@@ -35,21 +35,22 @@ class MobileBillingConfig {
   static bool get isSupported => Platform.isAndroid || Platform.isIOS;
 
   /// Existing monthly SKU. Do not rename this identifier.
-  static String get premiumProductId =>
-      Platform.isAndroid ? androidMonthlyProductId : iosMonthlyProductId;
+  static String get premiumProductId => Platform.isAndroid
+      ? _orDefault(androidMonthlyProductId, 'wopp_premium_monthly')
+      : _orDefault(iosMonthlyProductId, 'wopp_premium_monthly');
 
   static Set<String> get premiumProductIds {
     if (Platform.isAndroid) {
       return {
-        androidMonthlyProductId,
-        androidQuarterlyProductId,
-        androidYearlyProductId,
+        _orDefault(androidMonthlyProductId, 'wopp_premium_monthly'),
+        _orDefault(androidQuarterlyProductId, 'wopp_premium_quarterly'),
+        _orDefault(androidYearlyProductId, 'wopp_premium_yearly'),
       };
     }
     return {
-      iosMonthlyProductId,
-      iosQuarterlyProductId,
-      iosYearlyProductId,
+      _orDefault(iosMonthlyProductId, 'wopp_premium_monthly'),
+      _orDefault(iosQuarterlyProductId, 'wopp_premium_quarterly'),
+      _orDefault(iosYearlyProductId, 'wopp_premium_yearly'),
     };
   }
 
@@ -77,6 +78,9 @@ class MobileBillingConfig {
     }
     return 0;
   }
+
+  static String _orDefault(String value, String fallback) =>
+      value.trim().isEmpty ? fallback : value;
 }
 
 class WoppPremiumOffer {

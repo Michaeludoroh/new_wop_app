@@ -6,6 +6,8 @@ import {
 
   Injectable,
 
+  Logger,
+
   NotFoundException,
 
 } from '@nestjs/common';
@@ -30,6 +32,13 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 import { ContentAccessService } from '../subscriptions/content-access.service';
 import { hasPremiumAccess } from '../subscriptions/subscription-access.util';
+import {
+  extractRelativeMediaKey,
+  isLocalUploadReference,
+  mediaFileExists,
+  persistableMediaKey,
+  resolveMediaAbsolutePath,
+} from '../../common/media-storage.util';
 import { resolveApiPublicOrigin, toPublicAssetUrl } from '../../common/public-url.util';
 
 import { NotificationsService } from '../notifications/notifications.service';
@@ -43,8 +52,6 @@ import { ReadingProgressDto } from './dto/reading-progress.dto';
 import { UpdateEbookDto } from './dto/update-ebook.dto';
 
 import { createReadStream, existsSync } from 'fs';
-
-import { join } from 'path';
 
 import { Response } from 'express';
 
@@ -63,6 +70,8 @@ type PurchasePayload = {
 @Injectable()
 
 export class EbooksService {
+
+  private readonly logger = new Logger(EbooksService.name);
 
   constructor(
 
@@ -262,9 +271,9 @@ export class EbooksService {
 
         isPremium: dto.isPremium ?? (dto.price ?? 0) > 0,
 
-        fileUrl: dto.fileUrl,
+        fileUrl: persistableMediaKey(dto.fileUrl, { ebookLegacy: true }) ?? dto.fileUrl,
 
-        coverUrl: dto.coverUrl,
+        coverUrl: persistableMediaKey(dto.coverUrl, { ebookLegacy: true }) ?? dto.coverUrl,
 
         status,
 
@@ -324,9 +333,13 @@ export class EbooksService {
 
         ...(dto.isPremium !== undefined ? { isPremium: dto.isPremium } : {}),
 
-        ...(dto.fileUrl !== undefined ? { fileUrl: dto.fileUrl } : {}),
+        ...(dto.fileUrl !== undefined
+          ? { fileUrl: persistableMediaKey(dto.fileUrl, { ebookLegacy: true }) ?? dto.fileUrl }
+          : {}),
 
-        ...(dto.coverUrl !== undefined ? { coverUrl: dto.coverUrl } : {}),
+        ...(dto.coverUrl !== undefined
+          ? { coverUrl: persistableMediaKey(dto.coverUrl, { ebookLegacy: true }) ?? dto.coverUrl }
+          : {}),
 
         ...publishState,
 
@@ -774,51 +787,40 @@ export class EbooksService {
 
     const ebook = await this.findPublishedEbook(ebookId);
 
+    let reason = 'free_content';
 
+    if (ebook.isPremium) {
 
-    if (!ebook.isPremium) {
+      const [purchase, activeSubscription] = await Promise.all([
 
-      const token = this.contentAccessService.issueAccessToken(userId, 'ebook', ebook.id);
+        this.prisma.ebookPurchase.findUnique({
 
-      return this.buildAccessResponse(ebook.id, token, 'free_content');
+          where: { userId_ebookId: { userId, ebookId: ebook.id } },
 
-    }
+        }),
 
+        this.findPremiumSubscription(userId),
 
+      ]);
 
-    const [purchase, activeSubscription] = await Promise.all([
+      if (!purchase && !activeSubscription) {
 
-      this.prisma.ebookPurchase.findUnique({
+        throw new ForbiddenException({
+          code: 'SUBSCRIPTION_REQUIRED',
+          message: 'Subscription required',
+        });
 
-        where: { userId_ebookId: { userId, ebookId: ebook.id } },
+      }
 
-      }),
-
-      this.findPremiumSubscription(userId),
-
-    ]);
-
-
-
-    if (!purchase && !activeSubscription) {
-
-      throw new ForbiddenException({ message: 'Subscription required' });
+      reason = purchase ? 'purchased' : 'subscription';
 
     }
 
-
+    this.assertStoredEbookFile(ebook);
 
     const token = this.contentAccessService.issueAccessToken(userId, 'ebook', ebook.id);
 
-    return this.buildAccessResponse(
-
-      ebook.id,
-
-      token,
-
-      purchase ? 'purchased' : 'subscription',
-
-    );
+    return this.buildAccessResponse(ebook.id, token, reason);
 
   }
 
@@ -846,17 +848,23 @@ export class EbooksService {
 
     if (!validation.valid) {
 
-      throw new ForbiddenException('Invalid or expired access token');
+      throw new ForbiddenException({
+        code: 'TOKEN_EXPIRED',
+        message: 'Invalid or expired access token',
+      });
 
     }
 
 
 
-    const entitlement = await this.access(validation.userId, ebookId).catch(() => null);
+    const entitlement = await this.access(validation.userId, ebookId);
 
     if (!entitlement?.authorized) {
 
-      throw new ForbiddenException('You do not have access to this eBook');
+      throw new ForbiddenException({
+        code: 'EBOOK_ACCESS_DENIED',
+        message: 'You do not have access to this eBook',
+      });
 
     }
 
@@ -864,11 +872,18 @@ export class EbooksService {
 
     const ebook = await this.findPublishedEbook(ebookId);
 
+    const key = extractRelativeMediaKey(ebook.fileUrl, { ebookLegacy: true });
+
     const absolutePath = this.resolveAbsoluteFilePath(ebook.fileUrl);
 
-    if (!existsSync(absolutePath)) {
+    if (!absolutePath || !existsSync(absolutePath)) {
 
-      throw new NotFoundException('eBook file not found');
+      this.logger.warn(`eBook stream missing ebookId=${ebookId} key=${key ?? 'unknown'}`);
+
+      throw new NotFoundException({
+        code: 'EBOOK_FILE_MISSING',
+        message: 'This eBook file is not available on the server.',
+      });
 
     }
 
@@ -878,7 +893,28 @@ export class EbooksService {
 
     res.setHeader('Cache-Control', 'private, no-store');
 
-    createReadStream(absolutePath).pipe(res);
+    const stream = createReadStream(absolutePath);
+
+    stream.on('error', (error) => {
+
+      this.logger.warn(`eBook stream read failed ebookId=${ebookId} key=${key ?? 'unknown'} error=${error.message}`);
+
+      if (!res.headersSent) {
+
+        res.status(404).json({
+          code: 'EBOOK_FILE_MISSING',
+          message: 'This eBook file is not available on the server.',
+        });
+
+        return;
+
+      }
+
+      res.end();
+
+    });
+
+    stream.pipe(res);
 
   }
 
@@ -932,43 +968,41 @@ export class EbooksService {
 
   private resolveAbsoluteFilePath(fileUrl: string) {
 
-    const uploadsRoot = join(process.cwd(), 'uploads', 'ebooks');
+    return resolveMediaAbsolutePath(fileUrl, { ebookLegacy: true });
 
-    const normalized = fileUrl.trim();
+  }
 
+  private assertStoredEbookFile(ebook: { id: string; fileUrl: string }) {
 
+    if (!ebook.fileUrl?.trim()) {
 
-    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
+      this.logger.warn(`eBook media key missing ebookId=${ebook.id}`);
 
-      const marker = '/uploads/ebooks/';
-
-      const index = normalized.indexOf(marker);
-
-      if (index >= 0) {
-
-        const relative = normalized.slice(index + marker.length);
-
-        return join(uploadsRoot, relative);
-
-      }
+      throw new NotFoundException({
+        code: 'EBOOK_MEDIA_KEY_MISSING',
+        message: 'This eBook does not have a file attached.',
+      });
 
     }
 
+    if (!isLocalUploadReference(ebook.fileUrl)) {
 
+      return;
 
-    const relative = normalized
+    }
 
-      .replace(/^\/+/, '')
+    const key = extractRelativeMediaKey(ebook.fileUrl, { ebookLegacy: true });
 
-      .replace(/^api\/v1\/uploads\/ebooks\//, '')
+    if (!mediaFileExists(ebook.fileUrl, { ebookLegacy: true })) {
 
-      .replace(/^uploads\/ebooks\//, '')
+      this.logger.warn(`eBook file missing ebookId=${ebook.id} key=${key ?? 'unknown'}`);
 
-      .replace(/^ebooks\//, '');
+      throw new NotFoundException({
+        code: 'EBOOK_FILE_MISSING',
+        message: 'This eBook file is not available on the server.',
+      });
 
-
-
-    return join(uploadsRoot, relative);
+    }
 
   }
 
@@ -1582,7 +1616,7 @@ export class EbooksService {
 
       ...this.toPublicResponse(ebook),
 
-      fileUrl: ebook.fileUrl,
+      fileUrl: toPublicAssetUrl(ebook.fileUrl) ?? ebook.fileUrl,
 
       storageKey: this.resolveStorageKey(ebook.fileUrl),
 
@@ -1594,31 +1628,7 @@ export class EbooksService {
 
   private resolveStorageKey(fileUrl: string) {
 
-    const normalized = fileUrl.trim();
-
-    if (normalized.startsWith('http://') || normalized.startsWith('https://')) {
-
-      const marker = '/uploads/ebooks/';
-
-      const index = normalized.indexOf(marker);
-
-      if (index >= 0) {
-
-        return normalized.slice(index + marker.length);
-
-      }
-
-    }
-
-    return normalized
-
-      .replace(/^\/+/, '')
-
-      .replace(/^api\/v1\/uploads\/ebooks\//, '')
-
-      .replace(/^uploads\/ebooks\//, '')
-
-      .replace(/^ebooks\//, '');
+    return extractRelativeMediaKey(fileUrl, { ebookLegacy: true }) ?? fileUrl.trim();
 
   }
 

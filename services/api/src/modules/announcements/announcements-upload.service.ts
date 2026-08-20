@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { getMediaRoot } from '../../common/media-storage.util';
 import { buildPublicUploadUrl } from '../../common/public-url.util';
 import { readUploadedBuffer, UploadedBinary } from '../../common/read-uploaded-file.util';
 
@@ -9,7 +10,9 @@ const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 @Injectable()
 export class AnnouncementsUploadService {
-  private readonly uploadRoot = join(process.cwd(), 'uploads', 'announcements');
+  private get uploadRoot() {
+    return join(getMediaRoot(), 'announcements');
+  }
 
   async saveImage(file: UploadedBinary | undefined): Promise<{ url: string; key: string }> {
     const buffer = await readUploadedBuffer(file);

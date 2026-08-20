@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { getMediaRoot } from '../../common/media-storage.util';
 import { buildPublicUploadUrl } from '../../common/public-url.util';
 import { readUploadedBuffer, UploadedBinary } from '../../common/read-uploaded-file.util';
 
@@ -14,7 +15,9 @@ const ALLOWED_EXTENSIONS: Record<ClipUploadKind, Set<string>> = {
 
 @Injectable()
 export class ClipsUploadService {
-  private readonly uploadRoot = join(process.cwd(), 'uploads', 'clips');
+  private get uploadRoot() {
+    return join(getMediaRoot(), 'clips');
+  }
 
   async saveUpload(file: UploadedBinary | undefined, kind: ClipUploadKind): Promise<{ url: string; key: string }> {
     const buffer = await readUploadedBuffer(file);

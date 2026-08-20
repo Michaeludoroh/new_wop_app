@@ -16,4 +16,10 @@ void main() {
       'WOPP Premium Yearly',
     );
   });
+
+  test('orders monthly, quarterly, then yearly', () {
+    expect(MobileBillingConfig.sortOrderFor('wopp_premium_monthly'), 0);
+    expect(MobileBillingConfig.sortOrderFor('wopp_premium_quarterly'), 1);
+    expect(MobileBillingConfig.sortOrderFor('wopp_premium_yearly'), 2);
+  });
 }

@@ -1,7 +1,6 @@
 import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
-import { join } from 'path';
 import compression = require('compression');
 import * as express from 'express';
 import pinoHttp from 'pino-http';
@@ -10,6 +9,7 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { randomUUID } from 'node:crypto';
 import { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { getMediaRoot } from './common/media-storage.util';
 import { ObservabilityService } from './observability/observability.service';
 import { RedisIoAdapter } from './modules/realtime/redis-io.adapter';
 
@@ -137,24 +137,43 @@ async function bootstrap() {
       crossOriginEmbedderPolicy: false,
     }),
   );
-  app.use(compression());
+  app.use(
+    compression({
+      filter(req, res) {
+        const url = req.originalUrl || req.url || '';
+        if (url.includes('/api/v1/uploads') || url.includes('/stream')) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   if (!websocketOnlyMode) {
     expressApp.use('/api/v1/uploads/ebooks/file', (_req: Request, res: Response) => {
       res.status(403).json({
+        code: 'EBOOK_DIRECT_ACCESS_DISABLED',
         message:
           'Direct eBook file access is disabled. Request access via /ebooks/:id/access and use the secured stream URL.',
       });
     });
     expressApp.use(
       '/api/v1/uploads',
-      express.static(join(process.cwd(), 'uploads'), {
+      express.static(getMediaRoot(), {
         setHeaders(res) {
           res.setHeader('Accept-Ranges', 'bytes');
           res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
         },
       }),
     );
+    expressApp.use('/api/v1/uploads', (req: Request, res: Response) => {
+      const key = decodeURIComponent((req.path || '').replace(/^\/+/, ''));
+      console.warn(`[media] missing file key=${key} method=${req.method}`);
+      res.status(404).json({
+        code: 'MEDIA_FILE_MISSING',
+        message: 'Media file not found',
+      });
+    });
   }
 
   app.enableCors({

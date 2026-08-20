@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ProgramEnrollmentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { persistableMediaKey } from '../../common/media-storage.util';
 import { toPublicAssetUrl } from '../../common/public-url.util';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { ProgramQueryDto } from './dto/program-query.dto';
@@ -552,7 +553,7 @@ export class ProgramsService {
       slug,
       description: dto.description,
       category: dto.category?.trim().toUpperCase() ?? 'GENERAL',
-      bannerImageUrl: dto.bannerImageUrl,
+      bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl,
       instructorName: dto.instructorName,
       startDate: new Date(dto.startDate),
       endDate: new Date(dto.endDate),
@@ -572,7 +573,9 @@ export class ProgramsService {
       ...(slug !== undefined ? { slug } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.category !== undefined ? { category: dto.category.trim().toUpperCase() } : {}),
-      ...(dto.bannerImageUrl !== undefined ? { bannerImageUrl: dto.bannerImageUrl } : {}),
+      ...(dto.bannerImageUrl !== undefined
+        ? { bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl }
+        : {}),
       ...(dto.instructorName !== undefined ? { instructorName: dto.instructorName } : {}),
       ...(dto.startDate !== undefined ? { startDate: new Date(dto.startDate) } : {}),
       ...(dto.endDate !== undefined ? { endDate: new Date(dto.endDate) } : {}),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 
 /// Maps a [DioException] to a user-visible message.
@@ -48,6 +50,16 @@ String messageFromDio(
 }
 
 String? _extractApiMessage(dynamic data) {
+  if (data is List<int>) {
+    try {
+      final decoded = utf8.decode(data);
+      if (decoded.trim().startsWith('{') || decoded.trim().startsWith('[')) {
+        return _extractApiMessage(jsonDecode(decoded));
+      }
+    } catch (_) {
+      return null;
+    }
+  }
   if (data is Map) {
     final raw = data['message'];
     if (raw is String && raw.trim().isNotEmpty) {

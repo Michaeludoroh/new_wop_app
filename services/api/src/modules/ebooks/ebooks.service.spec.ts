@@ -332,6 +332,27 @@ describe('EbooksService content lifecycle', () => {
 
 
 
+  it('persists local upload URLs as relative media keys', async () => {
+
+    const { service, prisma } = createService();
+
+    await service.create({
+      title: 'New Book',
+      fileUrl: 'https://woppandmopp.com/api/v1/uploads/ebooks/file/generated.pdf',
+    });
+
+    expect(prisma.ebook.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          fileUrl: 'ebooks/file/generated.pdf',
+        }),
+      }),
+    );
+
+  });
+
+
+
   it('soft deletes ebooks by archiving them', async () => {
 
     const { service, prisma } = createService();
@@ -386,6 +407,17 @@ describe('EbooksService access security', () => {
     expect(result.authorized).toBe(true);
     expect(result.streamUrl).toContain('/api/v1/ebooks/ebook_1/stream?token=');
     expect(result).not.toHaveProperty('fileUrl');
+  });
+
+  it('does not issue stream access when a local eBook file is missing', async () => {
+    const { service, prisma } = createService();
+    prisma.ebook.findFirst.mockResolvedValue({
+      ...publishedEbook,
+      isPremium: false,
+      fileUrl: 'https://woppandmopp.com/api/v1/uploads/ebooks/file/missing.pdf',
+    });
+
+    await expect(service.access('user_1', 'ebook_1')).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 

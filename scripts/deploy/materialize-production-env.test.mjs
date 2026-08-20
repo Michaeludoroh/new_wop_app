@@ -3,6 +3,7 @@ import test from 'node:test';
 import {
   KEYS,
   PRODUCTION_PUBLIC_URL_DEFAULTS,
+  PRODUCTION_MEDIA_AND_BILLING_DEFAULTS,
   buildEnvLines,
   materializeProductionEnv,
 } from './materialize-production-env.mjs';
@@ -29,6 +30,9 @@ test('buildEnvLines fills missing WEB_APP_URL and USER_WEB_APP_URL', () => {
   const lines = buildEnvLines({ NODE_ENV: 'production' });
   assert.ok(lines.includes('WEB_APP_URL=https://admin.woppandmopp.com'));
   assert.ok(lines.includes('USER_WEB_APP_URL=https://woppandmopp.com'));
+  assert.ok(lines.includes('MEDIA_ROOT=/app/uploads'));
+  assert.ok(lines.includes('MOBILE_IOS_PREMIUM_PRODUCT_ID=wopp_premium_monthly'));
+  assert.equal(PRODUCTION_MEDIA_AND_BILLING_DEFAULTS.MEDIA_ROOT, '/app/uploads');
 });
 
 test('buildEnvLines keeps explicit env values and does not invent secrets', () => {

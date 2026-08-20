@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ContentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { persistableMediaKey, isLocalUploadReference, mediaFileExists } from '../../common/media-storage.util';
 import { ClipQueryDto } from './dto/clip-query.dto';
 import { CreateClipDto } from './dto/create-clip.dto';
 import { UpdateClipDto } from './dto/update-clip.dto';
@@ -157,8 +158,11 @@ export class ClipsService {
     return {
       title: dto.title,
       description: dto.description,
-      mediaUrl: dto.videoUrl,
-      thumbnailUrl: dto.thumbnailUrl,
+      mediaUrl: persistableMediaKey(dto.videoUrl) ?? dto.videoUrl,
+      thumbnailUrl:
+        dto.thumbnailUrl === undefined
+          ? dto.thumbnailUrl
+          : persistableMediaKey(dto.thumbnailUrl) ?? dto.thumbnailUrl,
       category: dto.category?.trim().toUpperCase() ?? 'GENERAL',
       durationSeconds: dto.durationSeconds,
       speaker: dto.speaker,
@@ -182,8 +186,12 @@ export class ClipsService {
     return {
       ...(dto.title !== undefined ? { title: dto.title } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
-      ...(dto.videoUrl !== undefined ? { mediaUrl: dto.videoUrl } : {}),
-      ...(dto.thumbnailUrl !== undefined ? { thumbnailUrl: dto.thumbnailUrl } : {}),
+      ...(dto.videoUrl !== undefined
+        ? { mediaUrl: persistableMediaKey(dto.videoUrl) ?? dto.videoUrl }
+        : {}),
+      ...(dto.thumbnailUrl !== undefined
+        ? { thumbnailUrl: persistableMediaKey(dto.thumbnailUrl) ?? dto.thumbnailUrl }
+        : {}),
       ...(dto.category !== undefined ? { category: dto.category.trim().toUpperCase() } : {}),
       ...(dto.durationSeconds !== undefined ? { durationSeconds: dto.durationSeconds } : {}),
       ...(dto.speaker !== undefined ? { speaker: dto.speaker } : {}),
@@ -222,6 +230,9 @@ export class ClipsService {
       description: clip.description,
       videoUrl: toPublicAssetUrl(clip.mediaUrl) ?? clip.mediaUrl,
       thumbnailUrl: toPublicAssetUrl(clip.thumbnailUrl),
+      videoAvailable: isLocalUploadReference(clip.mediaUrl)
+        ? mediaFileExists(clip.mediaUrl)
+        : true,
       category: clip.category,
       durationSeconds: clip.durationSeconds,
       speaker: clip.speaker,

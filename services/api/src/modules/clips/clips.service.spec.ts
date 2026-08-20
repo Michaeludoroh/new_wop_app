@@ -133,6 +133,22 @@ describe('ClipsService', () => {
     });
   });
 
+  it('persists local clip upload URLs as relative media keys', async () => {
+    const { service, prisma } = createService();
+
+    await service.create({
+      title: 'Faith for Today',
+      videoUrl: 'https://woppandmopp.com/api/v1/uploads/clips/media/faith.mp4',
+      isPublished: true,
+    });
+
+    expect(prisma.clip.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        mediaUrl: 'clips/media/faith.mp4',
+      }),
+    });
+  });
+
   it('increments view count for published public detail reads', async () => {
     const { service, prisma } = createService();
 

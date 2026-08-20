@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../http/api_error.dart';
 import '../http/authenticated_dio.dart';
+import '../http/public_asset_url.dart';
 import '../logging/app_log.dart';
 import 'models/clip_models.dart';
 
@@ -56,6 +57,31 @@ class ClipService {
       );
       throw ClipServiceException(
         messageFromDio(error, fallback: 'Failed to load clip.'),
+      );
+    }
+  }
+
+  Future<void> assertVideoReachable(String videoUrl) async {
+    final url = rewritePublicAssetUrl(videoUrl);
+    if (url.isEmpty || !isPlayableNetworkUrl(url)) {
+      throw ClipServiceException('This clip does not have a valid video URL.');
+    }
+    try {
+      await _dio.head<void>(
+        url,
+        options: Options(
+          followRedirects: true,
+          validateStatus: (status) => status != null && status < 400,
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+    } catch (error) {
+      final status = apiHttpStatus(error);
+      if (status == 405 || status == 501) {
+        return;
+      }
+      throw ClipServiceException(
+        messageFromDio(error, fallback: 'This clip video is not available.'),
       );
     }
   }

@@ -1,7 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 
+export const DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID = 'wopp_premium_monthly';
+
 export const DEFAULT_PREMIUM_STORE_PRODUCT_IDS = [
-  'wopp_premium_monthly',
+  DEFAULT_PREMIUM_MONTHLY_PRODUCT_ID,
   'wopp_premium_quarterly',
   'wopp_premium_yearly',
 ] as const;

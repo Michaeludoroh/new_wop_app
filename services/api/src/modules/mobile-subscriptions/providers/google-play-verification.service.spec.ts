@@ -120,4 +120,11 @@ describe('GooglePlayVerificationService', () => {
       service.verifySubscriptionPurchase('wopp_premium_monthly', 'bad-token'),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('defaults a missing MOBILE_ANDROID_PREMIUM_PRODUCT_ID to wopp_premium_monthly', () => {
+    const service = createService({
+      GOOGLE_PLAY_PACKAGE_NAME: 'com.ministrymobile.app',
+    });
+    expect(service.getConfiguredProductId()).toBe('wopp_premium_monthly');
+  });
 });

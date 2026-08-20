@@ -115,6 +115,8 @@ class EbookService {
       url,
       options: Options(
         responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(minutes: 2),
+        sendTimeout: const Duration(minutes: 2),
       ),
       onReceiveProgress: onProgress,
     );

@@ -27,6 +27,10 @@ const defines = [
   `--dart-define=API_BASE_URL=${apiBaseUrl}`,
   '--dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID=wopp_premium_monthly',
   '--dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID=wopp_premium_monthly',
+  '--dart-define=MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID=wopp_premium_quarterly',
+  '--dart-define=MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID=wopp_premium_quarterly',
+  '--dart-define=MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID=wopp_premium_yearly',
+  '--dart-define=MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID=wopp_premium_yearly',
 ].join(' ');
 
 console.log('iOS production archive commands (macOS + Xcode required)');

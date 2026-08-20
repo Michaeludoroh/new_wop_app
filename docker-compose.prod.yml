@@ -70,11 +70,12 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_ADAPTER_ENABLED: "true"
       WEBSOCKET_ONLY_MODE: "false"
+      MEDIA_ROOT: /app/uploads
     # Host Nginx (mwpp site) proxies /api/ here. Bind localhost only — do not steal :80/:443.
     ports:
       - "127.0.0.1:4000:4000"
     volumes:
-      - uploads_prod_data:/app/uploads
+      - /var/lib/wopp/media:/app/uploads
       - /etc/wopp/firebase-admin.json:/etc/wopp/firebase-admin.json:ro
     depends_on:
       migrate:
@@ -113,11 +114,12 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_ADAPTER_ENABLED: "true"
       WEBSOCKET_ONLY_MODE: "true"
+      MEDIA_ROOT: /app/uploads
     # Host Nginx proxies /realtime here. Bind localhost only.
     ports:
       - "127.0.0.1:4100:4100"
     volumes:
-      - uploads_prod_data:/app/uploads
+      - /var/lib/wopp/media:/app/uploads
       - /etc/wopp/firebase-admin.json:/etc/wopp/firebase-admin.json:ro
     depends_on:
       migrate:
@@ -216,7 +218,6 @@ services:
 volumes:
   postgres_prod_data:
   redis_prod_data:
-  uploads_prod_data:
 
 networks:
   ministry_net_prod:

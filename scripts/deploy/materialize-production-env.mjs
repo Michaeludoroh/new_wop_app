@@ -53,12 +53,32 @@ export const KEYS = [
   'FCM_PRIVATE_KEY',
   'SENTRY_DSN',
   'IMAGE_TAG',
+  'MEDIA_ROOT',
+  'MOBILE_IOS_PREMIUM_PRODUCT_ID',
+  'MOBILE_ANDROID_PREMIUM_PRODUCT_ID',
+  'MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID',
+  'MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID',
+  'MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID',
+  'MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID',
+  'APPLE_SHARED_SECRET',
+  'GOOGLE_PLAY_PACKAGE_NAME',
+  'GOOGLE_PLAY_SERVICE_ACCOUNT_JSON',
 ];
 
 /** Non-secret production origins. Never used to invent credentials. */
 export const PRODUCTION_PUBLIC_URL_DEFAULTS = {
   WEB_APP_URL: 'https://admin.woppandmopp.com',
   USER_WEB_APP_URL: 'https://woppandmopp.com',
+};
+
+export const PRODUCTION_MEDIA_AND_BILLING_DEFAULTS = {
+  MEDIA_ROOT: '/app/uploads',
+  MOBILE_IOS_PREMIUM_PRODUCT_ID: 'wopp_premium_monthly',
+  MOBILE_ANDROID_PREMIUM_PRODUCT_ID: 'wopp_premium_monthly',
+  MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID: 'wopp_premium_quarterly',
+  MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID: 'wopp_premium_quarterly',
+  MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID: 'wopp_premium_yearly',
+  MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID: 'wopp_premium_yearly',
 };
 
 export function buildEnvLines(env) {
@@ -71,6 +91,12 @@ export function buildEnvLines(env) {
   }
 
   for (const [key, fallback] of Object.entries(PRODUCTION_PUBLIC_URL_DEFAULTS)) {
+    if (!lines.some((line) => line.startsWith(`${key}=`))) {
+      lines.push(`${key}=${fallback}`);
+    }
+  }
+
+  for (const [key, fallback] of Object.entries(PRODUCTION_MEDIA_AND_BILLING_DEFAULTS)) {
     if (!lines.some((line) => line.startsWith(`${key}=`))) {
       lines.push(`${key}=${fallback}`);
     }

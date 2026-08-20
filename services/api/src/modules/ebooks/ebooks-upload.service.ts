@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import { getMediaRoot } from '../../common/media-storage.util';
 import { buildPublicUploadUrl } from '../../common/public-url.util';
 import { readUploadedBuffer, UploadedBinary } from '../../common/read-uploaded-file.util';
 
@@ -14,7 +15,9 @@ const ALLOWED_EXTENSIONS: Record<UploadKind, Set<string>> = {
 
 @Injectable()
 export class EbooksUploadService {
-  private readonly uploadRoot = join(process.cwd(), 'uploads', 'ebooks');
+  private get uploadRoot() {
+    return join(getMediaRoot(), 'ebooks');
+  }
 
   async saveUpload(
     file: UploadedBinary | undefined,
@@ -38,11 +41,11 @@ export class EbooksUploadService {
     await mkdir(directory, { recursive: true });
 
     const filename = `${randomUUID()}${extension}`;
-    const relativeKey = `${kind}/${filename}`;
+    const relativeKey = `ebooks/${kind}/${filename}`;
     await writeFile(join(directory, filename), buffer);
 
     return {
-      url: buildPublicUploadUrl(`ebooks/${relativeKey}`),
+      url: buildPublicUploadUrl(relativeKey),
       key: relativeKey,
       storageKey: relativeKey,
     };
