@@ -130,7 +130,10 @@ export class ClipsService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.clip.findMany({
         where,
-        orderBy: [{ featured: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
+        orderBy:
+          query.sort === 'recent'
+            ? [{ publishedAt: 'desc' }, { createdAt: 'desc' }]
+            : [{ featured: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
         skip: offset,
         take: limit,
       }),

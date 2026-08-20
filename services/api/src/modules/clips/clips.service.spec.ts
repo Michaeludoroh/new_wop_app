@@ -78,6 +78,19 @@ describe('ClipsService', () => {
     );
   });
 
+  it('lists recent public clips by published date instead of featured-first', async () => {
+    const { service, prisma } = createService();
+
+    await service.listPublic({ sort: 'recent', limit: 8 });
+
+    expect(prisma.clip.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ publishedAt: 'desc' }, { createdAt: 'desc' }],
+        take: 8,
+      }),
+    );
+  });
+
   it('rewrites localhost media URLs to the public API origin', async () => {
     const previous = process.env.API_PUBLIC_URL;
     process.env.API_PUBLIC_URL = 'https://woppandmopp.com';

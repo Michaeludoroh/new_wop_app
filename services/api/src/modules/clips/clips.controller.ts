@@ -83,7 +83,17 @@ export class ClipsController {
       limits: { fileSize: 512 * 1024 * 1024 },
     }),
   )
-  uploadMedia(@UploadedFile() file: { buffer?: Buffer; path?: string; originalname?: string }) {
+  uploadMedia(
+    @UploadedFile()
+    file: { buffer?: Buffer; path?: string; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'clips/admin/upload/media',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
     return this.uploadService.saveUpload(file, 'media');
   }
 
@@ -91,7 +101,17 @@ export class ClipsController {
   @Roles('MODERATOR')
   @Post('admin/upload/thumbnail')
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  uploadThumbnail(@UploadedFile() file: { buffer?: Buffer; path?: string; originalname?: string }) {
+  uploadThumbnail(
+    @UploadedFile()
+    file: { buffer?: Buffer; path?: string; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'clips/admin/upload/thumbnail',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
     return this.uploadService.saveUpload(file, 'thumbnail');
   }
 

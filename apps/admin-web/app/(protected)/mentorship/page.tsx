@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { mentorshipApi } from "../../../lib/mentorship/api-client";
 import {
   MentorshipAnalytics,
@@ -58,6 +60,11 @@ export default function MentorshipPage() {
   const [sessionForm, setSessionForm] = useState(emptySessionForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [bannerLabel, setBannerLabel] = useState("");
+  const [mentorPreview, setMentorPreview] = useState("");
+  const [mentorLabel, setMentorLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
@@ -83,7 +90,7 @@ export default function MentorshipPage() {
       setTotal(listResponse.total);
       setAnalytics(analyticsResponse.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load mentorship classes");
+      setError(normalizeApiError(err, "Failed to load mentorship classes"));
     } finally {
       setLoading(false);
     }
@@ -113,11 +120,19 @@ export default function MentorshipPage() {
       featured: item.featured,
       published: item.published
     });
+    setBannerPreview(item.bannerImageUrl ?? "");
+    setBannerLabel(item.bannerImageUrl ? "Existing image attached" : "");
+    setMentorPreview(item.mentorImageUrl ?? "");
+    setMentorLabel(item.mentorImageUrl ? "Existing image attached" : "");
   }
 
   function resetForm() {
     setEditing(null);
     setForm(emptyForm);
+    setBannerPreview("");
+    setBannerLabel("");
+    setMentorPreview("");
+    setMentorLabel("");
   }
 
   function toPayload(): MentorshipPayload {
@@ -284,8 +299,50 @@ export default function MentorshipPage() {
               <input type="number" min={1} placeholder="Capacity" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} />
             </div>
             <textarea placeholder="Mentor bio" value={form.mentorBio} onChange={(e) => setForm({ ...form, mentorBio: e.target.value })} />
-            <input placeholder="Banner image URL" value={form.bannerImageUrl} onChange={(e) => setForm({ ...form, bannerImageUrl: e.target.value })} />
-            <input placeholder="Mentor image URL" value={form.mentorImageUrl} onChange={(e) => setForm({ ...form, mentorImageUrl: e.target.value })} />
+            <MediaFileField
+              label="Class image"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              disabled={uploading || saving}
+              status={bannerLabel || "Choose an image from this device."}
+              previewUrl={bannerPreview || null}
+              previewAlt="Mentorship class image preview"
+              onSelect={async (file) => {
+                setUploading(true);
+                setError(null);
+                try {
+                  const result = await mentorshipApi.uploadBanner(file);
+                  setForm((current) => ({ ...current, bannerImageUrl: result.key }));
+                  setBannerPreview(result.url);
+                  setBannerLabel(`${file.name} uploaded`);
+                } catch (err) {
+                  setError(normalizeApiError(err, "Failed to upload class image"));
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
+            <MediaFileField
+              label="Mentor photo"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              disabled={uploading || saving}
+              status={mentorLabel || "Optional mentor photo."}
+              previewUrl={mentorPreview || null}
+              previewAlt="Mentor photo preview"
+              onSelect={async (file) => {
+                setUploading(true);
+                setError(null);
+                try {
+                  const result = await mentorshipApi.uploadMentorImage(file);
+                  setForm((current) => ({ ...current, mentorImageUrl: result.key }));
+                  setMentorPreview(result.url);
+                  setMentorLabel(`${file.name} uploaded`);
+                } catch (err) {
+                  setError(normalizeApiError(err, "Failed to upload mentor photo"));
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <label>Start <input required type="datetime-local" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} /></label>
               <label>End <input required type="datetime-local" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} /></label>
@@ -296,7 +353,7 @@ export default function MentorshipPage() {
               <label><input type="checkbox" checked={form.published} onChange={(e) => setForm({ ...form, published: e.target.checked })} /> Published</label>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" disabled={saving}>{saving ? "Saving..." : editing ? "Update class" : "Create class"}</button>
+              <button type="submit" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update class" : "Create class"}</button>
               {editing ? <button type="button" onClick={resetForm}>Cancel</button> : null}
             </div>
           </form>

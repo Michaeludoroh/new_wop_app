@@ -15,6 +15,7 @@ class _FakeClipService extends ClipService {
     String? search,
     String? category,
     bool? featured,
+    String? sort,
     int limit = 20,
     int offset = 0,
   }) async {

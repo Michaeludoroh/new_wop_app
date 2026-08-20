@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart, UploadResult } from "../http/multipart";
 import {
   MentorshipAnalyticsResponse,
   MentorshipAttendanceStatus,
@@ -137,5 +138,13 @@ export const mentorshipApi = {
       `/mentorship/admin/${id}/progress`
     );
     return response.data;
+  },
+
+  async uploadBanner(file: File): Promise<UploadResult> {
+    return postMultipart(mentorshipClient, "/mentorship/admin/upload/banner", file);
+  },
+
+  async uploadMentorImage(file: File): Promise<UploadResult> {
+    return postMultipart(mentorshipClient, "/mentorship/admin/upload/mentor-image", file);
   }
 };

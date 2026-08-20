@@ -77,8 +77,23 @@ export class AnnouncementsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN', 'SUPER_ADMIN')
   @Post('admin/upload/image')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  uploadImage(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadImage(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'announcements/admin/upload/image',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
     return this.uploadService.saveImage(file);
   }
 

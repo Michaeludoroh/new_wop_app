@@ -34,7 +34,7 @@ class HomepageFeed extends StatefulWidget {
   State<HomepageFeed> createState() => _HomepageFeedState();
 }
 
-class _HomepageFeedState extends State<HomepageFeed> {
+class _HomepageFeedState extends State<HomepageFeed> with WidgetsBindingObserver {
   late final HomepageFeedSources _sources;
   bool _loading = true;
   List<HomepageFeedItem> _items = const [];
@@ -44,13 +44,29 @@ class _HomepageFeedState extends State<HomepageFeed> {
   void initState() {
     super.initState();
     _sources = widget.sources ?? HomepageFeedSources.live();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _load(showSpinner: false);
+    }
+  }
+
+  Future<void> _load({bool showSpinner = true}) async {
+    if (showSpinner && mounted) {
+      setState(() {
+        _loading = true;
+      });
+    }
 
     var hadFailure = false;
 
@@ -70,8 +86,8 @@ class _HomepageFeedState extends State<HomepageFeed> {
         const AnnouncementListResponse(data: [], total: 0, page: 1, limit: 8),
       ),
       safe(
-        () => _sources.clips.getClips(limit: 8),
-        const ClipListResponse(data: [], total: 0, limit: 8, offset: 0),
+        () => _sources.clips.getClips(limit: 20, sort: 'recent'),
+        const ClipListResponse(data: [], total: 0, limit: 20, offset: 0),
       ),
       safe(
         () => _sources.events.getEvents(limit: 12),
@@ -119,8 +135,14 @@ class _HomepageFeedState extends State<HomepageFeed> {
     });
   }
 
-  void _open(HomepageFeedItem item) {
-    Navigator.of(context).pushNamed(item.routeName, arguments: item.routeArguments);
+  Future<void> _open(HomepageFeedItem item) async {
+    await Navigator.of(context).pushNamed(
+      item.routeName,
+      arguments: item.routeArguments,
+    );
+    if (mounted) {
+      await _load(showSpinner: false);
+    }
   }
 
   @override
@@ -166,17 +188,41 @@ class _HomepageFeedState extends State<HomepageFeed> {
           ),
           SliverPadding(
             padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 12),
-            sliver: const SliverToBoxAdapter(
+            sliver: SliverToBoxAdapter(
               child: Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _QuickLinkChip(label: 'Announcements', routeName: AnnouncementsScreen.routeName),
-                  _QuickLinkChip(label: 'Clips', routeName: ClipsScreen.routeName),
-                  _QuickLinkChip(label: 'Events', routeName: EventsScreen.routeName),
-                  _QuickLinkChip(label: 'Library', routeName: EbookScreen.routeName),
-                  _QuickLinkChip(label: 'Programs', routeName: ProgramsScreen.routeName),
-                  _QuickLinkChip(label: 'Mentorship', routeName: MentorshipScreen.routeName),
+                  _QuickLinkChip(
+                    label: 'Announcements',
+                    routeName: AnnouncementsScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
+                  _QuickLinkChip(
+                    label: 'Clips',
+                    routeName: ClipsScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
+                  _QuickLinkChip(
+                    label: 'Events',
+                    routeName: EventsScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
+                  _QuickLinkChip(
+                    label: 'Library',
+                    routeName: EbookScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
+                  _QuickLinkChip(
+                    label: 'Programs',
+                    routeName: ProgramsScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
+                  _QuickLinkChip(
+                    label: 'Mentorship',
+                    routeName: MentorshipScreen.routeName,
+                    onReturned: () => _load(showSpinner: false),
+                  ),
                 ],
               ),
             ),
@@ -260,16 +306,21 @@ class _QuickLinkChip extends StatelessWidget {
   const _QuickLinkChip({
     required this.label,
     required this.routeName,
+    this.onReturned,
   });
 
   final String label;
   final String routeName;
+  final Future<void> Function()? onReturned;
 
   @override
   Widget build(BuildContext context) {
     return ActionChip(
       label: Text(label),
-      onPressed: () => Navigator.of(context).pushNamed(routeName),
+      onPressed: () async {
+        await Navigator.of(context).pushNamed(routeName);
+        await onReturned?.call();
+      },
     );
   }
 }

@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart } from "../http/multipart";
 import {
   Announcement,
   AnnouncementCategoryOption,
@@ -119,12 +120,6 @@ export const announcementsApi = {
   },
 
   async uploadImage(file: File): Promise<AnnouncementUploadResponse> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await announcementsClient.post<AnnouncementUploadResponse>(
-      "/announcements/admin/upload/image",
-      formData
-    );
-    return response.data;
+    return postMultipart(announcementsClient, "/announcements/admin/upload/image", file);
   }
 };

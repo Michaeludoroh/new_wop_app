@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart } from "../http/multipart";
 import {
   EbookAnalytics,
   EbookItem,
@@ -74,16 +75,10 @@ export const ebooksApi = {
   },
 
   async uploadFile(file: File): Promise<UploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/file", formData);
-    return response.data;
+    return postMultipart(ebooksClient, "/ebooks/admin/upload/file", file);
   },
 
   async uploadCover(file: File): Promise<UploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await ebooksClient.post<UploadResult>("/ebooks/admin/upload/cover", formData);
-    return response.data;
+    return postMultipart(ebooksClient, "/ebooks/admin/upload/cover", file);
   }
 };

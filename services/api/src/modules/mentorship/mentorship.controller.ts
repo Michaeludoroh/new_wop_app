@@ -8,8 +8,12 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -22,6 +26,7 @@ import { SubmitFeedbackDto } from './dto/submit-feedback.dto';
 import { UpdateMentorshipDto } from './dto/update-mentorship.dto';
 import { UpdateMentorshipProgressDto } from './dto/update-mentorship-progress.dto';
 import { MentorshipService } from './mentorship.service';
+import { MentorshipUploadService } from './mentorship-upload.service';
 
 type AuthRequest = Request & {
   user: {
@@ -32,7 +37,10 @@ type AuthRequest = Request & {
 
 @Controller('mentorship')
 export class MentorshipController {
-  constructor(private readonly service: MentorshipService) {}
+  constructor(
+    private readonly service: MentorshipService,
+    private readonly uploadService: MentorshipUploadService,
+  ) {}
 
   @Get('public')
   listPublic(@Query() query: MentorshipQueryDto) {
@@ -106,6 +114,52 @@ export class MentorshipController {
   @Get('admin/:id/progress')
   listClassProgress(@Param('id') id: string) {
     return this.service.listClassProgress(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/banner')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadBanner(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'mentorship/admin/upload/banner',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
+    return this.uploadService.saveImage(file, 'banner');
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/mentor-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadMentorImage(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'mentorship/admin/upload/mentor-image',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
+    return this.uploadService.saveImage(file, 'mentor');
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

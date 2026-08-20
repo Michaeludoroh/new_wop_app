@@ -8,6 +8,7 @@ export const MEDIA_SUBDIRECTORIES = [
   'programs',
   'events',
   'announcements',
+  'mentorship',
   'images',
 ] as const;
 

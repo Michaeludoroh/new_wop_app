@@ -16,6 +16,7 @@ class ClipItem {
     this.durationSeconds,
     this.speaker,
     this.publishedAt,
+    this.createdAt,
     this.videoAvailable,
   });
 
@@ -33,6 +34,7 @@ class ClipItem {
   final bool featured;
   final bool isPublished;
   final DateTime? publishedAt;
+  final DateTime? createdAt;
   final bool? videoAvailable;
 
   bool get hasPlayableVideo => videoAvailable != false && isPlayableNetworkUrl(videoUrl);
@@ -61,6 +63,7 @@ class ClipItem {
       featured: json['featured'] == true,
       isPublished: json['isPublished'] == true || json['status'] == 'PUBLISHED',
       publishedAt: DateTime.tryParse(json['publishedAt']?.toString() ?? ''),
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
       videoAvailable: json['videoAvailable'] is bool ? json['videoAvailable'] as bool : null,
     );
   }

@@ -4,6 +4,8 @@ export type UploadedBinary = {
   buffer?: Buffer;
   path?: string;
   originalname?: string;
+  mimetype?: string;
+  size?: number;
 };
 
 export async function readUploadedBuffer(

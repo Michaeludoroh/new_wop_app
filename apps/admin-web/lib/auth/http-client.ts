@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import { tokenStorage } from "./token-storage";
 import { API_CONFIG } from "./config";
+import { clearMultipartContentType } from "../http/multipart";
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
@@ -69,10 +70,7 @@ async function refreshAccessToken(): Promise<string | null> {
 export function createAuthenticatedClient(): AxiosInstance {
   const client = axios.create({
     baseURL: API_CONFIG.baseUrl,
-    timeout: API_CONFIG.timeoutMs,
-    headers: {
-      "Content-Type": "application/json"
-    }
+    timeout: API_CONFIG.timeoutMs
   });
 
   client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -81,16 +79,14 @@ export function createAuthenticatedClient(): AxiosInstance {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-      const headers = config.headers;
-      if (headers && typeof headers.delete === "function") {
-        headers.delete("Content-Type");
-        headers.delete("content-type");
-      } else if (headers) {
-        delete headers["Content-Type"];
-        delete headers["content-type"];
-      }
-      config.timeout = Math.max(config.timeout ?? 0, 180000);
+    const isMultipart =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
+
+    if (isMultipart) {
+      clearMultipartContentType(config.headers);
+      config.timeout = Math.max(config.timeout ?? 0, 300000);
+    } else if (config.data != null && config.headers && !config.headers.get?.("Content-Type")) {
+      config.headers["Content-Type"] = "application/json";
     }
 
     if (DEBUG_AUTH) {

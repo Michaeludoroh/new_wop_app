@@ -3,15 +3,15 @@ import { persistUploadedFile, IMAGE_EXTENSIONS, IMAGE_MIME_EXTENSIONS } from '..
 import { UploadedBinary } from '../../common/read-uploaded-file.util';
 
 @Injectable()
-export class AnnouncementsUploadService {
-  saveImage(file: UploadedBinary | undefined): Promise<{ url: string; key: string }> {
+export class ProgramsUploadService {
+  saveBanner(file: UploadedBinary | undefined) {
     return persistUploadedFile(file, {
-      relativeDirectory: 'announcements/image',
+      relativeDirectory: 'programs/banner',
       allowedExtensions: IMAGE_EXTENSIONS,
       mimeExtensionMap: IMAGE_MIME_EXTENSIONS,
       emptyMessage: 'An image file is required',
-      typeMessage: 'Announcement images must be JPG, PNG, WEBP, or GIF',
-      logKind: 'announcements.image',
+      typeMessage: 'Program images must be JPG, PNG, WEBP, or GIF',
+      logKind: 'programs.banner',
     });
   }
 }

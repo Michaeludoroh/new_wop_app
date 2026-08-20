@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart, UploadResult } from "../http/multipart";
 import {
   EventAttendeesResponse,
   EventItem,
@@ -69,5 +70,9 @@ export const eventsApi = {
       `/events/admin/${id}/attendees`
     );
     return response.data;
+  },
+
+  async uploadBanner(file: File): Promise<UploadResult> {
+    return postMultipart(eventsClient, "/events/admin/upload/banner", file);
   }
 };

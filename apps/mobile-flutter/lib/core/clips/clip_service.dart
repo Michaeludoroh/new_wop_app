@@ -25,6 +25,7 @@ class ClipService {
     String? search,
     String? category,
     bool? featured,
+    String? sort,
     int limit = 20,
     int offset = 0,
   }) async {
@@ -34,6 +35,7 @@ class ClipService {
         if (search != null && search.isNotEmpty) 'search': search,
         if (category != null && category.isNotEmpty) 'category': category,
         if (featured != null) 'featured': featured,
+        if (sort != null && sort.isNotEmpty) 'sort': sort,
         'limit': limit,
         'offset': offset,
       },

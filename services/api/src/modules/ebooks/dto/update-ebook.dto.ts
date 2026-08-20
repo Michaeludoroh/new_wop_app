@@ -4,7 +4,6 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -49,12 +48,14 @@ export class UpdateEbookDto {
 
   @IsOptional()
   @Transform(({ value }) => trimString(value))
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MaxLength(2048)
   fileUrl?: string;
 
   @IsOptional()
   @Transform(({ value }) => trimString(value))
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MaxLength(2048)
   coverUrl?: string;
 
   @IsOptional()

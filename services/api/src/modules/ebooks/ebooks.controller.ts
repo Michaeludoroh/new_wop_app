@@ -83,23 +83,53 @@ export class EbooksController {
   }
 
   @Roles('ADMIN', 'MODERATOR')
-  @Post('admin')
-  create(@Body() dto: CreateEbookDto) {
-    return this.service.create(dto);
-  }
-
-  @Roles('ADMIN', 'MODERATOR')
   @Post('admin/upload/file')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  uploadFile(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 80 * 1024 * 1024 },
+    }),
+  )
+  uploadFile(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'ebooks/admin/upload/file',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
     return this.uploadService.saveUpload(file, 'file');
   }
 
   @Roles('ADMIN', 'MODERATOR')
   @Post('admin/upload/cover')
-  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-  uploadCover(@UploadedFile() file: { buffer?: Buffer; originalname?: string }) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadCover(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'ebooks/admin/upload/cover',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
     return this.uploadService.saveUpload(file, 'cover');
+  }
+
+  @Roles('ADMIN', 'MODERATOR')
+  @Post('admin')
+  create(@Body() dto: CreateEbookDto) {
+    return this.service.create(dto);
   }
 
   @Roles('ADMIN', 'MODERATOR')

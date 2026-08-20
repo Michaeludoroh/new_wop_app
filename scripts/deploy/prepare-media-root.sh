@@ -15,9 +15,11 @@ sudo mkdir -p \
   "${HOST_MEDIA_ROOT}/ebooks/cover" \
   "${HOST_MEDIA_ROOT}/clips/media" \
   "${HOST_MEDIA_ROOT}/clips/thumbnail" \
-  "${HOST_MEDIA_ROOT}/programs" \
-  "${HOST_MEDIA_ROOT}/events" \
+  "${HOST_MEDIA_ROOT}/programs/banner" \
+  "${HOST_MEDIA_ROOT}/events/banner" \
   "${HOST_MEDIA_ROOT}/announcements/image" \
+  "${HOST_MEDIA_ROOT}/mentorship/banner" \
+  "${HOST_MEDIA_ROOT}/mentorship/mentor" \
   "${HOST_MEDIA_ROOT}/images"
 
 # Copy existing named-volume uploads if they still exist and the host dir is empty.

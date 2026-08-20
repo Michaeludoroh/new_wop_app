@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
 import { programsApi } from "../../../lib/programs/api-client";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import {
   ProgramAnalytics,
   ProgramEnrollment,
@@ -41,6 +43,9 @@ export default function ProgramsPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [bannerLabel, setBannerLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
@@ -66,7 +71,7 @@ export default function ProgramsPage() {
       setTotal(listResponse.total);
       setAnalytics(analyticsResponse.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load programs");
+      setError(normalizeApiError(err, "Failed to load programs"));
     } finally {
       setLoading(false);
     }
@@ -94,11 +99,15 @@ export default function ProgramsPage() {
       featured: program.featured,
       published: program.published
     });
+    setBannerPreview(program.bannerImageUrl ?? "");
+    setBannerLabel(program.bannerImageUrl ? "Existing image attached" : "");
   }
 
   function resetForm() {
     setEditing(null);
     setForm(emptyForm);
+    setBannerPreview("");
+    setBannerLabel("");
   }
 
   function toPayload(): ProgramPayload {
@@ -133,7 +142,7 @@ export default function ProgramsPage() {
       resetForm();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save program");
+      setError(normalizeApiError(err, "Failed to save program"));
     } finally {
       setSaving(false);
     }
@@ -214,7 +223,28 @@ export default function ProgramsPage() {
               <input placeholder="Instructor name" value={form.instructorName} onChange={(event) => setForm({ ...form, instructorName: event.target.value })} />
               <input type="number" min={1} placeholder="Capacity" value={form.capacity} onChange={(event) => setForm({ ...form, capacity: event.target.value })} />
             </div>
-            <input placeholder="Banner image URL" value={form.bannerImageUrl} onChange={(event) => setForm({ ...form, bannerImageUrl: event.target.value })} />
+            <MediaFileField
+              label="Program image"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              disabled={uploading || saving}
+              status={bannerLabel || "Choose an image from this device."}
+              previewUrl={bannerPreview || null}
+              previewAlt="Program image preview"
+              onSelect={async (file) => {
+                setUploading(true);
+                setError(null);
+                try {
+                  const result = await programsApi.uploadBanner(file);
+                  setForm((current) => ({ ...current, bannerImageUrl: result.key }));
+                  setBannerPreview(result.url);
+                  setBannerLabel(`${file.name} uploaded`);
+                } catch (err) {
+                  setError(normalizeApiError(err, "Failed to upload program image"));
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
               <label>Start <input required type="datetime-local" value={form.startDate} onChange={(event) => setForm({ ...form, startDate: event.target.value })} /></label>
               <label>End <input required type="datetime-local" value={form.endDate} onChange={(event) => setForm({ ...form, endDate: event.target.value })} /></label>
@@ -225,7 +255,7 @@ export default function ProgramsPage() {
               <label><input type="checkbox" checked={form.published} onChange={(event) => setForm({ ...form, published: event.target.checked })} /> Published</label>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" disabled={saving}>{saving ? "Saving..." : editing ? "Update program" : "Create program"}</button>
+              <button type="submit" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update program" : "Create program"}</button>
               {editing ? <button type="button" onClick={resetForm}>Cancel</button> : null}
             </div>
           </form>

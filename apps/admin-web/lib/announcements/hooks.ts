@@ -68,7 +68,7 @@ type UseAnnouncementMutationResult = {
   publish: (id: string) => Promise<Announcement | null>;
   unpublish: (id: string) => Promise<Announcement | null>;
   remove: (id: string) => Promise<boolean>;
-  uploadImage: (file: File) => Promise<string | null>;
+  uploadImage: (file: File) => Promise<{ url: string; key: string } | null>;
   clearStatus: () => void;
 };
 
@@ -167,12 +167,11 @@ export function useAnnouncementMutation(
     [notifyChanged]
   );
 
-  const uploadImage = useCallback(async (file: File): Promise<string | null> => {
+  const uploadImage = useCallback(async (file: File): Promise<{ url: string; key: string } | null> => {
     setLoading(true);
     setError(null);
     try {
-      const uploaded = await announcementsApi.uploadImage(file);
-      return uploaded.url;
+      return await announcementsApi.uploadImage(file);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to upload image");
       return null;

@@ -10,6 +10,8 @@ import {
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { persistableMediaKey } from '../../common/media-storage.util';
+import { toPublicAssetUrl } from '../../common/public-url.util';
 import { CreateMentorshipDto } from './dto/create-mentorship.dto';
 import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { MentorshipQueryDto } from './dto/mentorship-query.dto';
@@ -736,10 +738,10 @@ export class MentorshipService {
       slug,
       description: dto.description,
       category: dto.category?.trim().toUpperCase() ?? 'GENERAL',
-      bannerImageUrl: dto.bannerImageUrl,
+      bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl,
       mentorName: dto.mentorName,
       mentorBio: dto.mentorBio,
-      mentorImageUrl: dto.mentorImageUrl,
+      mentorImageUrl: persistableMediaKey(dto.mentorImageUrl) ?? dto.mentorImageUrl,
       startDate: new Date(dto.startDate),
       endDate: new Date(dto.endDate),
       registrationDeadline: dto.registrationDeadline
@@ -758,10 +760,14 @@ export class MentorshipService {
       ...(slug !== undefined ? { slug } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.category !== undefined ? { category: dto.category.trim().toUpperCase() } : {}),
-      ...(dto.bannerImageUrl !== undefined ? { bannerImageUrl: dto.bannerImageUrl } : {}),
+      ...(dto.bannerImageUrl !== undefined
+        ? { bannerImageUrl: persistableMediaKey(dto.bannerImageUrl) ?? dto.bannerImageUrl }
+        : {}),
       ...(dto.mentorName !== undefined ? { mentorName: dto.mentorName } : {}),
       ...(dto.mentorBio !== undefined ? { mentorBio: dto.mentorBio } : {}),
-      ...(dto.mentorImageUrl !== undefined ? { mentorImageUrl: dto.mentorImageUrl } : {}),
+      ...(dto.mentorImageUrl !== undefined
+        ? { mentorImageUrl: persistableMediaKey(dto.mentorImageUrl) ?? dto.mentorImageUrl }
+        : {}),
       ...(dto.startDate !== undefined ? { startDate: new Date(dto.startDate) } : {}),
       ...(dto.endDate !== undefined ? { endDate: new Date(dto.endDate) } : {}),
       ...(dto.registrationDeadline !== undefined
@@ -819,10 +825,10 @@ export class MentorshipService {
       slug: mentorshipClass.slug,
       description: mentorshipClass.description,
       category: mentorshipClass.category,
-      bannerImageUrl: mentorshipClass.bannerImageUrl,
+      bannerImageUrl: toPublicAssetUrl(mentorshipClass.bannerImageUrl),
       mentorName: mentorshipClass.mentorName,
       mentorBio: mentorshipClass.mentorBio,
-      mentorImageUrl: mentorshipClass.mentorImageUrl,
+      mentorImageUrl: toPublicAssetUrl(mentorshipClass.mentorImageUrl),
       mentor: this.toMentorProfile(mentorshipClass),
       startDate: mentorshipClass.startDate,
       endDate: mentorshipClass.endDate,
@@ -848,7 +854,7 @@ export class MentorshipService {
     return {
       name: mentorshipClass.mentorName,
       bio: mentorshipClass.mentorBio,
-      imageUrl: mentorshipClass.mentorImageUrl,
+      imageUrl: toPublicAssetUrl(mentorshipClass.mentorImageUrl),
       category: mentorshipClass.category ?? null,
     };
   }

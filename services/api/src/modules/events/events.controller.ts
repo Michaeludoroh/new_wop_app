@@ -8,8 +8,12 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,6 +22,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventsService } from './events.service';
+import { EventsUploadService } from './events-upload.service';
 
 type AuthRequest = Request & {
   user: {
@@ -28,7 +33,10 @@ type AuthRequest = Request & {
 
 @Controller('events')
 export class EventsController {
-  constructor(private readonly service: EventsService) {}
+  constructor(
+    private readonly service: EventsService,
+    private readonly uploadService: EventsUploadService,
+  ) {}
 
   @Get('public')
   listPublic(@Query() query: EventQueryDto) {
@@ -92,6 +100,29 @@ export class EventsController {
   @Get('admin/:id/attendees')
   listAttendees(@Param('id') id: string) {
     return this.service.listAttendees(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/banner')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadBanner(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'events/admin/upload/banner',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
+    return this.uploadService.saveBanner(file);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

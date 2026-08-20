@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { normalizeApiError } from "../../../lib/http/normalize-error";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
 import { eventsApi } from "../../../lib/events/api-client";
 import { EventAttendee, EventItem, EventLocationType, EventPayload } from "../../../lib/events/types";
 
@@ -35,6 +36,9 @@ export default function EventsPage() {
   const [form, setForm] = useState(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [bannerPreview, setBannerPreview] = useState("");
+  const [bannerLabel, setBannerLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
@@ -84,11 +88,15 @@ export default function EventsPage() {
       featured: event.featured,
       published: event.published
     });
+    setBannerPreview(event.bannerImageUrl ?? "");
+    setBannerLabel(event.bannerImageUrl ? "Existing image attached" : "");
   }
 
   function resetForm() {
     setEditing(null);
     setForm(emptyForm);
+    setBannerPreview("");
+    setBannerLabel("");
   }
 
   function toPayload(): EventPayload {
@@ -185,7 +193,28 @@ export default function EventsPage() {
               </select>
               <input type="number" min={1} placeholder="Max capacity" value={form.maxCapacity} onChange={(event) => setForm({ ...form, maxCapacity: event.target.value })} />
             </div>
-            <input placeholder="Banner image URL" value={form.bannerImageUrl} onChange={(event) => setForm({ ...form, bannerImageUrl: event.target.value })} />
+            <MediaFileField
+              label="Event image"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              disabled={uploading || saving}
+              status={bannerLabel || "Choose an image from this device."}
+              previewUrl={bannerPreview || null}
+              previewAlt="Event image preview"
+              onSelect={async (file) => {
+                setUploading(true);
+                setError(null);
+                try {
+                  const result = await eventsApi.uploadBanner(file);
+                  setForm((current) => ({ ...current, bannerImageUrl: result.key }));
+                  setBannerPreview(result.url);
+                  setBannerLabel(`${file.name} uploaded`);
+                } catch (err) {
+                  setError(normalizeApiError(err, "Failed to upload event image"));
+                } finally {
+                  setUploading(false);
+                }
+              }}
+            />
             <input placeholder="Venue" value={form.venue} onChange={(event) => setForm({ ...form, venue: event.target.value })} />
             <input placeholder="Meeting link" value={form.meetingLink} onChange={(event) => setForm({ ...form, meetingLink: event.target.value })} />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
@@ -198,7 +227,7 @@ export default function EventsPage() {
               <label><input type="checkbox" checked={form.published} onChange={(event) => setForm({ ...form, published: event.target.checked })} /> Published</label>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" disabled={saving}>{saving ? "Saving..." : editing ? "Update event" : "Create event"}</button>
+              <button type="submit" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update event" : "Create event"}</button>
               {editing ? <button type="button" onClick={resetForm}>Cancel</button> : null}
             </div>
           </form>

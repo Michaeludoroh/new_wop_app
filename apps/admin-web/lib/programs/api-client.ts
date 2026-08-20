@@ -1,4 +1,5 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart, UploadResult } from "../http/multipart";
 import {
   ProgramAnalyticsResponse,
   ProgramEnrollmentsResponse,
@@ -83,5 +84,9 @@ export const programsApi = {
       `/programs/admin/${id}/progress`
     );
     return response.data;
+  },
+
+  async uploadBanner(file: File): Promise<UploadResult> {
+    return postMultipart(programsClient, "/programs/admin/upload/banner", file);
   }
 };

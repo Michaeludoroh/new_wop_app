@@ -1,9 +1,8 @@
 import { createAuthenticatedClient } from "../auth/http-client";
+import { postMultipart, UploadResult } from "../http/multipart";
 import { Clip, ClipListQuery, ClipListResponse, ClipPayload } from "./types";
 
 const clipsClient = createAuthenticatedClient();
-
-type UploadResult = { url: string; key: string };
 
 function normalizeListResponse(data: unknown): ClipListResponse {
   if (data && typeof data === "object") {
@@ -61,16 +60,10 @@ export const clipsApi = {
   },
 
   async uploadMedia(file: File): Promise<UploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/media", formData);
-    return response.data;
+    return postMultipart(clipsClient, "/clips/admin/upload/media", file);
   },
 
   async uploadThumbnail(file: File): Promise<UploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    const response = await clipsClient.post<UploadResult>("/clips/admin/upload/thumbnail", formData);
-    return response.data;
+    return postMultipart(clipsClient, "/clips/admin/upload/thumbnail", file);
   }
 };

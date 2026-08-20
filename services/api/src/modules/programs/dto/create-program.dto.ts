@@ -5,7 +5,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -40,7 +39,8 @@ export class CreateProgramDto {
 
   @IsOptional()
   @Transform(({ value }) => trimString(value))
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MaxLength(2048)
   bannerImageUrl?: string;
 
   @IsOptional()

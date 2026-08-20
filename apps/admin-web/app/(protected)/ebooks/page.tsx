@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
 import { ebooksApi } from "../../../lib/ebooks/api-client";
+import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { EbookAnalytics, EbookItem, EbookPayload } from "../../../lib/ebooks/types";
 
 const emptyForm = {
@@ -12,8 +14,11 @@ const emptyForm = {
   category: "GENERAL",
   price: "0",
   isPremium: false,
-  fileUrl: "",
-  coverUrl: "",
+  fileKey: "",
+  coverKey: "",
+  pdfLabel: "",
+  coverLabel: "",
+  coverPreview: "",
   isPublished: false
 };
 
@@ -30,6 +35,7 @@ export default function EbooksPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(
@@ -57,7 +63,7 @@ export default function EbooksPage() {
       setAnalytics(analyticsResponse);
       setCategories(categoryResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load eBooks");
+      setError(normalizeApiError(err, "Failed to load eBooks"));
     } finally {
       setLoading(false);
     }
@@ -76,8 +82,11 @@ export default function EbooksPage() {
       category: ebook.category,
       price: ebook.price.toString(),
       isPremium: ebook.isPremium,
-      fileUrl: ebook.fileUrl,
-      coverUrl: ebook.coverUrl ?? "",
+      fileKey: ebook.fileUrl,
+      coverKey: ebook.coverUrl ?? "",
+      pdfLabel: "Existing PDF attached",
+      coverLabel: ebook.coverUrl ? "Existing cover attached" : "",
+      coverPreview: ebook.coverUrl ?? "",
       isPublished: ebook.isPublished
     });
   }
@@ -95,8 +104,8 @@ export default function EbooksPage() {
       category: form.category.trim() || "GENERAL",
       price: Number(form.price || 0),
       isPremium: form.isPremium,
-      fileUrl: form.fileUrl.trim(),
-      coverUrl: form.coverUrl.trim() || undefined,
+      fileUrl: form.fileKey.trim(),
+      coverUrl: form.coverKey.trim() || undefined,
       isPublished: form.isPublished
     };
   }
@@ -105,7 +114,12 @@ export default function EbooksPage() {
     event.preventDefault();
     setSaving(true);
     setError(null);
+    setUploadStep(null);
     try {
+      if (!form.fileKey.trim()) {
+        throw new Error("Select a PDF before saving this eBook.");
+      }
+      setUploadStep("Saving eBook metadata");
       if (editing) {
         await ebooksApi.update(editing.id, toPayload());
       } else {
@@ -114,8 +128,9 @@ export default function EbooksPage() {
       resetForm();
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save eBook");
+      setError(normalizeApiError(err, "Failed to save eBook"));
     } finally {
+      setUploadStep(null);
       setSaving(false);
     }
   }
@@ -139,11 +154,18 @@ export default function EbooksPage() {
     if (!file) return;
     setUploading(true);
     setError(null);
+    setUploadStep("Uploading PDF");
     try {
       const result = await ebooksApi.uploadFile(file);
-      setForm((current) => ({ ...current, fileUrl: result.url }));
+      setForm((current) => ({
+        ...current,
+        fileKey: result.key,
+        pdfLabel: `${file.name} uploaded`
+      }));
+      setUploadStep("PDF uploaded");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload PDF");
+      setError(normalizeApiError(err, "Failed to upload PDF"));
+      setUploadStep("PDF upload failed");
     } finally {
       setUploading(false);
     }
@@ -151,18 +173,21 @@ export default function EbooksPage() {
 
   async function handleCoverUpload(file: File | undefined) {
     if (!file) return;
-    const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (!["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
-      setError("Cover uploads must be JPG, PNG, WEBP, or GIF");
-      return;
-    }
     setUploading(true);
     setError(null);
+    setUploadStep("Uploading cover image");
     try {
       const result = await ebooksApi.uploadCover(file);
-      setForm((current) => ({ ...current, coverUrl: result.url }));
+      setForm((current) => ({
+        ...current,
+        coverKey: result.key,
+        coverLabel: `${file.name} uploaded`,
+        coverPreview: result.url
+      }));
+      setUploadStep("Cover uploaded");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to upload cover");
+      setError(normalizeApiError(err, "Failed to upload cover"));
+      setUploadStep("Cover upload failed");
     } finally {
       setUploading(false);
     }
@@ -213,30 +238,23 @@ export default function EbooksPage() {
               </datalist>
               <input type="number" min={0} step="0.01" placeholder="Price" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} />
             </div>
-            <input required placeholder="PDF URL" value={form.fileUrl} onChange={(event) => setForm({ ...form, fileUrl: event.target.value })} />
-            <label>
-              Upload PDF
-              <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(event) => void handleFileUpload(event.target.files?.[0])} />
-            </label>
-            <input placeholder="Cover URL" value={form.coverUrl} onChange={(event) => setForm({ ...form, coverUrl: event.target.value })} />
-            <label>
-              Upload cover
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
-                disabled={uploading}
-                onChange={(event) => void handleCoverUpload(event.target.files?.[0])}
-              />
-            </label>
-            {form.coverUrl ? (
-              <img
-                src={form.coverUrl}
-                alt="Selected eBook cover preview"
-                style={{ maxHeight: 160, maxWidth: "100%", objectFit: "cover", borderRadius: 8 }}
-              />
-            ) : (
-              <p style={{ margin: 0, color: "#666" }}>No cover selected. Existing eBooks without covers can still be saved.</p>
-            )}
+            <MediaFileField
+              label="PDF file"
+              accept="application/pdf,.pdf"
+              disabled={uploading || saving}
+              status={form.pdfLabel || "Choose a PDF from this phone, computer, or tablet."}
+              onSelect={(file) => void handleFileUpload(file)}
+            />
+            <MediaFileField
+              label="Cover image"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+              disabled={uploading || saving}
+              status={form.coverLabel || "Optional. JPG, PNG, WEBP, or GIF."}
+              previewUrl={form.coverPreview || null}
+              previewAlt="Selected eBook cover preview"
+              onSelect={(file) => void handleCoverUpload(file)}
+            />
+            {uploadStep ? <p>{uploadStep}</p> : null}
             <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
               <label><input type="checkbox" checked={form.isPremium} onChange={(event) => setForm({ ...form, isPremium: event.target.checked })} /> Premium</label>
               <label><input type="checkbox" checked={form.isPublished} onChange={(event) => setForm({ ...form, isPublished: event.target.checked })} /> Published</label>

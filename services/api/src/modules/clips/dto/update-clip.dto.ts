@@ -5,7 +5,6 @@ import {
   IsInt,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -29,12 +28,14 @@ export class UpdateClipDto {
 
   @IsOptional()
   @Transform(({ value }) => trimString(value))
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MaxLength(2048)
   videoUrl?: string;
 
   @IsOptional()
   @Transform(({ value }) => trimString(value))
-  @IsUrl({ require_tld: false })
+  @IsString()
+  @MaxLength(2048)
   thumbnailUrl?: string;
 
   @IsOptional()

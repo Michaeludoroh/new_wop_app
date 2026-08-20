@@ -1,7 +1,8 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
 import { useAnnouncementMutation, useAnnouncementsFeed } from "../../../lib/announcements/hooks";
 import { Announcement, AnnouncementCategory, AnnouncementPayload } from "../../../lib/announcements/types";
 
@@ -23,6 +24,8 @@ const initialForm: AnnouncementPayload = {
 export default function AnnouncementsPage() {
   const [form, setForm] = useState<AnnouncementPayload>(initialForm);
   const [editing, setEditing] = useState<Announcement | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageLabel, setImageLabel] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "DRAFT" | "PUBLISHED">("ALL");
@@ -45,6 +48,8 @@ export default function AnnouncementsPage() {
   function resetForm() {
     setForm(initialForm);
     setEditing(null);
+    setImagePreview("");
+    setImageLabel("");
     setValidationError(null);
     mutation.clearStatus();
   }
@@ -58,6 +63,8 @@ export default function AnnouncementsPage() {
       imageUrl: announcement.imageUrl ?? "",
       isPublished: announcement.isPublished
     });
+    setImagePreview(announcement.imageUrl ?? "");
+    setImageLabel(announcement.imageUrl ? "Existing image attached" : "");
     mutation.clearStatus();
   }
 
@@ -89,12 +96,12 @@ export default function AnnouncementsPage() {
     if (saved) resetForm();
   }
 
-  async function onImageSelected(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    const url = await mutation.uploadImage(file);
-    if (url) setForm((prev) => ({ ...prev, imageUrl: url }));
+  async function onImageSelected(file: File) {
+    const uploaded = await mutation.uploadImage(file);
+    if (!uploaded) return;
+    setForm((prev) => ({ ...prev, imageUrl: uploaded.key }));
+    setImagePreview(uploaded.url);
+    setImageLabel(`${file.name} uploaded`);
   }
 
   return (
@@ -146,26 +153,15 @@ export default function AnnouncementsPage() {
               </select>
             </Field>
 
-            <Field label="Image URL">
-              <input
-                value={form.imageUrl ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
-                style={inputStyle}
-                placeholder="https://..."
-              />
-            </Field>
-
-            <Field label="Upload image">
-              <input type="file" accept="image/*" onChange={onImageSelected} />
-            </Field>
-
-            {form.imageUrl ? (
-              <img
-                src={form.imageUrl}
-                alt="Announcement preview"
-                style={{ width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: 8 }}
-              />
-            ) : null}
+            <MediaFileField
+              label="Image"
+              accept="image/*"
+              disabled={mutation.loading}
+              status={imageLabel || "Choose an image from this device."}
+              previewUrl={imagePreview || null}
+              previewAlt="Announcement preview"
+              onSelect={(file) => void onImageSelected(file)}
+            />
 
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
               <input

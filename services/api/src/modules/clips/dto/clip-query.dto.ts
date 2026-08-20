@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ClipQueryDto {
   @IsOptional()
@@ -14,6 +14,10 @@ export class ClipQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   featured?: boolean;
+
+  @IsOptional()
+  @IsIn(['recent', 'featured'])
+  sort?: 'recent' | 'featured';
 
   @IsOptional()
   @Transform(({ value }) => Number(value))

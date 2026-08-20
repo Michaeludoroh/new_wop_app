@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import ProtectedModule from "../../../components/protected-module";
+import MediaFileField from "../../../components/media-file-field";
 import { normalizeApiError } from "../../../lib/http/normalize-error";
 import { clipsApi } from "../../../lib/clips/api-client";
 import { Clip, ClipPayload } from "../../../lib/clips/types";
@@ -9,8 +10,11 @@ import { Clip, ClipPayload } from "../../../lib/clips/types";
 const emptyForm = {
   title: "",
   description: "",
-  videoUrl: "",
-  thumbnailUrl: "",
+  videoKey: "",
+  thumbnailKey: "",
+  videoLabel: "",
+  thumbnailLabel: "",
+  thumbnailPreview: "",
   category: "GENERAL",
   durationSeconds: "",
   speaker: "",
@@ -67,8 +71,11 @@ export default function ClipsPage() {
     setForm({
       title: clip.title,
       description: clip.description ?? "",
-      videoUrl: clip.videoUrl,
-      thumbnailUrl: clip.thumbnailUrl ?? "",
+      videoKey: clip.videoUrl,
+      thumbnailKey: clip.thumbnailUrl ?? "",
+      videoLabel: "Existing video attached",
+      thumbnailLabel: clip.thumbnailUrl ? "Existing thumbnail attached" : "",
+      thumbnailPreview: clip.thumbnailUrl ?? "",
       category: clip.category,
       durationSeconds: clip.durationSeconds?.toString() ?? "",
       speaker: clip.speaker ?? "",
@@ -88,8 +95,8 @@ export default function ClipsPage() {
     return {
       title: form.title.trim(),
       description: form.description.trim() || undefined,
-      videoUrl: form.videoUrl.trim(),
-      thumbnailUrl: form.thumbnailUrl.trim() || undefined,
+      videoUrl: form.videoKey.trim(),
+      thumbnailUrl: form.thumbnailKey.trim() || undefined,
       category: form.category.trim() || "GENERAL",
       durationSeconds: form.durationSeconds ? Number(form.durationSeconds) : undefined,
       speaker: form.speaker.trim() || undefined,
@@ -106,7 +113,11 @@ export default function ClipsPage() {
     setError(null);
     try {
       const result = await clipsApi.uploadMedia(file);
-      setForm((current) => ({ ...current, videoUrl: result.url }));
+      setForm((current) => ({
+        ...current,
+        videoKey: result.key,
+        videoLabel: `${file.name} uploaded`
+      }));
     } catch (err) {
       setError(normalizeApiError(err, "Failed to upload clip media"));
     } finally {
@@ -120,7 +131,12 @@ export default function ClipsPage() {
     setError(null);
     try {
       const result = await clipsApi.uploadThumbnail(file);
-      setForm((current) => ({ ...current, thumbnailUrl: result.url }));
+      setForm((current) => ({
+        ...current,
+        thumbnailKey: result.key,
+        thumbnailLabel: `${file.name} uploaded`,
+        thumbnailPreview: result.url
+      }));
     } catch (err) {
       setError(normalizeApiError(err, "Failed to upload thumbnail"));
     } finally {
@@ -133,6 +149,9 @@ export default function ClipsPage() {
     setSaving(true);
     setError(null);
     try {
+      if (!form.videoKey.trim()) {
+        throw new Error("Select a video before saving this clip.");
+      }
       if (editing) {
         await clipsApi.update(editing.id, toPayload());
       } else {
@@ -182,10 +201,22 @@ export default function ClipsPage() {
           <form onSubmit={saveClip} style={{ display: "grid", gap: 12, maxWidth: 760 }}>
             <input required placeholder="Title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
             <textarea placeholder="Description" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} />
-            <input required placeholder="Video URL" value={form.videoUrl} onChange={(event) => setForm({ ...form, videoUrl: event.target.value })} />
-            <input type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov,.m4v" disabled={uploading} onChange={(event) => void handleMediaUpload(event.target.files?.[0])} />
-            <input placeholder="Thumbnail URL" value={form.thumbnailUrl} onChange={(event) => setForm({ ...form, thumbnailUrl: event.target.value })} />
-            <input type="file" accept="image/*" disabled={uploading} onChange={(event) => void handleThumbnailUpload(event.target.files?.[0])} />
+            <MediaFileField
+              label="Video file"
+              accept="video/mp4,video/quicktime,.mp4,.m4v,.mov"
+              disabled={uploading || saving}
+              status={form.videoLabel || "Choose an MP4 from this phone, computer, or tablet. iOS playback requires MP4/H.264."}
+              onSelect={(file) => void handleMediaUpload(file)}
+            />
+            <MediaFileField
+              label="Thumbnail image"
+              accept="image/*"
+              disabled={uploading || saving}
+              status={form.thumbnailLabel || "Optional thumbnail."}
+              previewUrl={form.thumbnailPreview || null}
+              previewAlt="Clip thumbnail preview"
+              onSelect={(file) => void handleThumbnailUpload(file)}
+            />
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
               <input placeholder="Category" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
               <input placeholder="Speaker / presenter" value={form.speaker} onChange={(event) => setForm({ ...form, speaker: event.target.value })} />
@@ -198,7 +229,7 @@ export default function ClipsPage() {
               <label><input type="checkbox" checked={form.isPublished} onChange={(event) => setForm({ ...form, isPublished: event.target.checked })} /> Published</label>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" disabled={saving}>{saving ? "Saving..." : editing ? "Update clip" : "Create clip"}</button>
+              <button type="submit" disabled={saving || uploading}>{saving ? "Saving..." : editing ? "Update clip" : "Create clip"}</button>
               {editing ? <button type="button" onClick={resetForm}>Cancel</button> : null}
             </div>
           </form>

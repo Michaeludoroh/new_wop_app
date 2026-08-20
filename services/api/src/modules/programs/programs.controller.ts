@@ -8,8 +8,12 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,6 +23,7 @@ import { ProgramQueryDto } from './dto/program-query.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
 import { UpdateProgramProgressDto } from './dto/update-program-progress.dto';
 import { ProgramsService } from './programs.service';
+import { ProgramsUploadService } from './programs-upload.service';
 
 type AuthRequest = Request & {
   user: {
@@ -29,7 +34,10 @@ type AuthRequest = Request & {
 
 @Controller('programs')
 export class ProgramsController {
-  constructor(private readonly service: ProgramsService) {}
+  constructor(
+    private readonly service: ProgramsService,
+    private readonly uploadService: ProgramsUploadService,
+  ) {}
 
   @Get('public')
   listPublic(@Query() query: ProgramQueryDto) {
@@ -79,6 +87,29 @@ export class ProgramsController {
   @Get('admin/:id/progress')
   listProgramProgress(@Param('id') id: string) {
     return this.service.listProgramProgress(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('MODERATOR')
+  @Post('admin/upload/banner')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 20 * 1024 * 1024 },
+    }),
+  )
+  uploadBanner(
+    @UploadedFile()
+    file: { buffer?: Buffer; originalname?: string; mimetype?: string; size?: number },
+  ) {
+    console.info('[media] upload request', {
+      endpoint: 'programs/admin/upload/banner',
+      filename: file?.originalname,
+      mime: file?.mimetype,
+      bytes: file?.size ?? file?.buffer?.length,
+      hasFile: Boolean(file?.buffer?.length || file?.originalname),
+    });
+    return this.uploadService.saveBanner(file);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

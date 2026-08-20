@@ -172,6 +172,47 @@ void main() {
     expect(items, isEmpty);
   });
 
+  test('latest clip prefers newest published playable clip over featured list order', () {
+    final items = composeHomepageFeed(
+      announcements: const [],
+      clips: [
+        ClipItem(
+          id: 'clip-old-featured',
+          title: 'Older featured clip',
+          videoUrl: 'https://cdn.example.com/old.mp4',
+          category: 'TEACHING',
+          viewCount: 40,
+          featured: true,
+          isPublished: true,
+          tags: const [],
+          scriptureReferences: const [],
+          publishedAt: now.subtract(const Duration(days: 20)),
+        ),
+        ClipItem(
+          id: 'clip-new',
+          title: 'Brand new clip',
+          videoUrl: 'https://cdn.example.com/new.mp4',
+          category: 'TEACHING',
+          viewCount: 1,
+          featured: false,
+          isPublished: true,
+          tags: const [],
+          scriptureReferences: const [],
+          publishedAt: now.subtract(const Duration(minutes: 5)),
+        ),
+      ],
+      events: const [],
+      ebooks: const [],
+      programs: const [],
+      mentorship: const [],
+      now: now,
+    );
+
+    expect(items.single.kind, HomepageFeedKind.clip);
+    expect(items.single.title, 'Brand new clip');
+    expect(items.single.keyId, 'clip:clip-new');
+  });
+
   test('ignores past events when upcoming events exist', () {
     final items = composeHomepageFeed(
       announcements: const [],

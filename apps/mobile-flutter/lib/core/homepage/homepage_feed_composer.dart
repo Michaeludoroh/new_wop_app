@@ -67,9 +67,9 @@ List<HomepageFeedItem> composeHomepageFeed({
   }
 
   if (clips.isNotEmpty) {
-    final playable = clips.where((clip) => clip.hasPlayableVideo).toList();
-    if (playable.isNotEmpty) {
-      add(_clipItem(playable.first, now: now));
+    final latestPlayable = _latestPlayableClip(clips);
+    if (latestPlayable != null) {
+      add(_clipItem(latestPlayable, now: now));
     }
   }
 
@@ -134,6 +134,17 @@ T? _firstWhere<T>(Iterable<T> items, bool Function(T item) test) {
     if (test(item)) return item;
   }
   return null;
+}
+
+ClipItem? _latestPlayableClip(List<ClipItem> clips) {
+  final playable = clips.where((clip) => clip.hasPlayableVideo).toList();
+  if (playable.isEmpty) return null;
+  playable.sort((a, b) {
+    final aTime = a.publishedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    final bTime = b.publishedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return bTime.compareTo(aTime);
+  });
+  return playable.first;
 }
 
 HomepageFeedItem _announcementItem(
