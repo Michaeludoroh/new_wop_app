@@ -41,6 +41,7 @@ type VerifiedStorePurchase = {
   productId: string;
   transactionId: string;
   purchaseToken: string | null;
+  linkedPurchaseToken?: string | null;
   originalTransactionId: string | null;
   receiptData: string | null;
   purchaseDate: Date;
@@ -91,6 +92,7 @@ export class MobileSubscriptionsService {
       productId: verification.productId,
       transactionId: verification.transactionId,
       purchaseToken: verification.purchaseToken,
+      linkedPurchaseToken: verification.linkedPurchaseToken,
       originalTransactionId: verification.transactionId,
       receiptData: null,
       purchaseDate: verification.purchaseDate,
@@ -243,7 +245,7 @@ export class MobileSubscriptionsService {
   }
 
   private async persistVerifiedPurchase(userId: string, verified: VerifiedStorePurchase) {
-    const duplicate = await this.findExistingPurchase(verified);
+    const duplicate = await this.findExistingPurchase(userId, verified);
     if (duplicate && duplicate.userId !== userId) {
       this.logger.warn(
         `Replay attempt blocked: ${verified.provider} purchase already owned by another user`,
@@ -257,7 +259,11 @@ export class MobileSubscriptionsService {
     if (duplicate && duplicate.userId === userId) {
       const synced = await this.syncExistingPurchase(userId, duplicate, verified);
       return {
-        data: synced,
+        data: {
+          store: synced.store,
+          subscription: synced.subscription,
+        },
+        summary: synced.summary,
         message: 'Purchase already verified',
         idempotent: true,
       };
@@ -501,6 +507,8 @@ export class MobileSubscriptionsService {
         data: {
           productId: verified.productId,
           transactionId: verified.transactionId,
+          purchaseToken: verified.purchaseToken,
+          originalTransactionId: verified.originalTransactionId,
           purchaseDate: verified.purchaseDate,
           expiryDate: verified.expiryDate,
           renewalStatus: verified.renewalStatus,
@@ -529,6 +537,14 @@ export class MobileSubscriptionsService {
                   : null,
               cancelAtPeriodEnd: !verified.autoRenewStatus,
               lastPaymentAt: new Date(),
+              metadata: {
+                provider: verified.provider,
+                platform: verified.platform,
+                productId: verified.productId,
+                transactionId: verified.transactionId,
+                originalTransactionId: verified.originalTransactionId,
+                purchaseToken: verified.purchaseToken,
+              },
             },
           });
         }
@@ -563,15 +579,49 @@ export class MobileSubscriptionsService {
     };
   }
 
-  private async findExistingPurchase(verified: VerifiedStorePurchase) {
+  private async findExistingPurchase(userId: string, verified: VerifiedStorePurchase) {
     if (verified.provider === StoreProvider.GOOGLE_PLAY && verified.purchaseToken) {
-      return this.prisma.storeSubscription.findUnique({
+      const byCurrentToken = await this.prisma.storeSubscription.findUnique({
         where: {
           provider_purchaseToken: {
             provider: StoreProvider.GOOGLE_PLAY,
             purchaseToken: verified.purchaseToken,
           },
         },
+      });
+      if (byCurrentToken) {
+        return byCurrentToken;
+      }
+
+      if (verified.linkedPurchaseToken) {
+        const byLinkedToken = await this.prisma.storeSubscription.findUnique({
+          where: {
+            provider_purchaseToken: {
+              provider: StoreProvider.GOOGLE_PLAY,
+              purchaseToken: verified.linkedPurchaseToken,
+            },
+          },
+        });
+        if (byLinkedToken) {
+          return byLinkedToken;
+        }
+      }
+
+      return this.prisma.storeSubscription.findFirst({
+        where: {
+          userId,
+          provider: StoreProvider.GOOGLE_PLAY,
+          userSubscription: {
+            status: {
+              in: [
+                SubscriptionStatus.PENDING,
+                SubscriptionStatus.ACTIVE,
+                SubscriptionStatus.GRACE,
+              ],
+            },
+          },
+        },
+        orderBy: [{ updatedAt: 'desc' }],
       });
     }
 

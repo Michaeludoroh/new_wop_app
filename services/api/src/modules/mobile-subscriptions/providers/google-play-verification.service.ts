@@ -13,6 +13,7 @@ import { isAllowedPremiumProductId } from '../premium-store-products';
 export type GoogleSubscriptionVerification = {
   productId: string;
   purchaseToken: string;
+  linkedPurchaseToken: string | null;
   transactionId: string;
   purchaseDate: Date;
   expiryDate: Date;
@@ -79,10 +80,12 @@ export class GooglePlayVerificationService {
 
     const orderId = String(payload.orderId ?? purchaseToken);
     const acknowledged = payload.acknowledgementState === 1;
+    const linkedPurchaseToken = stringValue(payload.linkedPurchaseToken);
 
     return {
       productId,
       purchaseToken,
+      linkedPurchaseToken,
       transactionId: orderId,
       purchaseDate,
       expiryDate,
@@ -200,4 +203,8 @@ export function mapGooglePlatform(): MobilePlatform {
 
 export function mapGoogleProvider(): StoreProvider {
   return StoreProvider.GOOGLE_PLAY;
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }

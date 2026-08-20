@@ -53,6 +53,46 @@ describe('GooglePlayVerificationService', () => {
     expect(result.transactionId).toBe('GPA.123');
     expect(result.status).toBe('ACTIVE');
     expect(result.autoRenewStatus).toBe(true);
+    expect(result.linkedPurchaseToken).toBeNull();
+  });
+
+  it('exposes Google linkedPurchaseToken for subscription replacements', async () => {
+    const service = createService({
+      GOOGLE_PLAY_PACKAGE_NAME: 'com.ministrymobile.app',
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: JSON.stringify({
+        client_email: 'play@example.iam.gserviceaccount.com',
+        private_key: 'test-key',
+      }),
+      MOBILE_ANDROID_PREMIUM_PRODUCT_ID: 'wopp_premium_monthly',
+    });
+
+    jest.spyOn(
+      GooglePlayVerificationService.prototype as never,
+      'getAccessToken' as never,
+    ).mockResolvedValue('access-token' as never);
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        orderId: 'GPA.456',
+        startTimeMillis: '1719792000000',
+        expiryTimeMillis: String(Date.now() + 90 * 24 * 60 * 60 * 1000),
+        autoRenewing: true,
+        paymentState: 1,
+        acknowledgementState: 0,
+        linkedPurchaseToken: 'previous-monthly-token',
+      }),
+    }) as typeof fetch;
+
+    const result = await service.verifySubscriptionPurchase(
+      'wopp_premium_quarterly',
+      'new-quarterly-token',
+    );
+
+    expect(result.productId).toBe('wopp_premium_quarterly');
+    expect(result.linkedPurchaseToken).toBe('previous-monthly-token');
+    expect(result.acknowledged).toBe(false);
+    expect(result.status).toBe('ACTIVE');
   });
 
   it('throws when Google API verification fails', async () => {

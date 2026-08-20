@@ -20,6 +20,8 @@ const premiumPlan = {
 
 function createService(overrides?: {
   existingStore?: Record<string, unknown> | null;
+  existingGoogleStore?: Record<string, unknown> | null;
+  storeByToken?: Record<string, Record<string, unknown> | null>;
   googleVerification?: Record<string, unknown>;
   appleVerification?: Record<string, unknown>;
 }) {
@@ -68,8 +70,14 @@ function createService(overrides?: {
       }),
     },
     storeSubscription: {
-      findFirst: jest.fn().mockResolvedValue(null),
-      findUnique: jest.fn().mockResolvedValue(overrides?.existingStore ?? null),
+      findFirst: jest.fn().mockResolvedValue(overrides?.existingGoogleStore ?? null),
+      findUnique: jest.fn(async ({ where }: { where?: { provider_purchaseToken?: { purchaseToken?: string } } }) => {
+        const token = where?.provider_purchaseToken?.purchaseToken;
+        if (overrides?.storeByToken) {
+          return token ? overrides.storeByToken[token] ?? null : null;
+        }
+        return overrides?.existingStore ?? null;
+      }),
     },
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
   };
@@ -82,6 +90,7 @@ function createService(overrides?: {
     verifySubscriptionPurchase: jest.fn().mockResolvedValue({
       productId: 'wopp_premium_monthly',
       purchaseToken: 'token_abc',
+      linkedPurchaseToken: null,
       transactionId: 'GPA.123',
       purchaseDate: new Date('2026-07-01T00:00:00.000Z'),
       expiryDate: new Date('2026-08-01T00:00:00.000Z'),
@@ -361,6 +370,222 @@ describe('MobileSubscriptionsService', () => {
       'token_abc',
     );
     expect(tx.userSubscription.create).toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('verifies a yearly Google product and grants PREMIUM', async () => {
+    const { service, tx, googlePlayVerification } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_yearly',
+        purchaseToken: 'token_yearly',
+      },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_yearly',
+      purchaseToken: 'token_yearly',
+    });
+
+    expect(googlePlayVerification.verifySubscriptionPurchase).toHaveBeenCalledWith(
+      'wopp_premium_yearly',
+      'token_yearly',
+    );
+    expect(tx.userSubscription.create).toHaveBeenCalled();
+    expect(tx.storeSubscription.upsert).toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('rejects unknown Google product IDs', async () => {
+    const { service, googlePlayVerification } = createService();
+
+    await expect(
+      service.verifyGooglePurchase('user_1', {
+        productId: 'com.other.app.coins',
+        purchaseToken: 'token_abc',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(googlePlayVerification.verifySubscriptionPurchase).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges unacknowledged Google purchases after verification', async () => {
+    const { service, googlePlayVerification } = createService({
+      googleVerification: { acknowledged: false },
+    });
+
+    await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_monthly',
+      purchaseToken: 'token_abc',
+    });
+
+    expect(googlePlayVerification.acknowledgeSubscriptionPurchase).toHaveBeenCalledWith(
+      'wopp_premium_monthly',
+      'token_abc',
+    );
+  });
+
+  it('reconciles monthly to quarterly using a linked purchase token', async () => {
+    const { service, tx } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_quarterly',
+        purchaseToken: 'token_quarterly',
+        linkedPurchaseToken: 'token_monthly',
+        transactionId: 'GPA.456',
+      },
+      storeByToken: {
+        token_monthly: {
+          id: 'store_sub_existing',
+          userId: 'user_1',
+          userSubscriptionId: 'sub_1',
+        },
+      },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_quarterly',
+      purchaseToken: 'token_quarterly',
+    });
+
+    expect(result.idempotent).toBe(true);
+    expect(tx.storeSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'store_sub_existing' },
+        data: expect.objectContaining({
+          productId: 'wopp_premium_quarterly',
+          purchaseToken: 'token_quarterly',
+        }),
+      }),
+    );
+    expect(tx.userSubscription.create).not.toHaveBeenCalled();
+    expect(tx.storeSubscription.upsert).not.toHaveBeenCalled();
+    expect(tx.storePurchaseHistory.create).toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('reconciles quarterly to yearly using a linked purchase token', async () => {
+    const { service, tx } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_yearly',
+        purchaseToken: 'token_yearly',
+        linkedPurchaseToken: 'token_quarterly',
+      },
+      storeByToken: {
+        token_quarterly: {
+          id: 'store_sub_existing',
+          userId: 'user_1',
+          userSubscriptionId: 'sub_1',
+        },
+      },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_yearly',
+      purchaseToken: 'token_yearly',
+    });
+
+    expect(tx.storeSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          productId: 'wopp_premium_yearly',
+          purchaseToken: 'token_yearly',
+        }),
+      }),
+    );
+    expect(tx.userSubscription.create).not.toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('reconciles yearly to monthly using a linked purchase token', async () => {
+    const { service, tx } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_monthly',
+        purchaseToken: 'token_monthly_new',
+        linkedPurchaseToken: 'token_yearly',
+      },
+      storeByToken: {
+        token_yearly: {
+          id: 'store_sub_existing',
+          userId: 'user_1',
+          userSubscriptionId: 'sub_1',
+        },
+      },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_monthly',
+      purchaseToken: 'token_monthly_new',
+    });
+
+    expect(tx.storeSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          productId: 'wopp_premium_monthly',
+          purchaseToken: 'token_monthly_new',
+        }),
+      }),
+    );
+    expect(tx.userSubscription.create).not.toHaveBeenCalled();
+    expect(result.summary?.hasPremiumAccess).toBe(true);
+  });
+
+  it('does not attach a linked Google token that already belongs to another user', async () => {
+    const { service } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_quarterly',
+        purchaseToken: 'token_quarterly',
+        linkedPurchaseToken: 'token_monthly',
+      },
+      storeByToken: {
+        token_monthly: {
+          id: 'store_sub_other',
+          userId: 'other_user',
+          userSubscriptionId: 'sub_other',
+        },
+      },
+    });
+
+    await expect(
+      service.verifyGooglePurchase('user_1', {
+        productId: 'wopp_premium_quarterly',
+        purchaseToken: 'token_quarterly',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('updates the user\'s active Google StoreSubscription when a replacement token has no linked token', async () => {
+    const { service, tx } = createService({
+      googleVerification: {
+        productId: 'wopp_premium_yearly',
+        purchaseToken: 'token_yearly',
+        linkedPurchaseToken: null,
+      },
+      existingGoogleStore: {
+        id: 'store_sub_existing',
+        userId: 'user_1',
+        userSubscriptionId: 'sub_1',
+        platform: MobilePlatform.ANDROID,
+        provider: StoreProvider.GOOGLE_PLAY,
+        productId: 'wopp_premium_monthly',
+        autoRenewStatus: true,
+        status: StoreSubscriptionStatus.ACTIVE,
+        updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+      },
+    });
+
+    const result = await service.verifyGooglePurchase('user_1', {
+      productId: 'wopp_premium_yearly',
+      purchaseToken: 'token_yearly',
+    });
+
+    expect(tx.storeSubscription.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'store_sub_existing' },
+        data: expect.objectContaining({
+          productId: 'wopp_premium_yearly',
+          purchaseToken: 'token_yearly',
+        }),
+      }),
+    );
+    expect(tx.userSubscription.create).not.toHaveBeenCalled();
     expect(result.summary?.hasPremiumAccess).toBe(true);
   });
 });
