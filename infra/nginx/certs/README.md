@@ -7,9 +7,7 @@
 | `woppandmopp.com` | Flask website, Nest API (`/api/v1`), WebSocket (`/realtime`) | `/etc/letsencrypt/live/woppandmopp.com/` |
 | `admin.woppandmopp.com` | Next.js app admin | `/etc/letsencrypt/live/admin.woppandmopp.com/` |
 
-API and WebSocket are served on the apex domain via path routing (`woppandmopp.server.conf`), not separate subdomains.
-
-Legacy subdomains `api.woppandmopp.com` and `ws.woppandmopp.com` redirect to the apex paths.
+API is also served on `api.woppandmopp.com` (`api.server.conf` → Compose `api:4000`). Apex `woppandmopp.com/api/` remains valid. `ws.woppandmopp.com` still redirects to the apex Socket.IO path.
 
 ## Self-signed certs (local/staging only)
 
