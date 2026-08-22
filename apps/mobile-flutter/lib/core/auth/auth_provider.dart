@@ -4,6 +4,7 @@ import 'auth_service.dart';
 import 'auth_state.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
+import '../http/api_error.dart';
 import '../notifications/services/firebase_messaging_service.dart';
 import '../logging/app_log.dart';
 import '../policies/policy_acceptance_gate.dart';
@@ -105,12 +106,15 @@ class AuthProvider extends ChangeNotifier {
         _state.copyWith(
           status: AuthStatus.unauthenticated,
           clearUser: true,
-          errorMessage: e.toString(),
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback: 'Unable to restore your session. Please sign in again.',
+          ),
           isBusy: false,
           isBootstrapped: true,
         ),
       );
-      debugPrint('[BOOT] bootstrap error: $e');
+      AppLog.debug('[BOOT] bootstrap error type=${e.runtimeType}');
     }
 
     debugPrint(
@@ -151,7 +155,10 @@ class AuthProvider extends ChangeNotifier {
     } catch (e) {
       _setState(
         _state.copyWith(
-          errorMessage: e.toString(),
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback: 'Unable to refresh your profile. Please try again.',
+          ),
           isBusy: false,
         ),
       );
@@ -228,7 +235,10 @@ class AuthProvider extends ChangeNotifier {
         _state.copyWith(
           status: AuthStatus.unauthenticated,
           clearUser: true,
-          errorMessage: e.toString(),
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback: 'Your session expired. Please sign in again.',
+          ),
           isBusy: false,
           isBootstrapped: true,
         ),
@@ -258,6 +268,20 @@ class AuthProvider extends ChangeNotifier {
         ),
       );
     });
+  }
+
+  Future<String?> rememberedEmail() {
+    return _tokenStorageService.getRememberedEmail();
+  }
+
+  /// Stores the email only. Never persists a password.
+  Future<void> persistRememberedEmail(String? email) async {
+    final trimmed = email?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      await _tokenStorageService.clearRememberedEmail();
+      return;
+    }
+    await _tokenStorageService.saveRememberedEmail(trimmed);
   }
 
   Future<bool> _refreshIfExpiredOrNearExpiry() async {
@@ -295,12 +319,15 @@ class AuthProvider extends ChangeNotifier {
       await action();
       _setState(_state.copyWith(isBusy: false, clearError: true));
     } catch (e) {
-      AppLog.debug('AUTH_PROVIDER ERROR: $e');
+      AppLog.debug('AUTH_PROVIDER ERROR type=${e.runtimeType}');
 
       _setState(
         _state.copyWith(
           status: AuthStatus.unauthenticated,
-          errorMessage: e.toString(),
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback: 'Unable to complete that request. Please try again.',
+          ),
           isBusy: false,
         ),
       );

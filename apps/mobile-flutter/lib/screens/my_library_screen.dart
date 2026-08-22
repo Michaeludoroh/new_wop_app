@@ -12,11 +12,14 @@ import 'ebook_screen.dart';
 import 'pdf_reader_screen.dart';
 
 class MyLibraryScreen extends StatefulWidget {
-  const MyLibraryScreen({super.key, this.service});
+  const MyLibraryScreen({super.key, this.service, this.embedded = false});
 
   static const routeName = '/library';
 
   final EbookService? service;
+
+  /// When true, omit the local AppBar so this screen can sit in a parent tab.
+  final bool embedded;
 
   @override
   State<MyLibraryScreen> createState() => _MyLibraryScreenState();
@@ -153,20 +156,9 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
         library.downloads.isEmpty &&
         library.history.isEmpty;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const MinistryAppBarTitle(title: 'My Library'),
-        actions: [
-          TextButton(
-            onPressed: _openCatalog,
-            child: const Text('Browse eBooks'),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -262,8 +254,23 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
                     ],
                   ],
                 ),
-              ),
+              );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const MinistryAppBarTitle(title: 'My Library'),
+        actions: [
+          TextButton(
+            onPressed: _openCatalog,
+            child: const Text('Browse eBooks'),
+          ),
+        ],
       ),
+      body: SafeArea(child: body),
     );
   }
 }

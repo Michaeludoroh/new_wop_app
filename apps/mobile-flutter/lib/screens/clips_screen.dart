@@ -8,11 +8,14 @@ import '../core/logging/app_log.dart';
 import 'clip_details_screen.dart';
 
 class ClipsScreen extends StatefulWidget {
-  const ClipsScreen({super.key, this.service});
+  const ClipsScreen({super.key, this.service, this.embedded = false});
 
   static const routeName = '/clips';
 
   final ClipService? service;
+
+  /// When true, omit the local AppBar so this screen can sit in a parent tab.
+  final bool embedded;
 
   @override
   State<ClipsScreen> createState() => _ClipsScreenState();
@@ -87,12 +90,9 @@ class _ClipsScreenState extends State<ClipsScreen> {
     final clips = _clips?.data ?? const <ClipItem>[];
     final featured = _featured?.data ?? const <ClipItem>[];
 
-    return Scaffold(
-      appBar: AppBar(title: const MinistryAppBarTitle(title: 'Clips')),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -176,8 +176,15 @@ class _ClipsScreenState extends State<ClipsScreen> {
                           )),
                   ],
                 ),
-              ),
-      ),
+              );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const MinistryAppBarTitle(title: 'Clips')),
+      body: SafeArea(child: body),
     );
   }
 }

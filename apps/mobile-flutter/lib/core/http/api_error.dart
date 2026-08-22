@@ -91,6 +91,50 @@ int? apiHttpStatus(Object error) {
   return null;
 }
 
+/// User-visible login error. Never includes passwords, tokens, or raw bodies.
+String loginErrorMessage(Object error) {
+  final status = apiHttpStatus(error);
+  if (status == 401 || status == 403) {
+    return 'Invalid email or password.';
+  }
+  return sanitizeUserFacingError(
+    messageFromDio(
+      error,
+      fallback: 'Unable to sign in right now. Please try again.',
+    ),
+    fallback: 'Unable to sign in right now. Please try again.',
+  );
+}
+
+/// User-visible auth/session error. Never includes passwords, tokens, or raw bodies.
+String safeAuthErrorMessage(
+  Object error, {
+  required String fallback,
+}) {
+  return sanitizeUserFacingError(
+    messageFromDio(error, fallback: fallback),
+    fallback: fallback,
+  );
+}
+
+String sanitizeUserFacingError(String message, {required String fallback}) {
+  final trimmed = message.trim();
+  if (trimmed.isEmpty) {
+    return fallback;
+  }
+  final lower = trimmed.toLowerCase();
+  if (lower.contains('bearer ') ||
+      lower.contains('authorization') ||
+      lower.contains('refresh token') ||
+      lower.contains('access token') ||
+      lower.contains('password') ||
+      lower.contains('api key') ||
+      lower.contains('secret')) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 /// Nest/Dio error code when the backend sends `{ message: { code, message } }`.
 String? apiErrorCode(Object error) {
   if (error is! DioException) {

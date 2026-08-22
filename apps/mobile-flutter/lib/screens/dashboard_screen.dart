@@ -4,12 +4,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import '../core/auth/auth_scope.dart';
+import '../core/clips/clip_service.dart';
+import '../core/ebooks/ebook_service.dart';
+import '../core/events/event_service.dart';
 import '../core/homepage/homepage_feed_sources.dart';
 import '../core/notifications/push_notification_router.dart';
 import '../core/notifications/providers/notifications_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/homepage/homepage_feed.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/subscription_gate.dart';
 import 'notifications_screen.dart';
 import 'ebook_screen.dart';
 import 'my_library_screen.dart';
@@ -26,11 +30,17 @@ class DashboardScreen extends StatefulWidget {
     required this.authStatusLabel,
     this.authError,
     this.homepageSources,
+    this.eventService,
+    this.clipService,
+    this.libraryService,
   });
 
   final String authStatusLabel;
   final String? authError;
   final HomepageFeedSources? homepageSources;
+  final EventService? eventService;
+  final ClipService? clipService;
+  final EbookService? libraryService;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -40,6 +50,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     with WidgetsBindingObserver {
   late final NotificationsProvider _notificationsProvider;
   int _selectedIndex = 0;
+  final Set<int> _builtTabs = {0};
+  Widget? _eventsTab;
+  Widget? _clipsTab;
+  Widget? _libraryTab;
   StreamSubscription<RemoteMessage>? _foregroundPushSub;
   StreamSubscription<RemoteMessage>? _openedPushSub;
 
@@ -149,80 +163,61 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_selectedIndex == index) return;
     setState(() {
       _selectedIndex = index;
+      _builtTabs.add(index);
     });
   }
 
-  Widget _buildTabContent({
-    required BuildContext context,
-    required String userDisplayName,
-  }) {
-    final selectedLabel = _tabs[_selectedIndex].label;
-
-    switch (_selectedIndex) {
-      case 0:
-        return Column(
-          children: [
-            if (widget.authError != null && widget.authError!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Text(
-                  'Auth error: ${widget.authError}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                ),
-              ),
-            Expanded(
-              child: HomepageFeed(
-                sources: widget.homepageSources,
-                memberName: userDisplayName,
-              ),
+  Widget _homeTab({required String userDisplayName}) {
+    return Column(
+      children: [
+        if (widget.authError != null && widget.authError!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Text(
+              'Auth error: ${widget.authError}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
             ),
-          ],
-        );
+          ),
+        Expanded(
+          child: HomepageFeed(
+            sources: widget.homepageSources,
+            memberName: userDisplayName,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _tabAt(int index, {required String userDisplayName}) {
+    switch (index) {
+      case 0:
+        return _homeTab(userDisplayName: userDisplayName);
       case 1:
-        return _TabScaffold(
-          title: 'Events',
-          subtitle: 'Browse upcoming ministry events and manage your RSVP.',
-          authError: widget.authError,
-          icon: Icons.event_note_outlined,
-          actionLabel: 'Open Events',
-          onAction: () =>
-              Navigator.of(context).pushNamed(EventsScreen.routeName),
+        return _eventsTab ??= EventsScreen(
+          key: const Key('dashboard_events_content'),
+          service: widget.eventService,
+          embedded: true,
         );
       case 2:
-        return _TabScaffold(
-          title: 'Clips',
-          subtitle:
-              'Watch featured ministry clips, teaching highlights, and encouragement.',
-          authError: widget.authError,
-          icon: Icons.play_circle_outline,
-          actionLabel: 'Open Clips',
-          onAction: () =>
-              Navigator.of(context).pushNamed(ClipsScreen.routeName),
+        return _clipsTab ??= SubscriptionGate(
+          child: ClipsScreen(
+            key: const Key('dashboard_clips_content'),
+            service: widget.clipService,
+            embedded: true,
+          ),
         );
       case 3:
-        return _TabScaffold(
-          title: 'My Library',
-          subtitle: 'Access purchased titles or browse the full eBook catalog.',
-          authError: widget.authError,
-          icon: Icons.library_books_outlined,
-          actionLabel: 'Open Library',
-          onAction: () =>
-              Navigator.of(context).pushNamed(MyLibraryScreen.routeName),
-          secondaryActionLabel: 'Browse eBooks',
-          onSecondaryAction: () =>
-              Navigator.of(context).pushNamed(EbookScreen.routeName),
+        return _libraryTab ??= MyLibraryScreen(
+          key: const Key('dashboard_library_content'),
+          service: widget.libraryService,
+          embedded: true,
         );
       case 4:
         return const MoreScreen();
       default:
-        return _TabScaffold(
-          title: selectedLabel,
-          subtitle: 'Select a tab to continue.',
-          authError: widget.authError,
-          icon: Icons.dashboard_customize_outlined,
-        );
+        return const SizedBox.shrink();
     }
   }
 
@@ -271,6 +266,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
             },
           ),
+          if (_selectedIndex == 3)
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(EbookScreen.routeName),
+              child: const Text('Browse eBooks'),
+            ),
           IconButton(
             tooltip: 'Profile',
             onPressed: () =>
@@ -286,15 +287,15 @@ class _DashboardScreenState extends State<DashboardScreen>
         ],
       ),
       body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          child: KeyedSubtree(
-            key: ValueKey<int>(_selectedIndex),
-            child: _buildTabContent(
-              context: context,
-              userDisplayName: userDisplayName,
-            ),
-          ),
+        child: IndexedStack(
+          sizing: StackFit.expand,
+          index: _selectedIndex,
+          children: [
+            for (var i = 0; i < _tabs.length; i++)
+              _builtTabs.contains(i)
+                  ? _tabAt(i, userDisplayName: userDisplayName)
+                  : const SizedBox.shrink(),
+          ],
         ),
       ),
       bottomNavigationBar: NavigationBar(
@@ -324,97 +325,4 @@ class _DashboardTabItem {
   final String label;
   final IconData icon;
   final IconData selectedIcon;
-}
-
-class _TabScaffold extends StatelessWidget {
-  const _TabScaffold({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.authError,
-    this.actionLabel,
-    this.onAction,
-    this.secondaryActionLabel,
-    this.onSecondaryAction,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final String? authError;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-  final String? secondaryActionLabel;
-  final VoidCallback? onSecondaryAction;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final horizontalPadding =
-        MediaQuery.sizeOf(context).width > 600 ? 40.0 : 20.0;
-
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: 24,
-          ),
-          child: Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: 48, color: colorScheme.primary),
-                  const SizedBox(height: 16),
-                  Text(
-                    title,
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: colorScheme.primary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: textTheme.bodyLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (actionLabel != null && onAction != null) ...[
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: onAction,
-                      child: Text(actionLabel!),
-                    ),
-                  ],
-                  if (secondaryActionLabel != null &&
-                      onSecondaryAction != null) ...[
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: onSecondaryAction,
-                      child: Text(secondaryActionLabel!),
-                    ),
-                  ],
-                  if (authError != null && authError!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      'Auth error: $authError',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

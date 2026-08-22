@@ -7,11 +7,14 @@ import '../core/events/models/event_models.dart';
 import 'event_details_screen.dart';
 
 class EventsScreen extends StatefulWidget {
-  const EventsScreen({super.key, this.service});
+  const EventsScreen({super.key, this.service, this.embedded = false});
 
   static const routeName = '/events';
 
   final EventService? service;
+
+  /// When true, omit the local AppBar so this screen can sit in a parent tab.
+  final bool embedded;
 
   @override
   State<EventsScreen> createState() => _EventsScreenState();
@@ -91,12 +94,9 @@ class _EventsScreenState extends State<EventsScreen> {
     final events = _events?.data ?? const <EventItem>[];
     final featured = _featured?.data ?? const <EventItem>[];
 
-    return Scaffold(
-      appBar: AppBar(title: const MinistryAppBarTitle(title: 'Events')),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -169,8 +169,15 @@ class _EventsScreenState extends State<EventsScreen> {
                           )),
                   ],
                 ),
-              ),
-      ),
+              );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const MinistryAppBarTitle(title: 'Events')),
+      body: SafeArea(child: body),
     );
   }
 }

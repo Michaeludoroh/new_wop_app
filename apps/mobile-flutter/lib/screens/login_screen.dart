@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/auth/auth_scope.dart';
 import '../core/auth/models/auth_models.dart';
 import '../core/constants/app_constants.dart';
+import '../core/http/api_error.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_logo.dart';
@@ -24,13 +26,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   bool _submitting = false;
+  bool _rememberEmail = false;
   String? _submitError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restoreRememberedEmail();
+    });
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _restoreRememberedEmail() async {
+    if (!mounted) return;
+    final email = await AuthScope.read(context).rememberedEmail();
+    if (!mounted || email == null || email.trim().isEmpty) {
+      return;
+    }
+    setState(() {
+      _emailController.text = email.trim();
+      _rememberEmail = true;
+    });
   }
 
   Future<void> _submit() async {
@@ -44,17 +67,25 @@ class _LoginScreenState extends State<LoginScreen> {
       _submitError = null;
     });
 
+    final email = _emailController.text.trim();
+    final auth = AuthScope.read(context);
+
     try {
-      await AuthScope.read(context).login(
+      await auth.login(
         LoginRequest(
-          email: _emailController.text.trim(),
+          email: email,
           password: _passwordController.text,
         ),
       );
+      await auth.persistRememberedEmail(
+        _rememberEmail ? email : null,
+      );
+      TextInput.finishAutofillContext(shouldSave: true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _submitError = 'Login failed. Please try again.';
+        _submitting = false;
+        _submitError = loginErrorMessage(e);
       });
       return;
     }
@@ -96,102 +127,132 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Center(
-                        child: MinistryLogo(
-                          height: MinistryLogo.authFormHeight,
-                          variant: MinistryLogoVariant.hero,
+                child: AutofillGroup(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Center(
+                          child: MinistryLogo(
+                            height: MinistryLogo.authFormHeight,
+                            variant: MinistryLogoVariant.hero,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        AppConstants.appName,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: theme.colorScheme.primary,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Welcome back to ${AppConstants.appName}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        key: const Key('login_email_field'),
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        enabled: !_submitting,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                        ),
-                        validator: _validateEmail,
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        key: const Key('login_password_field'),
-                        controller: _passwordController,
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        enabled: !_submitting,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                        ),
-                        validator: _validatePassword,
-                        onFieldSubmitted: (_) => _submit(),
-                      ),
-                      const SizedBox(height: 12),
-                      if (_submitError != null) ...[
+                        const SizedBox(height: 16),
                         Text(
-                          _submitError!,
-                          style: TextStyle(color: theme.colorScheme.error),
+                          AppConstants.appName,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: theme.colorScheme.primary,
+                          ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Welcome back to ${AppConstants.appName}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        TextFormField(
+                          key: const Key('login_email_field'),
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.username, AutofillHints.email],
+                          autocorrect: false,
+                          enabled: !_submitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                          ),
+                          validator: _validateEmail,
+                        ),
                         const SizedBox(height: 12),
+                        TextFormField(
+                          key: const Key('login_password_field'),
+                          controller: _passwordController,
+                          obscureText: true,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          enabled: !_submitting,
+                          decoration: const InputDecoration(
+                            labelText: 'Password',
+                          ),
+                          validator: _validatePassword,
+                          onFieldSubmitted: (_) => _submit(),
+                        ),
+                        const SizedBox(height: 8),
+                        CheckboxListTile(
+                          key: const Key('login_remember_email_checkbox'),
+                          value: _rememberEmail,
+                          onChanged: _submitting
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    _rememberEmail = value ?? false;
+                                  });
+                                },
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            'Remember my email on this device',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        Text(
+                          'You stay signed in on this device until you log out. '
+                          'Your password is never stored in the app.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (_submitError != null) ...[
+                          Text(
+                            _submitError!,
+                            style: TextStyle(color: theme.colorScheme.error),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                        ],
+                        FilledButton(
+                          key: const Key('login_submit_button'),
+                          style: AppTheme.accentButtonStyle,
+                          onPressed: _submitting ? null : _submit,
+                          child: _submitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Text('Login'),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          key: const Key('go_to_forgot_password_button'),
+                          onPressed: _submitting
+                              ? null
+                              : () {
+                                  Navigator.of(context)
+                                      .pushNamed(ForgotPasswordScreen.routeName);
+                                },
+                          child: const Text('Forgot password?'),
+                        ),
+                        TextButton(
+                          key: const Key('go_to_register_button'),
+                          onPressed: _submitting
+                              ? null
+                              : () {
+                                  Navigator.of(context)
+                                      .pushNamed(RegisterScreen.routeName);
+                                },
+                          child: const Text('Create account'),
+                        ),
                       ],
-                      FilledButton(
-                        key: const Key('login_submit_button'),
-                        style: AppTheme.accentButtonStyle,
-                        onPressed: _submitting ? null : _submit,
-                        child: _submitting
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Login'),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        key: const Key('go_to_forgot_password_button'),
-                        onPressed: _submitting
-                            ? null
-                            : () {
-                                Navigator.of(context)
-                                    .pushNamed(ForgotPasswordScreen.routeName);
-                              },
-                        child: const Text('Forgot password?'),
-                      ),
-                      TextButton(
-                        key: const Key('go_to_register_button'),
-                        onPressed: _submitting
-                            ? null
-                            : () {
-                                Navigator.of(context)
-                                    .pushNamed(RegisterScreen.routeName);
-                              },
-                        child: const Text('Create account'),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

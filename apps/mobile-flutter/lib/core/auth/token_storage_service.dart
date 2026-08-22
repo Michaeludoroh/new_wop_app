@@ -9,6 +9,7 @@ class TokenStorageService {
   static const String _accessTokenKey = 'auth.access_token';
   static const String _refreshTokenKey = 'auth.refresh_token';
   static const String _tokenExpiryIsoKey = 'auth.token_expiry_iso';
+  static const String _rememberedEmailKey = 'auth.remembered_email';
 
   Future<void> saveAccessToken(String token) {
     return _secureStorage.write(key: _accessTokenKey, value: token);
@@ -47,6 +48,19 @@ class TokenStorageService {
     return _secureStorage.delete(key: _tokenExpiryIsoKey);
   }
 
+  Future<void> saveRememberedEmail(String email) {
+    return _secureStorage.write(key: _rememberedEmailKey, value: email.trim());
+  }
+
+  Future<String?> getRememberedEmail() {
+    return _secureStorage.read(key: _rememberedEmailKey);
+  }
+
+  Future<void> clearRememberedEmail() {
+    return _secureStorage.delete(key: _rememberedEmailKey);
+  }
+
+  /// Clears session tokens only. Remembered email is kept for the next login.
   Future<void> clearTokens() async {
     await Future.wait([
       _secureStorage.delete(key: _accessTokenKey),
