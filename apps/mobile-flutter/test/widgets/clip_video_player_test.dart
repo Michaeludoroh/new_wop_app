@@ -57,4 +57,78 @@ void main() {
       'This eBook file is not available on the server.',
     );
   });
+
+  testWidgets('play/pause control stays compact inside an expanding video stack', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 225,
+            child: Stack(
+              alignment: Alignment.center,
+              fit: StackFit.expand,
+              children: [
+                ColoredBox(color: Colors.black),
+                Center(child: ClipVideoPlayPauseButton(isPlaying: true)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final size = tester.getSize(find.byType(ClipVideoPlayPauseButton));
+    expect(size.width, ClipVideoPlayPauseButton.diameter);
+    expect(size.height, ClipVideoPlayPauseButton.diameter);
+    expect(size.width, lessThan(120));
+    expect(size.height, lessThan(120));
+    expect(find.byType(IconButton), findsNothing);
+    expect(find.byIcon(Icons.pause), findsOneWidget);
+  });
+
+  testWidgets('clip player does not use a filled IconButton overlay', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClipVideoPlayer(
+          initializing: false,
+          error: null,
+          onRetry: () {},
+          onPlayPause: () {},
+        ),
+      ),
+    );
+
+    expect(find.byType(IconButton), findsNothing);
+    expect(find.byType(ClipVideoPlayPauseButton), findsNothing);
+  });
+
+  test('restarts playback only after the video has completed', () {
+    expect(
+      clipPlaybackShouldRestart(
+        isPlaying: false,
+        position: const Duration(seconds: 30),
+        duration: const Duration(seconds: 30),
+      ),
+      isTrue,
+    );
+    expect(
+      clipPlaybackShouldRestart(
+        isPlaying: true,
+        position: const Duration(seconds: 30),
+        duration: const Duration(seconds: 30),
+      ),
+      isFalse,
+    );
+    expect(
+      clipPlaybackShouldRestart(
+        isPlaying: false,
+        position: const Duration(seconds: 12),
+        duration: const Duration(seconds: 30),
+      ),
+      isFalse,
+    );
+  });
 }

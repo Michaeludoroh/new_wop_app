@@ -20,7 +20,8 @@ class ClipDetailsScreen extends StatefulWidget {
   State<ClipDetailsScreen> createState() => _ClipDetailsScreenState();
 }
 
-class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
+class _ClipDetailsScreenState extends State<ClipDetailsScreen>
+    with WidgetsBindingObserver {
   late final ClipService _service = widget.service ?? ClipService();
 
   bool _loading = true;
@@ -32,14 +33,24 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.removeListener(_onPlayerUpdate);
     _controller?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused) {
+      _controller?.pause();
+    }
   }
 
   Future<void> _load() async {
@@ -139,7 +150,7 @@ class _ClipDetailsScreenState extends State<ClipDetailsScreen> {
   void _togglePlayback() {
     final controller = _controller;
     if (controller == null) return;
-    controller.value.isPlaying ? controller.pause() : controller.play();
+    toggleClipPlayback(controller);
   }
 
   @override
