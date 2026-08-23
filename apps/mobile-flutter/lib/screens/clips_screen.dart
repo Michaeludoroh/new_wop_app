@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/clips/clip_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/clips/models/clip_models.dart';
 import '../core/logging/app_log.dart';
 import 'clip_details_screen.dart';
@@ -221,22 +222,19 @@ class _ClipCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: clip.hasThumbnail
-                  ? Image.network(
-                      clip.thumbnailUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: AppColors.dividerGrey,
-                        child: Icon(Icons.play_circle_outline, size: 40),
-                      ),
-                    )
-                  : const ColoredBox(
+            clip.hasThumbnail
+                ? MinistryPostedImage(
+                    url: clip.thumbnailUrl!,
+                    fallbackIcon: Icons.play_circle_outline,
+                  )
+                : const SizedBox(
+                    height: 88,
+                    width: double.infinity,
+                    child: ColoredBox(
                       color: AppColors.dividerGrey,
                       child: Icon(Icons.play_circle_outline, size: 40),
                     ),
-            ),
+                  ),
             ListTile(
               title: Text(clip.title, maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/homepage/homepage_feed_item.dart';
 import '../../core/theme/app_colors.dart';
+import '../ministry_posted_image.dart';
 
 class HomepageFeedCard extends StatelessWidget {
   const HomepageFeedCard({
@@ -16,7 +17,6 @@ class HomepageFeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final mediaHeight = item.prominent ? 180.0 : 132.0;
     final imageUrl = item.imageUrl?.trim() ?? '';
 
     return Card(
@@ -26,36 +26,34 @@ class HomepageFeedCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: mediaHeight,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (imageUrl.isNotEmpty)
-                    Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _PlaceholderMedia(
-                        icon: item.fallbackIcon,
-                        prominent: item.prominent,
-                      ),
-                    )
-                  else
-                    _PlaceholderMedia(
+            Stack(
+              children: [
+                if (imageUrl.isNotEmpty)
+                  MinistryPostedImage(
+                    url: imageUrl,
+                    fallbackIcon: item.fallbackIcon,
+                    backgroundColor: item.prominent
+                        ? AppColors.lightPurple
+                        : AppColors.imagePlaceholder,
+                  )
+                else
+                  SizedBox(
+                    height: item.prominent ? 96 : 80,
+                    width: double.infinity,
+                    child: _PlaceholderMedia(
                       icon: item.fallbackIcon,
                       prominent: item.prominent,
                     ),
-                  Positioned(
-                    left: 12,
-                    top: 12,
-                    child: _EyebrowChip(
-                      label: item.eyebrow,
-                      prominent: item.prominent,
-                    ),
                   ),
-                ],
-              ),
+                Positioned(
+                  left: 12,
+                  top: 12,
+                  child: _EyebrowChip(
+                    label: item.eyebrow,
+                    prominent: item.prominent,
+                  ),
+                ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),

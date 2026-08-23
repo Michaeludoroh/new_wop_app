@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/announcements/announcement_service.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/announcements/models/announcement_models.dart';
 
 class AnnouncementDetailsScreen extends StatefulWidget {
@@ -118,18 +118,9 @@ class _AnnouncementDetailsScreenState extends State<AnnouncementDetailsScreen> {
                                 announcement.imageUrl!.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(top: 16, bottom: 16),
-                                child: ClipRRect(
+                                child: MinistryPostedImage(
+                                  url: announcement.imageUrl!,
                                   borderRadius: BorderRadius.circular(12),
-                                  child: Image.network(
-                                    announcement.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 200,
-                                      color: AppColors.imagePlaceholder,
-                                      alignment: Alignment.center,
-                                      child: const Icon(Icons.broken_image_outlined),
-                                    ),
-                                  ),
                                 ),
                               ),
                             Text(

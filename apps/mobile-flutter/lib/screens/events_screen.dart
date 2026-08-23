@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/events/event_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/events/models/event_models.dart';
 import 'event_details_screen.dart';
 
@@ -214,15 +215,19 @@ class _EventCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: event.bannerImageUrl == null
-                  ? const ColoredBox(
+            event.bannerImageUrl == null
+                ? const SizedBox(
+                    height: 88,
+                    width: double.infinity,
+                    child: ColoredBox(
                       color: AppColors.dividerGrey,
                       child: Icon(Icons.event_outlined, size: 40),
-                    )
-                  : Image.network(event.bannerImageUrl!, fit: BoxFit.cover),
-            ),
+                    ),
+                  )
+                : MinistryPostedImage(
+                    url: event.bannerImageUrl!,
+                    fallbackIcon: Icons.event_outlined,
+                  ),
             ListTile(
               title: Text(event.title, maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(

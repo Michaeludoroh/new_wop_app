@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import 'ministry_posted_image.dart';
+
 /// Compact play/pause control that must never expand over the video surface.
 class ClipVideoPlayPauseButton extends StatelessWidget {
   const ClipVideoPlayPauseButton({
@@ -97,10 +99,11 @@ class ClipVideoPlayer extends StatelessWidget {
                 if (ready)
                   VideoPlayer(player)
                 else if (posterUrl != null && posterUrl!.trim().isNotEmpty)
-                  Image.network(
-                    posterUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  MinistryPostedImage(
+                    url: posterUrl!,
+                    layout: PostedImageLayout.containInFrame,
+                    backgroundColor: Colors.black,
+                    fallbackIcon: Icons.videocam_off_outlined,
                   ),
                 if (initializing)
                   const ColoredBox(

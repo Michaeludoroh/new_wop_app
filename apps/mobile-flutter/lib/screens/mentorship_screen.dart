@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/mentorship/mentorship_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/mentorship/models/mentorship_models.dart';
 import 'mentorship_details_screen.dart';
 
@@ -194,15 +195,19 @@ class _MentorshipCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: item.bannerImageUrl == null
-                  ? const ColoredBox(
+            item.bannerImageUrl == null
+                ? const SizedBox(
+                    height: 88,
+                    width: double.infinity,
+                    child: ColoredBox(
                       color: AppColors.dividerGrey,
                       child: Icon(Icons.groups_outlined, size: 40),
-                    )
-                  : Image.network(item.bannerImageUrl!, fit: BoxFit.cover),
-            ),
+                    ),
+                  )
+                : MinistryPostedImage(
+                    url: item.bannerImageUrl!,
+                    fallbackIcon: Icons.groups_outlined,
+                  ),
             ListTile(
               title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
               subtitle: Text(

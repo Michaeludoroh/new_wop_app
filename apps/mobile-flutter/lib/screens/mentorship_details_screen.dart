@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../core/mentorship/mentorship_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/mentorship/models/mentorship_models.dart';
 
 class MentorshipDetailsScreen extends StatefulWidget {
@@ -191,15 +192,20 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
-                            AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: item.bannerImageUrl == null
-                                  ? const ColoredBox(
+                            item.bannerImageUrl == null
+                                ? const SizedBox(
+                                    height: 88,
+                                    width: double.infinity,
+                                    child: ColoredBox(
                                       color: AppColors.dividerGrey,
                                       child: Icon(Icons.groups_outlined, size: 48),
-                                    )
-                                  : Image.network(item.bannerImageUrl!, fit: BoxFit.cover),
-                            ),
+                                    ),
+                                  )
+                                : MinistryPostedImage(
+                                    url: item.bannerImageUrl!,
+                                    fallbackIcon: Icons.groups_outlined,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                             const SizedBox(height: 16),
                             Text(item.title, style: Theme.of(context).textTheme.headlineSmall),
                             const SizedBox(height: 8),

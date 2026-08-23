@@ -7,6 +7,7 @@ import '../core/http/api_error.dart';
 import '../core/subscriptions/trial_manager.dart';
 import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../widgets/trial_banner.dart';
 import 'ebook_details_screen.dart';
 import 'pdf_reader_screen.dart';
@@ -360,15 +361,14 @@ class _EbookTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         leading: ebook.coverImage.isNotEmpty
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.network(
-                  ebook.coverImage,
-                  width: 44,
-                  height: 56,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      const Icon(Icons.menu_book_outlined),
+            ? SizedBox(
+                width: 44,
+                height: 56,
+                child: MinistryPostedImage(
+                  url: ebook.coverImage,
+                  layout: PostedImageLayout.containInFrame,
+                  borderRadius: BorderRadius.circular(6),
+                  fallbackIcon: Icons.menu_book_outlined,
                 ),
               )
             : const Icon(Icons.menu_book_outlined),

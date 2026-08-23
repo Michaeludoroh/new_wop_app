@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../core/announcements/announcement_service.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/announcements/models/announcement_models.dart';
 import 'announcement_details_screen.dart';
 
@@ -164,20 +164,9 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                     announcement.imageUrl!.isNotEmpty)
                                   Padding(
                                     padding: const EdgeInsets.only(top: 12, bottom: 12),
-                                    child: ClipRRect(
+                                    child: MinistryPostedImage(
+                                      url: announcement.imageUrl!,
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        announcement.imageUrl!,
-                                        height: 160,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          height: 160,
-                                          color: AppColors.imagePlaceholder,
-                                          alignment: Alignment.center,
-                                          child: const Icon(Icons.broken_image_outlined),
-                                        ),
-                                      ),
                                     ),
                                   ),
                                 Text(

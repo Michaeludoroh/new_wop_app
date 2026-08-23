@@ -5,6 +5,7 @@ import '../core/events/event_service.dart';
 import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/events/models/event_models.dart';
 
 class EventDetailsScreen extends StatefulWidget {
@@ -134,15 +135,20 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
-                            AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: event.bannerImageUrl == null
-                                  ? const ColoredBox(
+                            event.bannerImageUrl == null
+                                ? const SizedBox(
+                                    height: 88,
+                                    width: double.infinity,
+                                    child: ColoredBox(
                                       color: AppColors.dividerGrey,
                                       child: Icon(Icons.event_outlined, size: 48),
-                                    )
-                                  : Image.network(event.bannerImageUrl!, fit: BoxFit.cover),
-                            ),
+                                    ),
+                                  )
+                                : MinistryPostedImage(
+                                    url: event.bannerImageUrl!,
+                                    fallbackIcon: Icons.event_outlined,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                             const SizedBox(height: 16),
                             Text(event.title, style: Theme.of(context).textTheme.headlineSmall),
                             const SizedBox(height: 8),

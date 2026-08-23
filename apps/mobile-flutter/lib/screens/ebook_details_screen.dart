@@ -7,6 +7,7 @@ import '../core/http/api_error.dart';
 import '../core/subscriptions/trial_manager.dart';
 import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../widgets/trial_banner.dart';
 import 'pdf_reader_screen.dart';
 import 'subscription_screen.dart';
@@ -201,16 +202,10 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (ebook.coverImage.isNotEmpty)
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              ebook.coverImage,
-                              height: 220,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(Icons.menu_book, size: 72),
-                            ),
-                          ),
+                        MinistryPostedImage(
+                          url: ebook.coverImage,
+                          borderRadius: BorderRadius.circular(8),
+                          fallbackIcon: Icons.menu_book_outlined,
                         )
                       else
                         const Icon(Icons.menu_book, size: 72),

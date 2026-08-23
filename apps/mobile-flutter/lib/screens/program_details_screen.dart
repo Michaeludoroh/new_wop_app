@@ -5,6 +5,7 @@ import '../core/http/api_error.dart';
 import '../core/programs/program_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/ministry_posted_image.dart';
 import '../core/programs/models/program_models.dart';
 
 class ProgramDetailsScreen extends StatefulWidget {
@@ -184,15 +185,20 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
-                            AspectRatio(
-                              aspectRatio: 16 / 9,
-                              child: program.bannerImageUrl == null
-                                  ? const ColoredBox(
+                            program.bannerImageUrl == null
+                                ? const SizedBox(
+                                    height: 88,
+                                    width: double.infinity,
+                                    child: ColoredBox(
                                       color: AppColors.dividerGrey,
                                       child: Icon(Icons.school_outlined, size: 48),
-                                    )
-                                  : Image.network(program.bannerImageUrl!, fit: BoxFit.cover),
-                            ),
+                                    ),
+                                  )
+                                : MinistryPostedImage(
+                                    url: program.bannerImageUrl!,
+                                    fallbackIcon: Icons.school_outlined,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                             const SizedBox(height: 16),
                             Text(program.title, style: Theme.of(context).textTheme.headlineSmall),
                             const SizedBox(height: 8),
