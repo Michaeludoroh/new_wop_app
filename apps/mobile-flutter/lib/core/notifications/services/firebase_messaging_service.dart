@@ -9,6 +9,7 @@ import '../../logging/app_log.dart';
 import '../../auth/auth_service.dart';
 import '../../auth/token_storage_service.dart';
 import '../../firebase/firebase_bootstrap.dart';
+import 'fcm_token_registration.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -26,6 +27,11 @@ class FirebaseMessagingService {
     FirebaseMessaging? messaging,
     Dio? dio,
     TokenStorageService? tokenStorageService,
+    Future<AuthorizationStatus> Function()? requestPermissionOverride,
+    Future<String?> Function()? getApnsTokenOverride,
+    Future<String?> Function()? getTokenOverride,
+    bool? isIosOverride,
+    Future<void> Function(Duration duration)? delayOverride,
   })  : _messagingOverride = messaging,
         _dio = dio ??
             Dio(
@@ -37,11 +43,21 @@ class FirebaseMessagingService {
                 headers: {'Content-Type': 'application/json'},
               ),
             ),
-        _tokenStorage = tokenStorageService ?? TokenStorageService();
+        _tokenStorage = tokenStorageService ?? TokenStorageService(),
+        _requestPermissionOverride = requestPermissionOverride,
+        _getApnsTokenOverride = getApnsTokenOverride,
+        _getTokenOverride = getTokenOverride,
+        _isIosOverride = isIosOverride,
+        _delayOverride = delayOverride;
 
   final FirebaseMessaging? _messagingOverride;
   final Dio _dio;
   final TokenStorageService _tokenStorage;
+  final Future<AuthorizationStatus> Function()? _requestPermissionOverride;
+  final Future<String?> Function()? _getApnsTokenOverride;
+  final Future<String?> Function()? _getTokenOverride;
+  final bool? _isIosOverride;
+  final Future<void> Function(Duration duration)? _delayOverride;
   final StreamController<RemoteMessage> _foregroundMessages =
       StreamController<RemoteMessage>.broadcast();
   final StreamController<RemoteMessage> _openedMessages =
@@ -90,7 +106,6 @@ class FirebaseMessagingService {
       return;
     }
 
-    await messaging.requestPermission();
     await registerCurrentToken();
 
     FirebaseMessaging.onMessage.listen(_foregroundMessages.add);
@@ -101,22 +116,53 @@ class FirebaseMessagingService {
       _bufferColdStartMessage(initial);
     }
 
-    messaging.onTokenRefresh.listen((newToken) async {
-      final oldToken = _registeredToken;
-      if (oldToken == null || oldToken.isEmpty) {
-        await _registerToken(newToken);
-        return;
-      }
-      await _refreshToken(oldToken: oldToken, newToken: newToken);
-    });
+    messaging.onTokenRefresh.listen(_handleTokenRefresh);
+  }
+
+  /// Test hook for the existing token-refresh register/refresh path.
+  @visibleForTesting
+  Future<void> handleTokenRefreshForTesting(String newToken) {
+    return _handleTokenRefresh(newToken);
+  }
+
+  Future<void> _handleTokenRefresh(String newToken) async {
+    final oldToken = _registeredToken;
+    if (oldToken == null || oldToken.isEmpty) {
+      await _registerToken(newToken);
+      return;
+    }
+    await _refreshToken(oldToken: oldToken, newToken: newToken);
   }
 
   Future<void> registerCurrentToken() async {
     try {
-      final messaging = _messaging;
-      if (messaging == null) return;
+      if (!_canRegisterToken) return;
 
-      final token = await messaging.getToken();
+      final permission = await _requestPermissionStatus();
+      if (!FcmTokenRegistration.mayRegisterToken(permission)) {
+        AppLog.debug(
+          'FCM token registration skipped: permission=$permission',
+        );
+        return;
+      }
+
+      if (_isIos) {
+        final apnsToken = await FcmTokenRegistration.waitForApnsToken(
+          getApnsToken: _getApnsToken,
+          sleep: _delayOverride,
+        );
+        if (apnsToken == null || apnsToken.isEmpty) {
+          AppLog.debug(
+            'FCM token registration skipped: APNs token unavailable '
+            'after ${FcmTokenRegistration.apnsMaxAttempts} attempts '
+            '(max wait ${FcmTokenRegistration.maxRetryWaitMs}ms).',
+          );
+          return;
+        }
+        AppLog.debug('APNs token available; requesting FCM token.');
+      }
+
+      final token = await _getFcmToken();
       if (token == null || token.isEmpty) return;
       await _registerToken(token);
     } catch (error) {
@@ -197,7 +243,48 @@ class FirebaseMessagingService {
 
   String get _platform {
     if (kIsWeb) return 'WEB';
-    if (Platform.isIOS) return 'IOS';
+    if (_isIos) return 'IOS';
     return 'ANDROID';
+  }
+
+  bool get _isIos {
+    final override = _isIosOverride;
+    if (override != null) {
+      return override;
+    }
+    return !kIsWeb && Platform.isIOS;
+  }
+
+  bool get _canRegisterToken {
+    return _requestPermissionOverride != null || _messaging != null;
+  }
+
+  Future<AuthorizationStatus> _requestPermissionStatus() async {
+    final override = _requestPermissionOverride;
+    if (override != null) {
+      return override();
+    }
+    final messaging = _messaging;
+    if (messaging == null) {
+      return AuthorizationStatus.notDetermined;
+    }
+    final settings = await messaging.requestPermission();
+    return settings.authorizationStatus;
+  }
+
+  Future<String?> _getApnsToken() async {
+    final override = _getApnsTokenOverride;
+    if (override != null) {
+      return override();
+    }
+    return _messaging?.getAPNSToken();
+  }
+
+  Future<String?> _getFcmToken() async {
+    final override = _getTokenOverride;
+    if (override != null) {
+      return override();
+    }
+    return _messaging?.getToken();
   }
 }

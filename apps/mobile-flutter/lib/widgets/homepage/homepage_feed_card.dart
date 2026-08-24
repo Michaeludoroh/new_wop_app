@@ -17,6 +17,7 @@ class HomepageFeedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
     final imageUrl = item.imageUrl?.trim() ?? '';
 
     return Card(
@@ -33,8 +34,8 @@ class HomepageFeedCard extends StatelessWidget {
                     url: imageUrl,
                     fallbackIcon: item.fallbackIcon,
                     backgroundColor: item.prominent
-                        ? AppColors.lightPurple
-                        : AppColors.imagePlaceholder,
+                        ? colorScheme.primaryContainer
+                        : colorScheme.outline,
                   )
                 else
                   SizedBox(
@@ -72,7 +73,7 @@ class HomepageFeedCard extends StatelessWidget {
                     Text(
                       item.subtitle!,
                       style: textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -94,7 +95,7 @@ class HomepageFeedCard extends StatelessWidget {
                           child: Text(
                             item.timestampLabel!,
                             style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.onSurfaceVariant,
+                              color: colorScheme.onSurfaceVariant,
                             ),
                           ),
                         )
@@ -127,16 +128,19 @@ class _EyebrowChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: prominent ? AppColors.accentGold : AppColors.white.withValues(alpha: 0.92),
+        color: prominent
+            ? AppColors.accentGold
+            : colorScheme.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.darkText,
+              color: prominent ? AppColors.darkText : colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
       ),
@@ -155,12 +159,15 @@ class _PlaceholderMedia extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return ColoredBox(
-      color: prominent ? AppColors.lightPurple : AppColors.imagePlaceholder,
+      color: prominent
+          ? colorScheme.primaryContainer
+          : colorScheme.outline,
       child: Icon(
         icon,
         size: prominent ? 48 : 36,
-        color: AppColors.primaryPurple,
+        color: colorScheme.primary,
       ),
     );
   }

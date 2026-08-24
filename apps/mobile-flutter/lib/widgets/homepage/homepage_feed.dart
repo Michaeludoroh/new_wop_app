@@ -153,7 +153,7 @@ class _HomepageFeedState extends State<HomepageFeed> with WidgetsBindingObserver
         MediaQuery.sizeOf(context).width > 600 ? 32.0 : 16.0;
 
     return RefreshIndicator(
-      color: AppColors.primaryPurple,
+      color: Theme.of(context).colorScheme.primary,
       onRefresh: _load,
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -179,7 +179,7 @@ class _HomepageFeedState extends State<HomepageFeed> with WidgetsBindingObserver
                         ? 'The latest publications and upcoming activities from ${AppConstants.appName}.'
                         : "What's new in the ministry — latest teaching, events, and publications.",
                     style: textTheme.bodyLarge?.copyWith(
-                      color: AppColors.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -283,7 +283,7 @@ class _HomepageFeedState extends State<HomepageFeed> with WidgetsBindingObserver
                     return Text(
                       'Some sections could not be refreshed. Pull down to try again.',
                       style: textTheme.bodySmall?.copyWith(
-                        color: AppColors.onSurfaceVariant,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     );
                   }

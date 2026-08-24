@@ -301,4 +301,26 @@ void main() {
     expect(find.text('Open Events'), findsNothing);
     expect(find.text('Open Library'), findsNothing);
   });
+
+  testWidgets('More tab shows Settings without adding a sixth destination',
+      (tester) async {
+    await tester.pumpWidget(buildDashboard());
+    await tester.pump();
+
+    expect(find.byType(NavigationDestination), findsNWidgets(5));
+    expect(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Settings'),
+      ),
+      findsNothing,
+    );
+
+    await tapBottomNav(tester, 'More');
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 4);
+  });
 }

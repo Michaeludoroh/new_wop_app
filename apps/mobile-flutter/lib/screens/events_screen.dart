@@ -216,12 +216,12 @@ class _EventCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             event.bannerImageUrl == null
-                ? const SizedBox(
+                ? SizedBox(
                     height: 88,
                     width: double.infinity,
                     child: ColoredBox(
-                      color: AppColors.dividerGrey,
-                      child: Icon(Icons.event_outlined, size: 40),
+                      color: Theme.of(context).colorScheme.outline,
+                      child: const Icon(Icons.event_outlined, size: 40),
                     ),
                   )
                 : MinistryPostedImage(

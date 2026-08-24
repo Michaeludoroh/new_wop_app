@@ -67,7 +67,8 @@ class MinistryPostedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final background = backgroundColor ?? AppColors.imagePlaceholder;
+    final background =
+        backgroundColor ?? Theme.of(context).colorScheme.outline;
     final trimmed = url.trim();
     final imageProvider = provider ?? (trimmed.isEmpty ? null : NetworkImage(trimmed));
 

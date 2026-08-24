@@ -10,7 +10,8 @@ import 'core/auth/auth_scope.dart';
 import 'core/firebase/crashlytics_bootstrap.dart';
 import 'core/firebase/firebase_bootstrap.dart';
 import 'core/notifications/services/firebase_messaging_service.dart';
-import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
+import 'core/theme/theme_scope.dart';
 
 Future<void> main() async {
   debugPrint('[BOOT] Entering main()');
@@ -60,11 +61,17 @@ Future<void> main() async {
     await authProvider.bootstrap();
     debugPrint('[BOOT] after authProvider.bootstrap()');
 
+    final themeController = ThemeController();
+    await themeController.load();
+
     debugPrint('[BOOT] runApp()');
     runApp(
-      AuthScope(
-        notifier: authProvider,
-        child: MinistryMobileApp(theme: AppTheme.lightTheme),
+      ThemeScope(
+        notifier: themeController,
+        child: AuthScope(
+          notifier: authProvider,
+          child: const MinistryMobileApp(),
+        ),
       ),
     );
   }, (Object error, StackTrace stack) {

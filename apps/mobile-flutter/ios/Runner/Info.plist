@@ -35,6 +35,7 @@
 		<string>mailto</string>
 		<string>https</string>
 		<string>http</string>
+		<string>app-settings</string>
 	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

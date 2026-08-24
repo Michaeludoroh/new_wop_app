@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/mentorship/mentorship_service.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_posted_image.dart';
 import '../core/mentorship/models/mentorship_models.dart';
@@ -196,12 +195,12 @@ class _MentorshipCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             item.bannerImageUrl == null
-                ? const SizedBox(
+                ? SizedBox(
                     height: 88,
                     width: double.infinity,
                     child: ColoredBox(
-                      color: AppColors.dividerGrey,
-                      child: Icon(Icons.groups_outlined, size: 40),
+                      color: Theme.of(context).colorScheme.outline,
+                      child: const Icon(Icons.groups_outlined, size: 40),
                     ),
                   )
                 : MinistryPostedImage(

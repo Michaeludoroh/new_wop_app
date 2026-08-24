@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/programs/program_service.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_posted_image.dart';
 import '../core/programs/models/program_models.dart';
@@ -200,12 +199,12 @@ class _ProgramCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             program.bannerImageUrl == null
-                ? const SizedBox(
+                ? SizedBox(
                     height: 88,
                     width: double.infinity,
                     child: ColoredBox(
-                      color: AppColors.dividerGrey,
-                      child: Icon(Icons.school_outlined, size: 40),
+                      color: Theme.of(context).colorScheme.outline,
+                      child: const Icon(Icons.school_outlined, size: 40),
                     ),
                   )
                 : MinistryPostedImage(

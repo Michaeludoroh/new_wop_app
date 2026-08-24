@@ -6,6 +6,7 @@ import 'core/auth/auth_state.dart';
 import 'core/subscriptions/subscription_provider.dart';
 import 'widgets/trial_banner.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_scope.dart';
 import 'core/logging/app_log.dart';
 import 'core/router/app_router.dart';
 import 'screens/dashboard_screen.dart';
@@ -55,9 +56,13 @@ class _MinistryMobileAppState extends State<MinistryMobileApp> {
   @override
   Widget build(BuildContext context) {
     final authProvider = AuthScope.of(context);
+    final themeController = ThemeScope.maybeOf(context);
 
     return AnimatedBuilder(
-      animation: authProvider,
+      animation: Listenable.merge([
+        authProvider,
+        if (themeController != null) themeController,
+      ]),
       builder: (context, _) {
         final authState = authProvider.state;
         _syncSubscriptionWithAuth(authState);
@@ -91,6 +96,8 @@ class _MinistryMobileAppState extends State<MinistryMobileApp> {
           title: AppConstants.appName,
           debugShowCheckedModeBanner: false,
           theme: widget.theme ?? AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeController?.themeMode ?? ThemeMode.light,
           onGenerateRoute: AppRouter.onGenerateRoute,
           home: home,
         );

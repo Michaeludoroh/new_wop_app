@@ -44,7 +44,7 @@ class AboutScreen extends StatelessWidget {
           Text(
             AppConstants.appTagline,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.onSurfaceVariant,
+              color: theme.colorScheme.onSurfaceVariant,
               height: 1.4,
             ),
             textAlign: TextAlign.center,
@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
                 Text(
                   'Powered by',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: theme.colorScheme.onSurfaceVariant,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -88,7 +88,7 @@ class AboutScreen extends StatelessWidget {
                 Text(
                   'Developed by:',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: AppColors.onSurfaceVariant,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -164,7 +164,7 @@ class AboutScreen extends StatelessWidget {
           Text(
             AppConstants.copyrightNotice,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.onSurfaceVariant,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
@@ -181,14 +181,15 @@ class _BrandingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       decoration: BoxDecoration(
-        color: AppColors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.lightPurple.withValues(alpha: 0.8),
+          color: colorScheme.primaryContainer.withValues(alpha: 0.8),
         ),
         boxShadow: [
           BoxShadow(
@@ -220,13 +221,13 @@ class _InfoRow extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.darkText,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
         ),

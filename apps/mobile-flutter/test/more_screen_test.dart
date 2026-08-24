@@ -6,6 +6,7 @@ import 'package:ministry_mobile/screens/announcements_screen.dart';
 import 'package:ministry_mobile/screens/mentorship_screen.dart';
 import 'package:ministry_mobile/screens/more_screen.dart';
 import 'package:ministry_mobile/screens/programs_screen.dart';
+import 'package:ministry_mobile/screens/settings_screen.dart';
 import 'package:ministry_mobile/screens/subscription_screen.dart';
 
 void main() {
@@ -20,6 +21,7 @@ void main() {
     expect(find.text('Programs'), findsOneWidget);
     expect(find.text('Mentorship'), findsOneWidget);
     expect(find.text('WOPP Premium'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
     expect(find.text(AppConstants.aboutTitle), findsOneWidget);
   });
 
@@ -106,5 +108,22 @@ void main() {
     await tester.tap(find.text('WOPP Premium'));
     await tester.pumpAndSettle();
     expect(find.text('Subscription Screen'), findsOneWidget);
+  });
+
+  testWidgets('MoreScreen navigates to settings', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        routes: {
+          SettingsScreen.routeName: (_) => const Scaffold(
+                body: Text('Settings Screen'),
+              ),
+        },
+        home: const MoreScreen(),
+      ),
+    );
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.text('Settings Screen'), findsOneWidget);
   });
 }

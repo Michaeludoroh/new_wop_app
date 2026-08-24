@@ -29,6 +29,8 @@ import '../../screens/announcement_details_screen.dart';
 import '../../screens/about_screen.dart';
 import '../../screens/profile_screen.dart';
 import '../../screens/policy_screen.dart';
+import '../../screens/notification_settings_screen.dart';
+import '../../screens/settings_screen.dart';
 
 class AppRouter {
   static const Set<String> _authRoutes = {
@@ -71,6 +73,8 @@ class AppRouter {
     MyLibraryScreen.routeName,
     SubscriptionScreen.routeName,
     AboutScreen.routeName,
+    SettingsScreen.routeName,
+    NotificationSettingsScreen.routeName,
     PdfReaderScreen.routeName,
   };
 
@@ -91,8 +95,10 @@ class AppRouter {
         }
 
         if (_authRoutes.contains(routeName) && authState.isAuthenticated) {
-          if (routeName == VerifyEmailScreen.routeName) {
-            // Allow authenticated users to stay on the verification screen.
+          if (routeName == VerifyEmailScreen.routeName ||
+              routeName == ForgotPasswordScreen.routeName ||
+              routeName == ResetPasswordScreen.routeName) {
+            // Authenticated users may stay on verify/reset (no change-password API).
           } else {
             return DashboardScreen(
               authStatusLabel: 'Authenticated',
@@ -223,6 +229,10 @@ class AppRouter {
             return const SubscriptionScreen();
           case AboutScreen.routeName:
             return const AboutScreen();
+          case SettingsScreen.routeName:
+            return const SettingsScreen();
+          case NotificationSettingsScreen.routeName:
+            return const NotificationSettingsScreen();
           case PdfReaderScreen.routeName:
             final args = settings.arguments as PdfReaderArgs?;
             if (args == null) {

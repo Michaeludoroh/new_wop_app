@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../core/clips/clip_service.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_posted_image.dart';
 import '../core/clips/models/clip_models.dart';
@@ -227,12 +226,12 @@ class _ClipCard extends StatelessWidget {
                     url: clip.thumbnailUrl!,
                     fallbackIcon: Icons.play_circle_outline,
                   )
-                : const SizedBox(
+                : SizedBox(
                     height: 88,
                     width: double.infinity,
                     child: ColoredBox(
-                      color: AppColors.dividerGrey,
-                      child: Icon(Icons.play_circle_outline, size: 40),
+                      color: Theme.of(context).colorScheme.outline,
+                      child: const Icon(Icons.play_circle_outline, size: 40),
                     ),
                   ),
             ListTile(

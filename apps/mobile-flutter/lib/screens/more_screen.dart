@@ -6,6 +6,7 @@ import 'announcements_screen.dart';
 import 'mentorship_screen.dart';
 import 'programs_screen.dart';
 import 'subscription_screen.dart';
+import 'settings_screen.dart';
 
 class MoreMenuItem {
   const MoreMenuItem({
@@ -66,6 +67,12 @@ class MoreScreen extends StatelessWidget {
 
   /// App information and credits.
   static const List<MoreMenuItem> appItems = [
+    MoreMenuItem(
+      title: 'Settings',
+      subtitle: 'Account, appearance, and notifications',
+      icon: Icons.settings_outlined,
+      routeName: SettingsScreen.routeName,
+    ),
     MoreMenuItem(
       title: AppConstants.aboutTitle,
       subtitle: 'App info, credits, and version',

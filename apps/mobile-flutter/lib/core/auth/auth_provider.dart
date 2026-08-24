@@ -167,17 +167,30 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> forgotPassword(ForgotPasswordRequest request) async {
-    await _runBusyAction(() async {
+    // Public reset request: keep the current session. Do not log the user out.
+    _setState(
+      _state.copyWith(
+        isBusy: true,
+        clearError: true,
+      ),
+    );
+
+    try {
       await _authService.forgotPassword(request);
+      _setState(_state.copyWith(isBusy: false, clearError: true));
+    } catch (e) {
+      AppLog.debug('AUTH_PROVIDER ERROR type=${e.runtimeType}');
       _setState(
         _state.copyWith(
-          status: AuthStatus.unauthenticated,
           isBusy: false,
-          clearError: true,
-          isBootstrapped: true,
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback: 'Unable to complete that request. Please try again.',
+          ),
         ),
       );
-    });
+      rethrow;
+    }
   }
 
   Future<void> resetPassword(ResetPasswordRequest request) async {

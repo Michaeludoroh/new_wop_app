@@ -223,5 +223,37 @@ void main() {
       expect(provider.state.status, AuthStatus.unauthenticated);
       expect(provider.state.isBusy, isFalse);
     });
+
+    test('keeps an authenticated session after requesting a reset email',
+        () async {
+      final storage = _FakeTokenStorageService(
+        accessToken: 'valid-token',
+        expiry: DateTime.now().toUtc().add(const Duration(minutes: 30)),
+      );
+      final authService = _FakeAuthService(
+        user: AuthUser(
+          id: 'user-123',
+          email: 'restore@example.com',
+          name: 'Restore Flow',
+          role: 'member',
+        ),
+      );
+      final provider = AuthProvider(
+        authService: authService,
+        tokenStorageService: storage,
+      );
+
+      await provider.bootstrap();
+      expect(provider.state.status, AuthStatus.authenticated);
+
+      await provider.forgotPassword(
+        ForgotPasswordRequest(email: 'restore@example.com'),
+      );
+
+      expect(provider.state.status, AuthStatus.authenticated);
+      expect(provider.state.user?.email, 'restore@example.com');
+      expect(provider.state.isBusy, isFalse);
+      expect(storage.clearTokensCalled, isFalse);
+    });
   });
 }

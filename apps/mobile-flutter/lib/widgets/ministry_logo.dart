@@ -75,7 +75,7 @@ class MinistryLogo extends StatelessWidget {
       MinistryLogoVariant.hero => Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           decoration: BoxDecoration(
-            color: AppColors.white.withValues(alpha: 0.92),
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.92),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: AppColors.softGold.withValues(alpha: 0.45),
@@ -96,7 +96,7 @@ class MinistryLogo extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: AppColors.darkText.withValues(alpha: 0.06),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

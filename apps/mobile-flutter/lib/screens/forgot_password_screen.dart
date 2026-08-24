@@ -20,8 +20,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
 
   bool _submitting = false;
+  bool _emailPrefillAttempted = false;
   String? _submitError;
   String? _submitSuccess;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_emailPrefillAttempted) return;
+    _emailPrefillAttempted = true;
+    if (_emailController.text.isNotEmpty) return;
+    final email = AuthScope.maybeOf(context)?.state.user?.email.trim();
+    if (email != null && email.isNotEmpty) {
+      _emailController.text = email;
+    }
+  }
 
   @override
   void dispose() {
@@ -63,7 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _submitError = messageFromDio(
+        _submitError = safeAuthErrorMessage(
           error,
           fallback: 'Failed to request password reset. Please try again.',
         );
@@ -79,9 +92,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authenticated =
+        AuthScope.maybeOf(context)?.state.isAuthenticated ?? false;
+
     return Scaffold(
       appBar: AppBar(
-        title: const MinistryAppBarTitle(title: 'Forgot Password'),
+        title: MinistryAppBarTitle(
+          title: authenticated ? 'Reset Password' : 'Forgot Password',
+        ),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -93,6 +111,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (authenticated) ...[
+                    Text(
+                      'There is no in-app change-password. We will email a reset link to your address.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   TextFormField(
                     key: const Key('forgot_password_email_field'),
                     controller: _emailController,

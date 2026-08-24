@@ -12,7 +12,6 @@ class SplashScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -49,7 +48,7 @@ class SplashScreen extends StatelessWidget {
               Text(
                 'Initializing session...',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],

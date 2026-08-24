@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../core/events/event_service.dart';
 import '../core/http/api_error.dart';
-import '../core/theme/app_colors.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_posted_image.dart';
 import '../core/events/models/event_models.dart';
@@ -136,12 +135,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           padding: const EdgeInsets.all(16),
                           children: [
                             event.bannerImageUrl == null
-                                ? const SizedBox(
+                                ? SizedBox(
                                     height: 88,
                                     width: double.infinity,
                                     child: ColoredBox(
-                                      color: AppColors.dividerGrey,
-                                      child: Icon(Icons.event_outlined, size: 48),
+                                      color: Theme.of(context).colorScheme.outline,
+                                      child: const Icon(Icons.event_outlined, size: 48),
                                     ),
                                   )
                                 : MinistryPostedImage(

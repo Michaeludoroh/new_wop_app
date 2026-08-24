@@ -17,4 +17,12 @@ abstract final class AppColors {
   static const Color onSurfaceVariant = Color(0xFF616161);
   static const Color imagePlaceholder = dividerGrey;
   static const Color success = Color(0xFF2E7D32);
+
+  /// Dark theme surfaces — purple-tinted, not a generic grey dark mode.
+  static const Color darkBackground = Color(0xFF120C18);
+  static const Color darkSurface = Color(0xFF1E1628);
+  static const Color darkOnSurface = Color(0xFFF5F5F5);
+  static const Color darkOnSurfaceVariant = Color(0xFFBDBDBD);
+  static const Color darkDivider = Color(0xFF3D3450);
+  static const Color darkInputFill = Color(0xFF2A2236);
 }
