@@ -30,7 +30,7 @@ abstract final class AppConstants {
 
   static const appVersion = '1.0.0';
 
-  static const buildNumber = '1';
+  static const buildNumber = '8';
 
   static const versionLabel = 'v$appVersion ($buildNumber)';
 
