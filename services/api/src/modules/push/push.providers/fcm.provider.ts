@@ -7,6 +7,7 @@ import {
   resolveFirebaseAdminCredentials,
   type ResolvedFirebaseCredentials,
 } from './firebase-admin-credentials.loader';
+import { buildFcmMulticastMessage } from './fcm-multicast-message';
 import {
   PushDeliveryAttempt,
   PushDeliveryResult,
@@ -48,34 +49,27 @@ export class FcmProvider implements PushProvider, OnModuleInit {
       `FCM payload generated dedupeKey=${message.dedupeKey} tokenCount=${cleanTokens.length} title="${message.title}" dataKeys=${Object.keys(message.data ?? {}).join(',') || 'none'}`,
     );
 
-    const response = await this.getMessagingClient().sendEachForMulticast({
-      tokens: cleanTokens,
-      notification: {
-        title: message.title,
-        body: message.body,
-      },
-      data: {
-        ...(message.data ?? {}),
-        category: message.category,
-        dedupeKey: message.dedupeKey,
-      },
-      android: {
-        priority: 'high',
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-          },
-        },
-      },
-    });
+    const multicast = buildFcmMulticastMessage(cleanTokens, message);
+    const response = await this.getMessagingClient().sendEachForMulticast(multicast);
 
     const attempts = this.mapBatchResponse(cleanTokens, response);
 
     this.logger.log(
       `FCM response received dedupeKey=${message.dedupeKey} success=${response.successCount} failure=${response.failureCount}`,
     );
+
+    if (response.failureCount > 0) {
+      const errorCodes = [
+        ...new Set(
+          attempts
+            .filter((attempt) => !attempt.success)
+            .map((attempt) => attempt.errorCode ?? 'messaging/unknown-error'),
+        ),
+      ];
+      this.logger.warn(
+        `FCM send failures dedupeKey=${message.dedupeKey} failure=${response.failureCount} errorCodes=${errorCodes.join(',')}`,
+      );
+    }
 
     return {
       provider: this.providerName,
