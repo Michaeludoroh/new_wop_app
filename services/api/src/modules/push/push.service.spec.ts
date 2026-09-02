@@ -139,6 +139,21 @@ describe('PushService delivery reliability', () => {
     );
   });
 
+  it('does not send when the user has no active device tokens', async () => {
+    const { service, prisma, provider } = createService();
+    prisma.pushDeviceToken.findMany.mockResolvedValueOnce([]);
+
+    const result = await service.sendToUser('user-1', {
+      dedupeKey: 'notification.created:no-tokens',
+      category: 'NOTIFICATION',
+      title: 'Hello',
+      body: 'World',
+    });
+
+    expect(result.data).toEqual({ attempts: 0 });
+    expect(provider.sendToTokens).not.toHaveBeenCalled();
+  });
+
   it('prevents duplicate broadcast delivery by dedupe key', async () => {
     const { service, prisma, provider } = createService();
     prisma.pushDeliveryLog.findFirst.mockResolvedValueOnce({ id: 'existing-log' });

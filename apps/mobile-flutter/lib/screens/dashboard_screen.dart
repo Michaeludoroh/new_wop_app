@@ -96,6 +96,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (userId == null || userId.isEmpty) return;
       maybePromptPolicyAcceptance(context: context, userId: userId);
       _bindPushNotifications();
+      // Registration during bootstrap can run before APNs is ready. Retry once
+      // the first frame is up, then again on resume.
+      unawaited(AuthScope.read(context).ensurePushTokenRegistered());
     });
   }
 
@@ -147,6 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (state == AppLifecycleState.resumed) {
       _notificationsProvider.refresh();
       SubscriptionScope.maybeOf(context)?.refresh();
+      unawaited(AuthScope.read(context).ensurePushTokenRegistered());
     }
   }
 

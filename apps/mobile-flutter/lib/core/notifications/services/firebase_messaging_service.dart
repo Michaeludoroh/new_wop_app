@@ -32,6 +32,7 @@ class FirebaseMessagingService {
     Future<String?> Function()? getTokenOverride,
     bool? isIosOverride,
     Future<void> Function(Duration duration)? delayOverride,
+    Future<void> Function()? setForegroundPresentationOverride,
   })  : _messagingOverride = messaging,
         _dio = dio ??
             Dio(
@@ -48,7 +49,8 @@ class FirebaseMessagingService {
         _getApnsTokenOverride = getApnsTokenOverride,
         _getTokenOverride = getTokenOverride,
         _isIosOverride = isIosOverride,
-        _delayOverride = delayOverride;
+        _delayOverride = delayOverride,
+        _setForegroundPresentationOverride = setForegroundPresentationOverride;
 
   final FirebaseMessaging? _messagingOverride;
   final Dio _dio;
@@ -58,6 +60,7 @@ class FirebaseMessagingService {
   final Future<String?> Function()? _getTokenOverride;
   final bool? _isIosOverride;
   final Future<void> Function(Duration duration)? _delayOverride;
+  final Future<void> Function()? _setForegroundPresentationOverride;
   final StreamController<RemoteMessage> _foregroundMessages =
       StreamController<RemoteMessage>.broadcast();
   final StreamController<RemoteMessage> _openedMessages =
@@ -75,8 +78,13 @@ class FirebaseMessagingService {
 
   String? _registeredToken;
   bool _initialized = false;
+  Future<void>? _pendingInitialize;
+  Future<bool>? _pendingRegistration;
   RemoteMessage? _pendingColdStartMessage;
   bool _openedMessageListenersReady = false;
+
+  /// True once this device's FCM token has been accepted by the backend.
+  bool get hasRegisteredToken => _registeredToken?.isNotEmpty ?? false;
 
   /// Resolves messaging only when Firebase is configured, avoiding test/runtime
   /// crashes from [FirebaseMessaging.instance] before [Firebase.initializeApp].
@@ -90,10 +98,19 @@ class FirebaseMessagingService {
     return FirebaseMessaging.instance;
   }
 
-  Future<void> initialize() async {
-    if (_initialized) return;
-    _initialized = true;
+  /// Safe to call repeatedly. Concurrent callers share one attempt, and an
+  /// attempt that could not reach Firebase leaves the service retryable
+  /// instead of disabling notifications for the rest of the session.
+  Future<void> initialize() {
+    if (_initialized) return Future<void>.value();
+    return _pendingInitialize ??= _initialize().whenComplete(() {
+      if (!_initialized) {
+        _pendingInitialize = null;
+      }
+    });
+  }
 
+  Future<void> _initialize() async {
     await FirebaseBootstrap.initialize();
     if (!FirebaseBootstrap.isConfigured) {
       AppLog.debug('FCM initialization skipped: Firebase is not configured.');
@@ -106,7 +123,10 @@ class FirebaseMessagingService {
       return;
     }
 
-    await registerCurrentToken();
+    // Latch before wiring listeners so a concurrent call cannot subscribe twice.
+    _initialized = true;
+
+    await _runStartupSequence();
 
     FirebaseMessaging.onMessage.listen(_foregroundMessages.add);
     FirebaseMessaging.onMessageOpenedApp.listen(_openedMessages.add);
@@ -117,6 +137,29 @@ class FirebaseMessagingService {
     }
 
     messaging.onTokenRefresh.listen(_handleTokenRefresh);
+  }
+
+  Future<void> _runStartupSequence() async {
+    // iOS suppresses notification banners while the app is foregrounded unless
+    // these options are set. Android ignores this and keeps its own behaviour.
+    await _setForegroundPresentationOptions();
+    await registerCurrentToken();
+  }
+
+  /// Test hook for the startup sequence [initialize] runs once Firebase is
+  /// available, without requiring a configured Firebase app.
+  @visibleForTesting
+  Future<void> runStartupSequenceForTesting() => _runStartupSequence();
+
+  /// Re-attempts registration when an earlier attempt produced no token, e.g.
+  /// permission was granted later or the APNs token was not ready at launch.
+  /// Called on app resume and after session restoration.
+  Future<void> ensureTokenRegistered() async {
+    if (hasRegisteredToken) return;
+    await initialize();
+    if (!hasRegisteredToken) {
+      await registerCurrentToken();
+    }
   }
 
   /// Test hook for the existing token-refresh register/refresh path.
@@ -134,16 +177,23 @@ class FirebaseMessagingService {
     await _refreshToken(oldToken: oldToken, newToken: newToken);
   }
 
-  Future<void> registerCurrentToken() async {
+  /// Returns true when the backend holds a token for this device. A false
+  /// result is always retryable via [ensureTokenRegistered].
+  Future<bool> registerCurrentToken() {
+    return _pendingRegistration ??=
+        _registerCurrentToken().whenComplete(() => _pendingRegistration = null);
+  }
+
+  Future<bool> _registerCurrentToken() async {
     try {
-      if (!_canRegisterToken) return;
+      if (!_canRegisterToken) return false;
 
       final permission = await _requestPermissionStatus();
       if (!FcmTokenRegistration.mayRegisterToken(permission)) {
         AppLog.debug(
-          'FCM token registration skipped: permission=$permission',
+          'FCM token registration deferred: permission=$permission',
         );
-        return;
+        return false;
       }
 
       if (_isIos) {
@@ -153,20 +203,27 @@ class FirebaseMessagingService {
         );
         if (apnsToken == null || apnsToken.isEmpty) {
           AppLog.debug(
-            'FCM token registration skipped: APNs token unavailable '
+            'FCM token registration deferred: APNs token unavailable '
             'after ${FcmTokenRegistration.apnsMaxAttempts} attempts '
-            '(max wait ${FcmTokenRegistration.maxRetryWaitMs}ms).',
+            '(max wait ${FcmTokenRegistration.maxRetryWaitMs}ms). '
+            'Will retry on resume.',
           );
-          return;
+          return false;
         }
         AppLog.debug('APNs token available; requesting FCM token.');
       }
 
       final token = await _getFcmToken();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        AppLog.debug('FCM token registration deferred: no FCM token yet.');
+        return false;
+      }
+      if (token == _registeredToken) return true;
       await _registerToken(token);
+      return hasRegisteredToken;
     } catch (error) {
-      AppLog.debug('FCM token registration skipped: $error');
+      AppLog.debug('FCM token registration deferred: $error');
+      return false;
     }
   }
 
@@ -210,11 +267,15 @@ class FirebaseMessagingService {
   }
 
   Future<void> _registerToken(String token) async {
-    await _authorizedPost('/push/device-token/register', {
+    final posted = await _authorizedPost('/push/device-token/register', {
       'token': token,
       'platform': _platform,
       'deviceId': token.hashCode.toString(),
     });
+    if (!posted) {
+      AppLog.debug('FCM token registration deferred: not authenticated yet.');
+      return;
+    }
     _registeredToken = token;
   }
 
@@ -222,23 +283,28 @@ class FirebaseMessagingService {
     required String oldToken,
     required String newToken,
   }) async {
-    await _authorizedPost('/push/device-token/refresh', {
+    final posted = await _authorizedPost('/push/device-token/refresh', {
       'oldToken': oldToken,
       'newToken': newToken,
       'platform': _platform,
       'deviceId': newToken.hashCode.toString(),
     });
+    if (!posted) {
+      AppLog.debug('FCM token refresh deferred: not authenticated yet.');
+      return;
+    }
     _registeredToken = newToken;
   }
 
-  Future<void> _authorizedPost(String path, Object data) async {
+  Future<bool> _authorizedPost(String path, Object data) async {
     final accessToken = await _tokenStorage.getAccessToken();
-    if (accessToken == null || accessToken.isEmpty) return;
+    if (accessToken == null || accessToken.isEmpty) return false;
     await _dio.post<dynamic>(
       path,
       data: data,
       options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
     );
+    return true;
   }
 
   String get _platform {
@@ -270,6 +336,23 @@ class FirebaseMessagingService {
     }
     final settings = await messaging.requestPermission();
     return settings.authorizationStatus;
+  }
+
+  Future<void> _setForegroundPresentationOptions() async {
+    final override = _setForegroundPresentationOverride;
+    if (override != null) {
+      await override();
+      return;
+    }
+    try {
+      await _messaging?.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } catch (error) {
+      AppLog.debug('Foreground notification presentation not applied: $error');
+    }
   }
 
   Future<String?> _getApnsToken() async {

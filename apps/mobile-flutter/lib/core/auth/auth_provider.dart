@@ -379,4 +379,12 @@ class AuthProvider extends ChangeNotifier {
     await _firebaseMessagingService.initialize();
     await _firebaseMessagingService.registerCurrentToken();
   }
+
+  /// Retries push-token registration for the signed-in user when an earlier
+  /// attempt produced no token (permission granted later, APNs token not ready
+  /// at launch, or the access token was not yet stored).
+  Future<void> ensurePushTokenRegistered() async {
+    if (!_state.isAuthenticated) return;
+    await _firebaseMessagingService.ensureTokenRegistered();
+  }
 }

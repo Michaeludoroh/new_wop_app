@@ -143,6 +143,10 @@ export class PushService {
       orderBy: [{ createdAt: 'asc' }],
     });
 
+    this.logger.log(
+      `Targeted device tokens loaded dedupeKey=${message.dedupeKey} userId=${userId} tokenCount=${tokenRows.length} platforms=${summarizeTokenPlatforms(tokenRows)}`,
+    );
+
     if (tokenRows.length === 0) {
       return { message: 'No active push tokens for user', data: { attempts: 0 } };
     }
@@ -172,7 +176,7 @@ export class PushService {
     });
 
     this.logger.log(
-      `Broadcast device tokens loaded dedupeKey=${message.dedupeKey} tokenCount=${tokenRows.length}`,
+      `Broadcast device tokens loaded dedupeKey=${message.dedupeKey} tokenCount=${tokenRows.length} platforms=${summarizeTokenPlatforms(tokenRows)}`,
     );
 
     if (tokenRows.length === 0) {
@@ -362,4 +366,23 @@ export class PushService {
 
     return Object.fromEntries(Object.entries(value));
   }
+}
+
+function summarizeTokenPlatforms(
+  rows: Array<{ platform?: string | null }>,
+): string {
+  if (rows.length === 0) {
+    return 'none';
+  }
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const platform = row.platform?.trim() || 'UNKNOWN';
+    counts.set(platform, (counts.get(platform) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([platform, count]) => `${platform}:${count}`)
+    .join(',');
 }

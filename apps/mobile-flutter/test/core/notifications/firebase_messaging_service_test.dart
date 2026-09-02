@@ -39,15 +39,18 @@ FirebaseMessagingService _service({
   Future<String?> Function()? getToken,
   bool isIos = false,
   Future<void> Function(Duration duration)? delay,
+  TokenStorageService? tokenStorage,
+  Future<void> Function()? setForegroundPresentation,
 }) {
   return FirebaseMessagingService(
     dio: _recordingDio(captured),
-    tokenStorageService: _MemoryTokenStorage(),
+    tokenStorageService: tokenStorage ?? _MemoryTokenStorage(),
     requestPermissionOverride: requestPermission,
     getApnsTokenOverride: getApnsToken,
     getTokenOverride: getToken,
     isIosOverride: isIos,
     delayOverride: delay ?? (_) async {},
+    setForegroundPresentationOverride: setForegroundPresentation,
   );
 }
 
@@ -300,6 +303,146 @@ void main() {
 
       await service.revokeCurrentToken();
       expect(captured, hasLength(2));
+      await service.dispose();
+    });
+  });
+
+  group('FirebaseMessagingService foreground presentation', () {
+    test('enables OS notification presentation before registering the token',
+        () async {
+      final captured = <RequestOptions>[];
+      final order = <String>[];
+      final service = _service(
+        captured: captured,
+        requestPermission: () async => AuthorizationStatus.authorized,
+        isIos: true,
+        getApnsToken: () async => 'apns-token',
+        getToken: () async {
+          order.add('getToken');
+          return 'ios-fcm-token';
+        },
+        setForegroundPresentation: () async => order.add('foregroundOptions'),
+      );
+
+      await service.runStartupSequenceForTesting();
+
+      expect(order, ['foregroundOptions', 'getToken']);
+      expect(captured, hasLength(1));
+      expect(captured.single.path, '/push/device-token/register');
+      await service.dispose();
+    });
+  });
+
+  group('FirebaseMessagingService registration retry', () {
+    test('registers on a later attempt once the APNs token becomes available',
+        () async {
+      final captured = <RequestOptions>[];
+      var apnsAvailable = false;
+      final service = _service(
+        captured: captured,
+        requestPermission: () async => AuthorizationStatus.authorized,
+        isIos: true,
+        getApnsToken: () async => apnsAvailable ? 'apns-token' : null,
+        getToken: () async => 'ios-fcm-token',
+      );
+
+      expect(await service.registerCurrentToken(), isFalse);
+      expect(service.hasRegisteredToken, isFalse);
+      expect(captured, isEmpty);
+
+      apnsAvailable = true;
+      await service.ensureTokenRegistered();
+
+      expect(service.hasRegisteredToken, isTrue);
+      expect(captured, hasLength(1));
+      expect(captured.single.data, containsPair('token', 'ios-fcm-token'));
+      await service.dispose();
+    });
+
+    test('registers on a later attempt once permission is granted', () async {
+      final captured = <RequestOptions>[];
+      var granted = false;
+      final service = _service(
+        captured: captured,
+        requestPermission: () async =>
+            granted ? AuthorizationStatus.authorized : AuthorizationStatus.denied,
+        isIos: false,
+        getToken: () async => 'android-fcm-token',
+      );
+
+      expect(await service.registerCurrentToken(), isFalse);
+      expect(captured, isEmpty);
+
+      granted = true;
+      await service.ensureTokenRegistered();
+
+      expect(service.hasRegisteredToken, isTrue);
+      expect(captured, hasLength(1));
+      await service.dispose();
+    });
+
+    test('defers registration until the user is authenticated', () async {
+      final captured = <RequestOptions>[];
+      final storage = _MemoryTokenStorage()..accessToken = null;
+      final service = _service(
+        captured: captured,
+        requestPermission: () async => AuthorizationStatus.authorized,
+        isIos: false,
+        getToken: () async => 'android-fcm-token',
+        tokenStorage: storage,
+      );
+
+      expect(await service.registerCurrentToken(), isFalse);
+      expect(service.hasRegisteredToken, isFalse);
+      expect(captured, isEmpty);
+
+      storage.accessToken = 'access-token';
+      await service.ensureTokenRegistered();
+
+      expect(service.hasRegisteredToken, isTrue);
+      expect(captured, hasLength(1));
+      expect(captured.single.path, '/push/device-token/register');
+      await service.dispose();
+    });
+
+    test('does not re-register once a token is already registered', () async {
+      final captured = <RequestOptions>[];
+      var getTokenCalls = 0;
+      final service = _service(
+        captured: captured,
+        requestPermission: () async => AuthorizationStatus.authorized,
+        isIos: false,
+        getToken: () async {
+          getTokenCalls++;
+          return 'android-fcm-token';
+        },
+      );
+
+      expect(await service.registerCurrentToken(), isTrue);
+      await service.ensureTokenRegistered();
+      await service.ensureTokenRegistered();
+
+      expect(getTokenCalls, 1);
+      expect(captured, hasLength(1));
+      await service.dispose();
+    });
+
+    test('does not duplicate registration for concurrent callers', () async {
+      final captured = <RequestOptions>[];
+      final service = _service(
+        captured: captured,
+        requestPermission: () async => AuthorizationStatus.authorized,
+        isIos: false,
+        getToken: () async => 'android-fcm-token',
+      );
+
+      await Future.wait([
+        service.registerCurrentToken(),
+        service.registerCurrentToken(),
+        service.registerCurrentToken(),
+      ]);
+
+      expect(captured, hasLength(1));
       await service.dispose();
     });
   });

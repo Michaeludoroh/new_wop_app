@@ -12,6 +12,40 @@ import {
 
 const channelOptions: NotificationChannel[] = ["IN_APP", "EMAIL", "PUSH"];
 
+const channelLabels: Record<NotificationChannel, string> = {
+  IN_APP: "IN_APP — in-app inbox only",
+  EMAIL: "EMAIL — email only",
+  PUSH: "PUSH — phone notification + in-app inbox"
+};
+
+function ChannelNotice({ channel }: { channel: NotificationChannel }) {
+  if (channel === "PUSH") {
+    return (
+      <div
+        style={{
+          border: "1px solid #f79009",
+          background: "#fffaeb",
+          color: "#b54708",
+          borderRadius: 8,
+          padding: "8px 10px",
+          fontSize: 13
+        }}
+      >
+        <strong>Sending as PUSH.</strong> Recipients get a notification on their phone lock screen
+        and notification tray, in addition to the in-app inbox.
+      </div>
+    );
+  }
+
+  return (
+    <small style={{ color: "#667085" }}>
+      {channel === "IN_APP"
+        ? "In-app inbox only. Recipients will not get a notification on their phone."
+        : "Email only. Recipients will not get a notification on their phone."}
+    </small>
+  );
+}
+
 function formatDate(value: string) {
   try {
     return new Date(value).toLocaleString();
@@ -257,11 +291,18 @@ export default function NotificationsPage() {
               >
                 {channelOptions.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {channelLabels[c]}
                   </option>
                 ))}
               </select>
-              <button type="submit" disabled={creating}>{creating ? "Submitting..." : "Send Broadcast"}</button>
+              <ChannelNotice channel={broadcastForm.channel} />
+              <button type="submit" disabled={creating}>
+                {creating
+                  ? "Submitting..."
+                  : broadcastForm.channel === "PUSH"
+                    ? "Send Broadcast as PUSH"
+                    : "Send Broadcast"}
+              </button>
             </form>
 
             <form
@@ -291,11 +332,18 @@ export default function NotificationsPage() {
               >
                 {channelOptions.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {channelLabels[c]}
                   </option>
                 ))}
               </select>
-              <button type="submit" disabled={creating}>{creating ? "Submitting..." : "Send Targeted"}</button>
+              <ChannelNotice channel={targetedForm.channel} />
+              <button type="submit" disabled={creating}>
+                {creating
+                  ? "Submitting..."
+                  : targetedForm.channel === "PUSH"
+                    ? "Send Targeted as PUSH"
+                    : "Send Targeted"}
+              </button>
             </form>
           </section>
         )}

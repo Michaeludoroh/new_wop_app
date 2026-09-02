@@ -52,7 +52,10 @@ describe('buildFcmMulticastMessage', () => {
     const payload = buildFcmMulticastMessage(['token-a', 'token-b'], sample);
 
     expect(payload.tokens).toEqual(['token-a', 'token-b']);
-    expect(payload.android).toEqual({ priority: 'high' });
+    expect(payload.android).toEqual({
+      priority: 'high',
+      notification: { channelId: 'wopp_default_channel' },
+    });
     expect(payload.data).toEqual({
       notificationId: 'abc',
       channel: 'PUSH',

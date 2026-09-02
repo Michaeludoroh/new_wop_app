@@ -1,6 +1,9 @@
 import type { MulticastMessage } from 'firebase-admin/messaging';
 import type { PushMessage } from './push-provider.interface';
 
+/** Mirrors `default_notification_channel_id` in the Flutter Android manifest. */
+export const ANDROID_DEFAULT_NOTIFICATION_CHANNEL_ID = 'wopp_default_channel';
+
 /**
  * Builds the FCM multicast payload for Android + iOS.
  *
@@ -30,6 +33,11 @@ export function buildFcmMulticastMessage(
     },
     android: {
       priority: 'high',
+      notification: {
+        // Must match default_notification_channel_id in the Android manifest,
+        // otherwise Android 8+ drops the notification into a fallback channel.
+        channelId: ANDROID_DEFAULT_NOTIFICATION_CHANNEL_ID,
+      },
     },
     apns: {
       headers: {

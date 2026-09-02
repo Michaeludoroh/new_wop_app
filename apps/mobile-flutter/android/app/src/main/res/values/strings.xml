@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">WOPP</string>
+    <string name="default_notification_channel_id">wopp_default_channel</string>
+    <string name="default_notification_channel_name">WOPP Notifications</string>
 </resources>
