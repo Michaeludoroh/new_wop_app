@@ -304,3 +304,107 @@ workflows:
       # TestFlight external review submission is intentionally disabled.
       app_store_connect:
         auth: integration
+
+
+  # Signed Android-only release for Google Play internal testing.
+  # Intentionally does not inherit mobile_workflow_base so it is not
+  # skipped by the apps/mobile-flutter/ changeset watcher.
+  wopp_mobile_android:
+    name: WOPP Android Google Play
+    <<: *instance_mac
+    working_directory: apps/mobile-flutter
+
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+      cancel_previous_builds: true
+
+    environment:
+      <<: *env_versions
+
+      android_signing:
+        - wopp_upload_keystore
+
+      vars:
+        <<: *mobile_env_vars
+
+    cache:
+      cache_paths: *cache_paths
+
+    scripts:
+      - name: Set up Android key.properties
+        script: |
+          cat > android/key.properties <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_KEYSTORE_PATH
+          EOF
+
+      - name: Set up Android local.properties
+        script: |
+          echo "flutter.sdk=$HOME/programs/flutter" > android/local.properties
+
+      - name: Verify Firebase config files
+        script: |
+          test -f android/app/google-services.json
+
+      - name: Flutter doctor
+        script: flutter doctor -v
+
+      # Android builds still regenerate iOS plugin metadata and can crash
+      # on stale SPM ephemeral links. Do not install CocoaPods or configure
+      # iOS signing in this workflow.
+      - name: Prepare Flutter dependencies
+        script: |
+          set -euo pipefail
+          flutter config --no-enable-swift-package-manager
+          rm -rf ios/Flutter/ephemeral
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+          flutter clean
+          flutter pub get
+
+      - name: Analyze
+        script: flutter analyze
+
+      - name: Run tests
+        script: flutter test
+
+      - name: Build Android App Bundle
+        script: |
+          flutter build appbundle --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="${MOBILE_IOS_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID:-wopp_premium_quarterly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID="${MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID:-wopp_premium_quarterly}" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID:-wopp_premium_yearly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID="${MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID:-wopp_premium_yearly}"
+
+      - name: Build Android APK
+        script: |
+          flutter build apk --release \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_PRODUCT_ID="${MOBILE_IOS_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_QUARTERLY_PRODUCT_ID:-wopp_premium_quarterly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID="${MOBILE_IOS_PREMIUM_QUARTERLY_PRODUCT_ID:-wopp_premium_quarterly}" \
+            --dart-define=MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_YEARLY_PRODUCT_ID:-wopp_premium_yearly}" \
+            --dart-define=MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID="${MOBILE_IOS_PREMIUM_YEARLY_PRODUCT_ID:-wopp_premium_yearly}"
+
+    artifacts:
+      - build/app/outputs/bundle/release/app-release.aab
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/**/mapping.txt
+
+    publishing:
+      email:
+        recipients:
+          - misanreacts@gmail.com
+        notify:
+          success: true
+          failure: true
