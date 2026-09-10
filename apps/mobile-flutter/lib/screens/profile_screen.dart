@@ -8,6 +8,8 @@ import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/store_legal_links.dart';
 import '../widgets/trial_banner.dart';
 import 'policy_screen.dart';
+import 'settings_screen.dart';
+import 'delete_account_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,7 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nameController.dispose();
     super.dispose();
   }
-
 
   Future<void> _saveProfile() async {
     final auth = AuthScope.of(context);
@@ -112,9 +113,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (_errorMessage != null)
-                    Text(_errorMessage!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    Text(_errorMessage!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error)),
                   if (_statusMessage != null)
-                    Text(_statusMessage!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                    Text(_statusMessage!,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 8),
                   FilledButton(
                     onPressed: _saving ? null : _saveProfile,
@@ -122,6 +127,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  key: const Key('profile_settings_tile'),
+                  leading: const Icon(Icons.settings_outlined),
+                  title: const Text('Settings'),
+                  subtitle:
+                      const Text('Account, appearance, and notifications'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).pushNamed(
+                    SettingsScreen.routeName,
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('profile_delete_account_tile'),
+                  leading: Icon(
+                    Icons.person_off_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    'Delete Account',
+                    style:
+                        TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                  subtitle: const Text('Permanently delete your WOPP account'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).pushNamed(
+                    DeleteAccountScreen.routeName,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),

@@ -47,7 +47,8 @@ class _FakeSubscriptionService extends SubscriptionService {
 }
 
 void main() {
-  testWidgets('subscription screen shows WOPP Premium without obsolete plans', (tester) async {
+  testWidgets('subscription screen shows WOPP Premium without obsolete plans',
+      (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SubscriptionScreen(service: _FakeSubscriptionService()),
@@ -58,11 +59,13 @@ void main() {
     await tester.pump();
 
     expect(find.text('WOPP Premium'), findsWidgets);
-    expect(find.text('Choose the plan that works best for you.'), findsOneWidget);
+    expect(
+        find.text('Choose the plan that works best for you.'), findsOneWidget);
     expect(find.text('Basic Monthly'), findsNothing);
     expect(find.text('Partner'), findsNothing);
     expect(find.textContaining('₦500'), findsNothing);
     expect(find.text('Premium Membership'), findsNothing);
-    expect(find.text('Subscribe Now'), findsOneWidget);
+    expect(find.text('Subscribe Now'), findsNothing);
+    expect(find.text('Change Plan'), findsOneWidget);
   });
 }

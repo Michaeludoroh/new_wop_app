@@ -33,6 +33,11 @@ describe('Auth JWT integration', () => {
       emailVerifiedAt: '2026-01-01T00:00:00.000Z',
       requireEmailVerification: true,
     })),
+    deleteAccount: jest.fn(async (userId: string) => ({
+      message: 'Your account has been deleted',
+      deleted: true,
+      userId,
+    })),
   };
 
   beforeAll(async () => {
@@ -163,5 +168,35 @@ describe('Auth JWT integration', () => {
       .get('/api/v1/auth/me')
       .set('Authorization', `Bearer ${refreshAsAccess}`)
       .expect(401);
+  });
+
+  it('deletes the authenticated user and never accepts a client-supplied user id', async () => {
+    const jwtService = new JwtService({
+      secret: ACCESS_SECRET,
+      signOptions: { algorithm: 'HS256' },
+    });
+    const accessToken = await jwtService.signAsync({
+      sub: 'user-super-admin',
+      email: 'superadmin@wop.local',
+      role: 'SUPER_ADMIN',
+    });
+
+    const response = await request(app.getHttpServer())
+      .delete('/api/v1/auth/account')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ userId: 'someone-else' })
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      message: 'Your account has been deleted',
+      deleted: true,
+    });
+    expect(authService.deleteAccount).toHaveBeenCalledWith('user-super-admin');
+    expect(authService.deleteAccount).not.toHaveBeenCalledWith('someone-else');
+  });
+
+  it('rejects account deletion without an access token', async () => {
+    await request(app.getHttpServer()).delete('/api/v1/auth/account').expect(401);
+    expect(authService.deleteAccount).not.toHaveBeenCalled();
   });
 });

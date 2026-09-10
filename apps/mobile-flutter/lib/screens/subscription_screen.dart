@@ -29,9 +29,11 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  late final SubscriptionService _service = widget.service ?? SubscriptionService();
+  late final SubscriptionService _service =
+      widget.service ?? SubscriptionService();
   late final MobileBillingService _mobileBilling =
-      widget.mobileBillingService ?? MobileBillingService(subscriptionService: _service);
+      widget.mobileBillingService ??
+          MobileBillingService(subscriptionService: _service);
 
   bool _loading = true;
   bool _submitting = false;
@@ -76,7 +78,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     await _loadStatus();
     if (!mounted) return;
     final setupMessage = _mobileBilling.storeSetupMessage;
-    if (_usesNativeBilling && _offers.isEmpty && setupMessage != null) {
+    final hasPremium = _status?.hasPremiumAccess ?? false;
+    if (_usesNativeBilling &&
+        _offers.isEmpty &&
+        setupMessage != null &&
+        !hasPremium) {
       setState(() {
         _error ??= setupMessage;
       });
@@ -106,7 +112,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       _logBillingError('load subscription status', error, stackTrace);
       if (!mounted) return;
       setState(() {
-        _error = _safeErrorMessage(error, 'Failed to load subscription status.');
+        _error =
+            _safeErrorMessage(error, 'Failed to load subscription status.');
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -133,6 +140,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       debugPrint(
         '[billing] PurchaseStatus.error code=${purchase.error?.code} message=${purchase.error?.message}',
       );
+      if (_isAlreadyOwnedError(purchase.error)) {
+        await _restorePurchases();
+        return;
+      }
       try {
         await _mobileBilling.completePurchase(purchase);
       } catch (error, stackTrace) {
@@ -141,9 +152,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       if (!mounted) return;
       setState(() {
         _submitting = false;
-        _error = purchase.error?.message.trim().isNotEmpty == true
-            ? 'Purchase failed: ${purchase.error!.message}'
-            : 'The store could not complete this purchase. Please try again.';
+        _error = _safeStoreErrorMessage(purchase.error);
       });
       return;
     }
@@ -163,16 +172,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         );
       } catch (error, stackTrace) {
         _logBillingError('purchase verification', error, stackTrace);
-        try {
-          await _mobileBilling.completePurchase(purchase);
-        } catch (completeError, completeStack) {
-          _logBillingError('complete after verification failure', completeError, completeStack);
-        }
         if (!mounted) return;
         setState(() {
           _error = _safeErrorMessage(
             error,
-            'Purchase verification failed. Use Restore purchases if you were charged.',
+            'Purchase could not be verified. Use Restore purchases if you were charged.',
           );
         });
       } finally {
@@ -197,7 +201,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
 
       final productId = _selectedProductId ??
-          (_offers.isEmpty ? MobileBillingConfig.premiumProductId : _offers.first.productId);
+          (_offers.isEmpty
+              ? MobileBillingConfig.premiumProductId
+              : _offers.first.productId);
       await _mobileBilling.purchaseOffer(productId);
     } catch (error, stackTrace) {
       _logBillingError('subscribe', error, stackTrace);
@@ -267,10 +273,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   children: [
                     Text(
                       'WOPP Premium',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: AppColors.primaryPurple,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: AppColors.primaryPurple,
+                                fontWeight: FontWeight.w700,
+                              ),
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -282,7 +289,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     if (hasPremium) ...[
                       const SizedBox(height: 12),
                       Text(
-                        'You already have WOPP Premium access. Manage billing in ${Platform.isIOS ? 'App Store' : Platform.isAndroid ? 'Google Play' : 'your store'} settings.',
+                        'You already have WOPP Premium access. Manage or cancel billing in ${Platform.isIOS ? 'App Store' : Platform.isAndroid ? 'Google Play' : 'your store'} settings. Use Restore if this device is missing your subscription.',
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
@@ -319,12 +326,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                             billedThrough: Platform.isIOS
                                 ? 'Billed through the App Store'
                                 : 'Billed through Google Play',
-                            onSelect: () => setState(() => _selectedProductId = offer.productId),
+                            onSelect: () => setState(
+                                () => _selectedProductId = offer.productId),
                           ),
                         ),
                       ),
                     const SizedBox(height: 8),
-                    Text('Benefits', style: Theme.of(context).textTheme.titleMedium),
+                    Text('Benefits',
+                        style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 8),
                     const _BenefitLine(text: 'Complete eBook library'),
                     const _BenefitLine(text: 'Daily devotionals'),
@@ -336,8 +345,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: _submitting || offers.isEmpty ? null : _subscribeSelected,
-                        child: Text(_submitting ? 'Processing...' : 'Subscribe Now'),
+                        onPressed: _submitting || offers.isEmpty
+                            ? null
+                            : _subscribeSelected,
+                        child: Text(
+                          _submitting
+                              ? 'Processing...'
+                              : hasPremium
+                                  ? 'Change Plan'
+                                  : 'Subscribe Now',
+                        ),
                       ),
                     ),
                   ],
@@ -349,9 +366,31 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   String _safeErrorMessage(Object error, String fallback) {
     if (error is MobileBillingException && error.message.trim().isNotEmpty) {
-      return error.message;
+      return sanitizeUserFacingError(error.message, fallback: fallback);
     }
     return messageFromDio(error, fallback: fallback);
+  }
+
+  String _safeStoreErrorMessage(IAPError? error) {
+    final raw = error?.message.trim() ?? '';
+    if (raw.isEmpty) {
+      return 'The store could not complete this purchase. Please try again.';
+    }
+    return sanitizeUserFacingError(
+      raw,
+      fallback: 'The store could not complete this purchase. Please try again.',
+    );
+  }
+
+  bool _isAlreadyOwnedError(IAPError? error) {
+    if (error == null) return false;
+    final code = error.code.toLowerCase();
+    final message = error.message.toLowerCase();
+    return code.contains('already') ||
+        message.contains('already owned') ||
+        message.contains('already subscribed') ||
+        message.contains('already a subscriber') ||
+        message.contains('item_already_owned');
   }
 
   void _logBillingError(String action, Object error, StackTrace stackTrace) {

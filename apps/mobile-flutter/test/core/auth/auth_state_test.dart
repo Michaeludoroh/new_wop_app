@@ -9,9 +9,23 @@ void main() {
       expect(state.status, AuthStatus.unknown);
       expect(state.user, isNull);
       expect(state.errorMessage, isNull);
+      expect(state.infoMessage, isNull);
       expect(state.isBusy, isFalse);
       expect(state.isBootstrapped, isFalse);
       expect(state.isAuthenticated, isFalse);
+    });
+
+    test('copyWith can set and clear infoMessage independently of errors', () {
+      const initial = AuthState.unknown();
+      final withInfo =
+          initial.copyWith(infoMessage: 'Your WOPP account has been deleted.');
+      expect(withInfo.infoMessage, 'Your WOPP account has been deleted.');
+      expect(withInfo.errorMessage, isNull);
+
+      final cleared =
+          withInfo.copyWith(clearInfo: true, errorMessage: 'failed');
+      expect(cleared.infoMessage, isNull);
+      expect(cleared.errorMessage, 'failed');
     });
 
     test('copyWith updates selected fields', () {
@@ -25,6 +39,7 @@ void main() {
 
       expect(updated.status, AuthStatus.loading);
       expect(updated.errorMessage, 'error');
+      expect(updated.infoMessage, isNull);
       expect(updated.isBusy, isTrue);
       expect(updated.isBootstrapped, isTrue);
       expect(updated.user, isNull);

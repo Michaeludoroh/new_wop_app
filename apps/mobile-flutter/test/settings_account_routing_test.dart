@@ -12,6 +12,7 @@ import 'package:ministry_mobile/core/theme/theme_scope.dart';
 import 'package:ministry_mobile/screens/login_screen.dart';
 import 'package:ministry_mobile/screens/profile_screen.dart';
 import 'package:ministry_mobile/screens/settings_screen.dart';
+import 'package:ministry_mobile/screens/delete_account_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
@@ -166,6 +167,31 @@ void main() {
 
     expect(find.byType(LoginScreen), findsOneWidget);
     expect(find.byType(ProfileScreen), findsNothing);
+  });
+
+  testWidgets('unauthenticated users cannot open Delete Account',
+      (tester) async {
+    final auth = _SessionAuthProvider(authenticated: false);
+    await pumpRoutedApp(
+      tester,
+      auth: auth,
+      home: Builder(
+        builder: (context) {
+          return TextButton(
+            onPressed: () {
+              Navigator.of(context).pushNamed(DeleteAccountScreen.routeName);
+            },
+            child: const Text('open delete account'),
+          );
+        },
+      ),
+    );
+
+    await tester.tap(find.text('open delete account'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(DeleteAccountScreen), findsNothing);
   });
 
   testWidgets('logout then Settings route stays protected', (tester) async {

@@ -12,6 +12,7 @@ class AuthState {
     required this.status,
     this.user,
     this.errorMessage,
+    this.infoMessage,
     this.isBusy = false,
     this.isBootstrapped = false,
   });
@@ -20,12 +21,14 @@ class AuthState {
       : status = AuthStatus.unknown,
         user = null,
         errorMessage = null,
+        infoMessage = null,
         isBusy = false,
         isBootstrapped = false;
 
   final AuthStatus status;
   final AuthUser? user;
   final String? errorMessage;
+  final String? infoMessage;
   final bool isBusy;
   final bool isBootstrapped;
 
@@ -37,6 +40,8 @@ class AuthState {
     bool clearUser = false,
     String? errorMessage,
     bool clearError = false,
+    String? infoMessage,
+    bool clearInfo = false,
     bool? isBusy,
     bool? isBootstrapped,
   }) {
@@ -44,6 +49,7 @@ class AuthState {
       status: status ?? this.status,
       user: clearUser ? null : (user ?? this.user),
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      infoMessage: clearInfo ? null : (infoMessage ?? this.infoMessage),
       isBusy: isBusy ?? this.isBusy,
       isBootstrapped: isBootstrapped ?? this.isBootstrapped,
     );

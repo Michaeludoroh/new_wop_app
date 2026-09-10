@@ -31,6 +31,7 @@ import '../../screens/profile_screen.dart';
 import '../../screens/policy_screen.dart';
 import '../../screens/notification_settings_screen.dart';
 import '../../screens/settings_screen.dart';
+import '../../screens/delete_account_screen.dart';
 
 class AppRouter {
   static const Set<String> _authRoutes = {
@@ -74,6 +75,7 @@ class AppRouter {
     SubscriptionScreen.routeName,
     AboutScreen.routeName,
     SettingsScreen.routeName,
+    DeleteAccountScreen.routeName,
     NotificationSettingsScreen.routeName,
     PdfReaderScreen.routeName,
   };
@@ -231,6 +233,8 @@ class AppRouter {
             return const AboutScreen();
           case SettingsScreen.routeName:
             return const SettingsScreen();
+          case DeleteAccountScreen.routeName:
+            return const DeleteAccountScreen();
           case NotificationSettingsScreen.routeName:
             return const NotificationSettingsScreen();
           case PdfReaderScreen.routeName:

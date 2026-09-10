@@ -35,7 +35,8 @@ class _MemoryTokenStorage extends TokenStorageService {
   Future<void> clearTokenExpiry() async => expiry = null;
 
   @override
-  Future<void> saveRememberedEmail(String email) async => rememberedEmail = email;
+  Future<void> saveRememberedEmail(String email) async =>
+      rememberedEmail = email;
 
   @override
   Future<String?> getRememberedEmail() async => rememberedEmail;
@@ -56,10 +57,13 @@ class _FakeAuthService extends AuthService {
   _FakeAuthService({
     required this.storage,
     this.throwOnLogin,
+    this.throwOnDelete,
   }) : super(tokenStorageService: storage);
 
   final TokenStorageService storage;
   Object? throwOnLogin;
+  Object? throwOnDelete;
+  bool deleteAccountCalled = false;
 
   @override
   Future<AuthSession> login(LoginRequest request) async {
@@ -114,6 +118,16 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<void> resetPassword(ResetPasswordRequest request) async {}
+
+  @override
+  Future<void> deleteAccount() async {
+    deleteAccountCalled = true;
+    if (throwOnDelete != null) {
+      throw throwOnDelete!;
+    }
+    await storage.clearTokens();
+    await storage.clearRememberedEmail();
+  }
 }
 
 void main() {
@@ -190,7 +204,8 @@ void main() {
     });
 
     test('clearing remembered email does not store a password key', () async {
-      final storage = _MemoryTokenStorage()..rememberedEmail = 'user@example.com';
+      final storage = _MemoryTokenStorage()
+        ..rememberedEmail = 'user@example.com';
       final provider = AuthProvider(
         authService: _FakeAuthService(storage: storage),
         tokenStorageService: storage,
@@ -199,6 +214,54 @@ void main() {
       await provider.persistRememberedEmail(null);
 
       expect(storage.rememberedEmail, isNull);
+    });
+
+    test('deleteAccount clears session and remembered email', () async {
+      final storage = _MemoryTokenStorage()
+        ..accessToken = 'access-token'
+        ..refreshToken = 'refresh-token'
+        ..rememberedEmail = 'user@example.com';
+      final authService = _FakeAuthService(storage: storage);
+      final provider = AuthProvider(
+        authService: authService,
+        tokenStorageService: storage,
+      );
+
+      await provider.deleteAccount();
+
+      expect(authService.deleteAccountCalled, isTrue);
+      expect(provider.state.status, AuthStatus.unauthenticated);
+      expect(provider.state.user, isNull);
+      expect(provider.state.infoMessage, 'Your WOPP account has been deleted.');
+      expect(storage.accessToken, isNull);
+      expect(storage.refreshToken, isNull);
+      expect(storage.rememberedEmail, isNull);
+    });
+
+    test('failed deleteAccount keeps the session so the user can retry',
+        () async {
+      final storage = _MemoryTokenStorage()
+        ..accessToken = 'access-token'
+        ..refreshToken = 'refresh-token'
+        ..rememberedEmail = 'user@example.com';
+      final provider = AuthProvider(
+        authService: _FakeAuthService(
+          storage: storage,
+          throwOnDelete: DioException(
+            requestOptions: RequestOptions(path: '/auth/account'),
+            type: DioExceptionType.connectionError,
+          ),
+        ),
+        tokenStorageService: storage,
+      );
+
+      await expectLater(provider.deleteAccount(), throwsA(isA<DioException>()));
+
+      expect(provider.state.status, isNot(AuthStatus.unauthenticated));
+      expect(provider.state.isBusy, isFalse);
+      expect(provider.state.errorMessage, isNotNull);
+      expect(storage.accessToken, 'access-token');
+      expect(storage.rememberedEmail, 'user@example.com');
     });
   });
 }

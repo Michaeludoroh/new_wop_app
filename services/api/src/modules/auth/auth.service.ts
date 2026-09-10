@@ -1,7 +1,13 @@
 import { ConflictException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Prisma, Role, User } from '@prisma/client';
+import {
+  Prisma,
+  Role,
+  StoreSubscriptionStatus,
+  SubscriptionStatus,
+  User,
+} from '@prisma/client';
 import { AppRole } from './auth.types';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes, randomUUID } from 'crypto';
@@ -303,6 +309,126 @@ export class AuthService {
     );
 
     return { message: 'Password reset successful' };
+  }
+
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.deletedAt) {
+      return {
+        message: 'Your account has been deleted',
+        deleted: true,
+      };
+    }
+
+    const now = new Date();
+    const anonymizedEmail = `deleted+${user.id}@deleted.invalid`;
+    const passwordHash = await bcrypt.hash(randomBytes(32).toString('hex'), 12);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.refreshToken.deleteMany({ where: { userId } });
+      await tx.pushDeviceToken.deleteMany({ where: { userId } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.policyAcceptance.deleteMany({ where: { userId } });
+      await tx.readingProgress.deleteMany({ where: { userId } });
+      await tx.mentorshipAttendance.deleteMany({ where: { userId } });
+      await tx.mentorshipFeedback.deleteMany({ where: { userId } });
+      await tx.mentorshipProgress.deleteMany({ where: { userId } });
+      await tx.mentorshipClassParticipant.deleteMany({ where: { userId } });
+      await tx.programEnrollment.deleteMany({ where: { userId } });
+      await tx.programProgress.deleteMany({ where: { userId } });
+      await tx.eventAttendee.deleteMany({ where: { userId } });
+      await tx.pushDeliveryLog.deleteMany({ where: { userId } });
+
+      await tx.auditLog.updateMany({
+        where: { userId },
+        data: { userId: null },
+      });
+      await tx.empowermentProgram.updateMany({
+        where: { createdById: userId },
+        data: { createdById: null },
+      });
+      await tx.mentorshipClass.updateMany({
+        where: { createdById: userId },
+        data: { createdById: null },
+      });
+
+      await tx.userSubscription.updateMany({
+        where: {
+          userId,
+          status: {
+            in: [
+              SubscriptionStatus.ACTIVE,
+              SubscriptionStatus.GRACE,
+              SubscriptionStatus.PENDING,
+            ],
+          },
+        },
+        data: {
+          status: SubscriptionStatus.CANCELLED,
+          cancelledAt: now,
+          cancellationReason: 'Account deleted by user',
+          cancelAtPeriodEnd: true,
+        },
+      });
+
+      await tx.storeSubscription.updateMany({
+        where: {
+          userId,
+          status: {
+            in: [
+              StoreSubscriptionStatus.ACTIVE,
+              StoreSubscriptionStatus.GRACE,
+              StoreSubscriptionStatus.PENDING,
+            ],
+          },
+        },
+        data: {
+          status: StoreSubscriptionStatus.CANCELLED,
+          autoRenewStatus: false,
+          receiptData: null,
+        },
+      });
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          email: anonymizedEmail,
+          fullName: 'Deleted User',
+          passwordHash,
+          passwordResetTokenHash: null,
+          passwordResetExpiresAt: null,
+          emailVerificationTokenHash: null,
+          emailVerificationExpiresAt: null,
+          emailVerified: false,
+          emailVerifiedAt: null,
+          lastLoginAt: null,
+          deletedAt: now,
+        },
+      });
+
+      await tx.auditLog.create({
+        data: {
+          action: 'ACCOUNT_DELETED',
+          resource: 'User',
+          resourceId: userId,
+          metadata: { selfService: true },
+        },
+      });
+    });
+
+    this.logger.log(`Account deleted for user ${userId}`);
+
+    return {
+      message: 'Your account has been deleted',
+      deleted: true,
+    };
   }
 
   async me(userId: string): Promise<AuthUserResponse> {

@@ -2,6 +2,10 @@
 # Firebase iOS SDK pods require iOS 15.0+.
 platform :ios, '15.0'
 
+# WOPP does not track users or use IDFA. Use the Firebase Analytics build
+# without AdSupport so the SDK cannot request the advertising identifier.
+$FirebaseAnalyticsWithoutAdIdSupport = true
+
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 

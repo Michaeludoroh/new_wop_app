@@ -26,6 +26,23 @@ function createAuthService(overrides?: {
       findMany: jest.fn().mockResolvedValue([]),
       deleteMany: jest.fn(),
     },
+    pushDeviceToken: { deleteMany: jest.fn() },
+    notification: { deleteMany: jest.fn() },
+    policyAcceptance: { deleteMany: jest.fn() },
+    readingProgress: { deleteMany: jest.fn() },
+    mentorshipAttendance: { deleteMany: jest.fn() },
+    mentorshipFeedback: { deleteMany: jest.fn() },
+    mentorshipProgress: { deleteMany: jest.fn() },
+    mentorshipClassParticipant: { deleteMany: jest.fn() },
+    programEnrollment: { deleteMany: jest.fn() },
+    programProgress: { deleteMany: jest.fn() },
+    eventAttendee: { deleteMany: jest.fn() },
+    pushDeliveryLog: { deleteMany: jest.fn() },
+    auditLog: { updateMany: jest.fn(), create: jest.fn() },
+    empowermentProgram: { updateMany: jest.fn() },
+    mentorshipClass: { updateMany: jest.fn() },
+    userSubscription: { updateMany: jest.fn() },
+    storeSubscription: { updateMany: jest.fn() },
     $transaction: jest.fn(async (callback: any) => {
       if (typeof callback === 'function') {
         return callback(prisma);
@@ -356,5 +373,103 @@ describe('AuthService password reset', () => {
     ).resolves.toMatchObject({
       user: expect.objectContaining({ email: 'active@example.com', role: 'USER' }),
     });
+  });
+});
+
+describe('AuthService deleteAccount', () => {
+  beforeEach(() => {
+    bcryptMock.hash.mockResolvedValue('deleted-hash' as never);
+  });
+
+  it('anonymizes personal data, revokes sessions, and cancels subscriptions', async () => {
+    const { service, prisma } = createAuthService({
+      user: {
+        id: 'user_1',
+        email: 'member@example.com',
+        fullName: 'Ada Lovelace',
+        passwordHash: 'hash',
+        role: Role.USER,
+        deletedAt: null,
+      },
+    });
+
+    await expect(service.deleteAccount('user_1')).resolves.toEqual({
+      message: 'Your account has been deleted',
+      deleted: true,
+    });
+
+    expect(prisma.refreshToken.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user_1' },
+    });
+    expect(prisma.pushDeviceToken.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user_1' },
+    });
+    expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+      where: { userId: 'user_1' },
+    });
+    expect(prisma.userSubscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'user_1' }),
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          cancellationReason: 'Account deleted by user',
+        }),
+      }),
+    );
+    expect(prisma.storeSubscription.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ userId: 'user_1' }),
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          autoRenewStatus: false,
+          receiptData: null,
+        }),
+      }),
+    );
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user_1' },
+      data: expect.objectContaining({
+        email: 'deleted+user_1@deleted.invalid',
+        fullName: 'Deleted User',
+        passwordHash: 'deleted-hash',
+        emailVerified: false,
+        lastLoginAt: null,
+        deletedAt: expect.any(Date),
+      }),
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'ACCOUNT_DELETED',
+        resource: 'User',
+        resourceId: 'user_1',
+      }),
+    });
+  });
+
+  it('is idempotent when the account is already deleted', async () => {
+    const { service, prisma } = createAuthService({
+      user: {
+        id: 'user_1',
+        email: 'deleted+user_1@deleted.invalid',
+        fullName: 'Deleted User',
+        passwordHash: 'hash',
+        role: Role.USER,
+        deletedAt: new Date(),
+      },
+    });
+
+    await expect(service.deleteAccount('user_1')).resolves.toEqual({
+      message: 'Your account has been deleted',
+      deleted: true,
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects deletion when the authenticated user no longer exists', async () => {
+    const { service } = createAuthService({ user: null });
+
+    await expect(service.deleteAccount('missing')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 });

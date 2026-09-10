@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/auth_scope.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/ministry_app_bar_title.dart';
@@ -13,6 +14,7 @@ class AuthLandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final infoMessage = AuthScope.maybeOf(context)?.state.infoMessage;
 
     return Scaffold(
       appBar: AppBar(
@@ -58,6 +60,19 @@ class AuthLandingScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
+                    if (infoMessage != null &&
+                        infoMessage.trim().isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        infoMessage,
+                        key: const Key('auth_landing_info_message'),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     FilledButton(
                       key: const Key('go_to_login_button'),

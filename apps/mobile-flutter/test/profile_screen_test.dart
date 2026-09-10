@@ -35,7 +35,11 @@ class _FakeAuthService extends AuthService {
 
   @override
   Future<AuthUser> me() async {
-    return AuthUser(id: 'user-1', email: 'user@example.com', name: 'Test User', role: 'USER');
+    return AuthUser(
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'Test User',
+        role: 'USER');
   }
 
   @override
@@ -81,7 +85,8 @@ class _FakeSubscriptionProvider extends SubscriptionProvider {
 }
 
 void main() {
-  testWidgets('profile screen renders account and policies section', (tester) async {
+  testWidgets('profile screen renders account and policies section',
+      (tester) async {
     tester.view.physicalSize = const Size(400, 1600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -89,7 +94,11 @@ void main() {
     final provider = _TestAuthProvider(
       AuthState(
         status: AuthStatus.authenticated,
-        user: AuthUser(id: 'user-1', email: 'user@example.com', name: 'Test User', role: 'USER'),
+        user: AuthUser(
+            id: 'user-1',
+            email: 'user@example.com',
+            name: 'Test User',
+            role: 'USER'),
         isBootstrapped: true,
       ),
     );
@@ -119,5 +128,7 @@ void main() {
     expect(find.text('Content Sharing Rules'), findsOneWidget);
     expect(find.text('Legal & Support'), findsOneWidget);
     expect(find.text('Save profile'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Delete Account'), findsWidgets);
   });
 }

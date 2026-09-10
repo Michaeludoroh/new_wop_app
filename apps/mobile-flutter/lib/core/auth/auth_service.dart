@@ -17,8 +17,10 @@ class AuthApiConfig {
   static const String mePath = '/auth/me';
   static const String forgotPasswordPath = '/auth/forgot-password';
   static const String resetPasswordPath = '/auth/reset-password';
-  static const String sendVerificationEmailPath = '/auth/send-verification-email';
+  static const String sendVerificationEmailPath =
+      '/auth/send-verification-email';
   static const String resendVerificationPath = '/auth/resend-verification';
+  static const String deleteAccountPath = '/auth/account';
 }
 
 /// Debug-only auth traffic logger. Never logs bodies, tokens, passwords, or Authorization.
@@ -42,7 +44,8 @@ class _AuthDebugInterceptor extends Interceptor {
   }
 
   @override
-  void onResponse(Response<dynamic> response, ResponseInterceptorHandler handler) {
+  void onResponse(
+      Response<dynamic> response, ResponseInterceptorHandler handler) {
     AppLog.debug(
       '[AUTH] ${response.requestOptions.method} ${_safePath(response.requestOptions)} -> ${response.statusCode}',
     );
@@ -222,6 +225,35 @@ class AuthService {
         headers: {'Authorization': 'Bearer $accessToken'},
       ),
     );
+  }
+
+  /// Permanently deletes the authenticated user's account.
+  ///
+  /// The user is identified by the access token, never by a client-supplied id.
+  /// Tokens are cleared only after the server accepts the deletion, or when the
+  /// session is already invalid (account already deleted).
+  Future<void> deleteAccount() async {
+    final accessToken = await _tokenStorageService.getAccessToken();
+    if (accessToken == null || accessToken.isEmpty) {
+      throw StateError('No access token available');
+    }
+
+    try {
+      await _dio.delete<dynamic>(
+        AuthApiConfig.deleteAccountPath,
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken'},
+        ),
+      );
+    } on DioException catch (error) {
+      final status = error.response?.statusCode;
+      if (status != 401) {
+        rethrow;
+      }
+    }
+
+    await _tokenStorageService.clearTokens();
+    await _tokenStorageService.clearRememberedEmail();
   }
 
   Future<void> _persistTokens(AuthTokens tokens) async {

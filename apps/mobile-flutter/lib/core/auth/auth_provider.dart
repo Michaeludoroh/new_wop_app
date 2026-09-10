@@ -4,6 +4,7 @@ import 'auth_service.dart';
 import 'auth_state.dart';
 import 'models/auth_models.dart';
 import 'token_storage_service.dart';
+import '../ebooks/ebook_download_store.dart';
 import '../http/api_error.dart';
 import '../notifications/services/firebase_messaging_service.dart';
 import '../logging/app_log.dart';
@@ -14,14 +15,17 @@ class AuthProvider extends ChangeNotifier {
     AuthService? authService,
     TokenStorageService? tokenStorageService,
     FirebaseMessagingService? firebaseMessagingService,
+    EbookDownloadStore? ebookDownloadStore,
   })  : _authService = authService ?? AuthService(),
         _tokenStorageService = tokenStorageService ?? TokenStorageService(),
         _firebaseMessagingService =
-            firebaseMessagingService ?? FirebaseMessagingService();
+            firebaseMessagingService ?? FirebaseMessagingService(),
+        _ebookDownloadStore = ebookDownloadStore ?? const EbookDownloadStore();
 
   final AuthService _authService;
   final TokenStorageService _tokenStorageService;
   final FirebaseMessagingService _firebaseMessagingService;
+  final EbookDownloadStore _ebookDownloadStore;
 
   AuthState _state = const AuthState.unknown();
   AuthState get state => _state;
@@ -276,11 +280,64 @@ class AuthProvider extends ChangeNotifier {
           status: AuthStatus.unauthenticated,
           clearUser: true,
           clearError: true,
+          clearInfo: true,
           isBusy: false,
           isBootstrapped: true,
         ),
       );
     });
+  }
+
+  /// Permanently deletes the signed-in account, then signs the user out.
+  ///
+  /// Network failures keep the current session so the user can retry.
+  Future<void> deleteAccount() async {
+    if (_state.isBusy) {
+      return;
+    }
+
+    _setState(
+      _state.copyWith(
+        isBusy: true,
+        clearError: true,
+        clearInfo: true,
+      ),
+    );
+
+    try {
+      await _firebaseMessagingService.revokeCurrentToken();
+      await _authService.deleteAccount();
+      PolicyAcceptanceGate.resetSession();
+      try {
+        await _ebookDownloadStore.clearAll();
+      } catch (error) {
+        AppLog.debug(
+            'Local library cleanup after account deletion failed: $error');
+      }
+      _setState(
+        _state.copyWith(
+          status: AuthStatus.unauthenticated,
+          clearUser: true,
+          clearError: true,
+          infoMessage: 'Your WOPP account has been deleted.',
+          isBusy: false,
+          isBootstrapped: true,
+        ),
+      );
+    } catch (e) {
+      AppLog.debug('AUTH_PROVIDER DELETE ACCOUNT ERROR type=${e.runtimeType}');
+      _setState(
+        _state.copyWith(
+          errorMessage: safeAuthErrorMessage(
+            e,
+            fallback:
+                'Unable to delete your account. Check your connection and try again.',
+          ),
+          isBusy: false,
+        ),
+      );
+      rethrow;
+    }
   }
 
   Future<String?> rememberedEmail() {
@@ -357,23 +414,24 @@ class AuthProvider extends ChangeNotifier {
         user: user,
         isBusy: false,
         clearError: true,
+        clearInfo: true,
         isBootstrapped: isBootstrapped,
       ),
     );
     _registerPushToken();
   }
 
- void _setState(AuthState newState) {
-  AppLog.debug(
-    'STATE CHANGE => '
-    '${newState.status} '
-    'bootstrapped=${newState.isBootstrapped} '
-    'user=${newState.user?.email}',
-  );
+  void _setState(AuthState newState) {
+    AppLog.debug(
+      'STATE CHANGE => '
+      '${newState.status} '
+      'bootstrapped=${newState.isBootstrapped} '
+      'user=${newState.user?.email}',
+    );
 
-  _state = newState;
-  notifyListeners();
-}
+    _state = newState;
+    notifyListeners();
+  }
 
   Future<void> _registerPushToken() async {
     await _firebaseMessagingService.initialize();

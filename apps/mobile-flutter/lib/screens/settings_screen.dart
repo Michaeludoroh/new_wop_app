@@ -11,6 +11,7 @@ import '../core/theme/theme_controller.dart';
 import '../core/theme/theme_scope.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import 'about_screen.dart';
+import 'delete_account_screen.dart';
 import 'forgot_password_screen.dart';
 import 'notification_settings_screen.dart';
 import 'profile_screen.dart';
@@ -92,6 +93,26 @@ class SettingsScreen extends StatelessWidget {
                   enabled: !authState.isBusy,
                   onTap: () => Navigator.of(context).pushNamed(
                     ForgotPasswordScreen.routeName,
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  key: const Key('settings_delete_account_tile'),
+                  leading: Icon(
+                    Icons.person_off_outlined,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    'Delete Account',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  subtitle: const Text(
+                    'Permanently delete your WOPP account and personal data',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  enabled: !authState.isBusy,
+                  onTap: () => Navigator.of(context).pushNamed(
+                    DeleteAccountScreen.routeName,
                   ),
                 ),
                 const Divider(height: 1),

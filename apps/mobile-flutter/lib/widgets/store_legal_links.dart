@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/config/store_urls.dart';
+import '../screens/delete_account_screen.dart';
 
 /// Legal and support links required for App Store / Play Store compliance.
 class StoreLegalLinks extends StatelessWidget {
@@ -53,11 +54,14 @@ class StoreLegalLinks extends StatelessWidget {
             onTap: () => _openUrl(context, StoreUrls.supportUrl),
           ),
           ListTile(
+            key: const Key('store_legal_delete_account_tile'),
             leading: const Icon(Icons.person_off_outlined),
             title: const Text('Account Deletion'),
-            subtitle: const Text('Request deletion of your account'),
-            trailing: const Icon(Icons.open_in_new),
-            onTap: () => _openUrl(context, StoreUrls.accountDeletionUrl),
+            subtitle: const Text('Permanently delete your account in the app'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pushNamed(
+              DeleteAccountScreen.routeName,
+            ),
           ),
         ],
       ),

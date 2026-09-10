@@ -23,4 +23,13 @@ class EbookDownloadStore {
     final file = await fileFor(ebookId);
     return file.writeAsBytes(bytes, flush: true);
   }
+
+  /// Removes locally downloaded eBooks for the current device user.
+  Future<void> clearAll() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final folder = Directory('${directory.path}/ebooks');
+    if (folder.existsSync()) {
+      await folder.delete(recursive: true);
+    }
+  }
 }

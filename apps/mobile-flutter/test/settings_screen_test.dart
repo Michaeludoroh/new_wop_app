@@ -10,6 +10,7 @@ import 'package:ministry_mobile/core/theme/app_theme.dart';
 import 'package:ministry_mobile/core/theme/theme_controller.dart';
 import 'package:ministry_mobile/core/theme/theme_scope.dart';
 import 'package:ministry_mobile/screens/about_screen.dart';
+import 'package:ministry_mobile/screens/delete_account_screen.dart';
 import 'package:ministry_mobile/screens/forgot_password_screen.dart';
 import 'package:ministry_mobile/screens/notification_settings_screen.dart';
 import 'package:ministry_mobile/screens/profile_screen.dart';
@@ -115,6 +116,9 @@ void main() {
                   ForgotPasswordScreen.routeName: (_) => const Scaffold(
                         body: Text('Reset Password Screen'),
                       ),
+                  DeleteAccountScreen.routeName: (_) => const Scaffold(
+                        body: Text('Delete Account Screen'),
+                      ),
                   AboutScreen.routeName: (_) => const Scaffold(
                         body: Text('About Screen'),
                       ),
@@ -146,6 +150,7 @@ void main() {
     expect(find.byKey(const Key('settings_account_email')), findsOneWidget);
     expect(find.text('member@example.com'), findsOneWidget);
     expect(find.text('Reset Password'), findsOneWidget);
+    expect(find.text('Delete Account'), findsOneWidget);
     expect(find.text('Log out'), findsOneWidget);
     expect(find.text('Appearance'), findsOneWidget);
     expect(find.text('System'), findsOneWidget);
@@ -195,6 +200,17 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_reset_password_tile')));
     await tester.pumpAndSettle();
     expect(find.text('Reset Password Screen'), findsOneWidget);
+  });
+
+  testWidgets('delete account opens the in-app deletion screen',
+      (tester) async {
+    final auth = _TestAuthProvider();
+    final theme = ThemeController();
+    await pumpSettings(tester, auth: auth, themeController: theme);
+
+    await tester.tap(find.byKey(const Key('settings_delete_account_tile')));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete Account Screen'), findsOneWidget);
   });
 
   testWidgets('logout uses existing AuthProvider.logout', (tester) async {
@@ -271,7 +287,8 @@ void main() {
     final theme = ThemeController();
     await pumpSettings(tester, auth: auth, themeController: theme);
 
-    await tester.tap(find.byKey(const Key('settings_notification_preferences_tile')));
+    await tester
+        .tap(find.byKey(const Key('settings_notification_preferences_tile')));
     await tester.pumpAndSettle();
     expect(find.text('Notification Settings Screen'), findsOneWidget);
   });
