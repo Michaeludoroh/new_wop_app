@@ -277,6 +277,8 @@ workflows:
           flutter build ipa \
             --release \
             --verbose \
+            --build-name=1.0.0 \
+            --build-number=11 \
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \
@@ -300,10 +302,13 @@ workflows:
           success: true
           failure: true
 
-      # Upload the signed WOPP IPA directly to App Store Connect.
-      # TestFlight external review submission is intentionally disabled.
+      # Upload the signed WOPP IPA directly to App Store Connect
+      # and submit it to TestFlight. App Store Review is not submitted.
       app_store_connect:
         auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Internal Testers
 
 
   # Signed Android-only release for Google Play internal testing.
