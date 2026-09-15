@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/constants/app_constants.dart';
 import 'about_screen.dart';
 import 'announcements_screen.dart';
@@ -133,9 +134,13 @@ class MoreScreen extends StatelessWidget {
     MoreMenuSection(title: 'App', items: appItems),
   ];
 
-  void _openItem(BuildContext context, MoreMenuItem item) {
+  Future<void> _openItem(BuildContext context, MoreMenuItem item) async {
     if (!item.enabled) return;
-    Navigator.of(context).pushNamed(item.routeName);
+    if (item.routeName == SubscriptionScreen.routeName) {
+      if (!await ensureAccount(context)) return;
+      if (!context.mounted) return;
+    }
+    await Navigator.of(context).pushNamed(item.routeName);
   }
 
   @override

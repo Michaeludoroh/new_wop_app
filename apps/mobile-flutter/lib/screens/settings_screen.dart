@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/auth/auth_scope.dart';
 import '../core/auth/models/auth_models.dart';
 import '../core/config/store_urls.dart';
@@ -11,6 +12,7 @@ import '../core/theme/theme_controller.dart';
 import '../core/theme/theme_scope.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import 'about_screen.dart';
+import 'auth_landing_screen.dart';
 import 'delete_account_screen.dart';
 import 'forgot_password_screen.dart';
 import 'notification_settings_screen.dart';
@@ -26,6 +28,7 @@ class SettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final authState = AuthScope.of(context).state;
     final user = authState.user;
+    final isAuthenticated = authState.isAuthenticated;
     final themeController = ThemeScope.maybeOf(context);
     final displayName = _displayName(user);
     final displayEmail = _displayEmail(user);
@@ -47,13 +50,15 @@ class SettingsScreen extends StatelessWidget {
                   key: const Key('settings_profile_tile'),
                   leading: const Icon(Icons.person_outline),
                   title: const Text('Profile'),
-                  subtitle: user == null
-                      ? Text(
-                          authState.isBusy
-                              ? 'Loading account…'
-                              : 'Account information is unavailable.',
-                        )
-                      : null,
+                  subtitle: !isAuthenticated
+                      ? const Text('Sign in to manage your account')
+                      : user == null
+                          ? Text(
+                              authState.isBusy
+                                  ? 'Loading account…'
+                                  : 'Account information is unavailable.',
+                            )
+                          : null,
                   trailing: authState.isBusy && user == null
                       ? const SizedBox(
                           width: 20,
@@ -61,9 +66,13 @@ class SettingsScreen extends StatelessWidget {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).pushNamed(
-                    ProfileScreen.routeName,
-                  ),
+                  onTap: () async {
+                    if (!await ensureAccount(context)) return;
+                    if (!context.mounted) return;
+                    await Navigator.of(context).pushNamed(
+                      ProfileScreen.routeName,
+                    );
+                  },
                 ),
                 if (user != null) ...[
                   ListTile(
@@ -111,25 +120,41 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   enabled: !authState.isBusy,
-                  onTap: () => Navigator.of(context).pushNamed(
-                    DeleteAccountScreen.routeName,
-                  ),
+                  onTap: () async {
+                    if (!await ensureAccount(context)) return;
+                    if (!context.mounted) return;
+                    await Navigator.of(context).pushNamed(
+                      DeleteAccountScreen.routeName,
+                    );
+                  },
                 ),
                 const Divider(height: 1),
-                ListTile(
-                  key: const Key('settings_logout_tile'),
-                  leading: Icon(
-                    Icons.logout,
-                    color: theme.colorScheme.error,
+                if (isAuthenticated)
+                  ListTile(
+                    key: const Key('settings_logout_tile'),
+                    leading: Icon(
+                      Icons.logout,
+                      color: theme.colorScheme.error,
+                    ),
+                    title: Text(
+                      'Log out',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                    subtitle: const Text('Sign out of this device'),
+                    enabled: !authState.isBusy,
+                    onTap: () => _logout(context),
+                  )
+                else
+                  ListTile(
+                    key: const Key('settings_sign_in_tile'),
+                    leading: const Icon(Icons.login),
+                    title: const Text('Sign in'),
+                    subtitle: const Text('Log in or create an account'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AuthLandingScreen.routeName,
+                    ),
                   ),
-                  title: Text(
-                    'Log out',
-                    style: TextStyle(color: theme.colorScheme.error),
-                  ),
-                  subtitle: const Text('Sign out of this device'),
-                  enabled: !authState.isBusy,
-                  onTap: () => _logout(context),
-                ),
               ],
             ),
           ),
@@ -187,9 +212,13 @@ class SettingsScreen extends StatelessWidget {
               title: const Text('Notification Preferences'),
               subtitle: const Text('Push notifications for this device'),
               trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).pushNamed(
-                NotificationSettingsScreen.routeName,
-              ),
+              onTap: () async {
+                if (!await ensureAccount(context)) return;
+                if (!context.mounted) return;
+                await Navigator.of(context).pushNamed(
+                  NotificationSettingsScreen.routeName,
+                );
+              },
             ),
           ),
           const SizedBox(height: 16),

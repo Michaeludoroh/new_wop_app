@@ -15,6 +15,8 @@ import { AnnouncementsController } from '../modules/announcements/announcements.
 import { NotificationsController } from '../modules/notifications/notifications.controller';
 import { AuthController } from '../modules/auth/auth.controller';
 import { PublicUserResetPageController } from '../modules/auth/public-reset-page.controller';
+import { EbooksPublicController } from '../modules/ebooks/ebooks-public.controller';
+import { EbooksController } from '../modules/ebooks/ebooks.controller';
 
 type ControllerClass = new (...args: never[]) => unknown;
 
@@ -113,6 +115,15 @@ describe('route security metadata', () => {
 
     expect(methodRoles(NotificationsController, 'createBroadcast')).toEqual(['SUPER_ADMIN', 'ADMIN']);
     expect(methodRoles(NotificationsController, 'createTargeted')).toEqual(['SUPER_ADMIN', 'ADMIN']);
+  });
+
+  it('keeps ebook catalog browsing public and ebook access/library authenticated', () => {
+    expect(classGuards(EbooksPublicController)).toEqual([]);
+    expect(methodGuards(EbooksPublicController, 'findAll')).toEqual([]);
+    expect(methodGuards(EbooksPublicController, 'findOne')).toEqual([]);
+    expectClassProtected(EbooksController);
+    expect(methodRoles(EbooksController, 'access')).toEqual(['ADMIN', 'USER', 'MODERATOR']);
+    expect(methodRoles(EbooksController, 'library')).toEqual(['ADMIN', 'USER', 'MODERATOR']);
   });
 
   it('keeps normal-user password reset public and does not attach admin auth guards', () => {

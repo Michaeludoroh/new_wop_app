@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/http/api_error.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/ebooks/ebook_download_button.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/login_required.dart';
 import '../core/ebooks/models/ebook_models.dart';
 import 'ebook_details_screen.dart';
 import 'ebook_screen.dart';
@@ -38,10 +40,21 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
+    if (!isAccountAuthenticated(context)) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = null;
+        });
+      }
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -148,6 +161,21 @@ class _MyLibraryScreenState extends State<MyLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!isAccountAuthenticated(context)) {
+      const required = LoginRequiredView(
+        showGoBack: false,
+        message:
+            'Please sign in or create an account to view your personal library.',
+      );
+      if (widget.embedded) {
+        return required;
+      }
+      return Scaffold(
+        appBar: AppBar(title: const MinistryAppBarTitle(title: 'My Library')),
+        body: required,
+      );
+    }
+
     final library = _library;
     final isEmpty = library != null &&
         library.purchased.isEmpty &&

@@ -32,6 +32,7 @@ import '../../screens/policy_screen.dart';
 import '../../screens/notification_settings_screen.dart';
 import '../../screens/settings_screen.dart';
 import '../../screens/delete_account_screen.dart';
+import '../../widgets/login_required.dart';
 
 class AppRouter {
   static const Set<String> _authRoutes = {
@@ -40,6 +41,7 @@ class AppRouter {
     ForgotPasswordScreen.routeName,
     ResetPasswordScreen.routeName,
     VerifyEmailScreen.routeName,
+    AuthLandingScreen.routeName,
   };
 
   static const Set<String> _consumerRoles = {
@@ -48,6 +50,16 @@ class AppRouter {
     'moderator',
     'super_admin',
     'member',
+  };
+
+  /// Routes that require a signed-in user. Public ministry browsing is not listed.
+  static const Set<String> _accountRequiredRoutes = {
+    NotificationsScreen.routeName,
+    ProfileScreen.routeName,
+    MyLibraryScreen.routeName,
+    SubscriptionScreen.routeName,
+    DeleteAccountScreen.routeName,
+    PdfReaderScreen.routeName,
   };
 
   static const Set<String> _protectedConsumerRoutes = {
@@ -109,11 +121,9 @@ class AppRouter {
           }
         }
 
-        if (!_authRoutes.contains(routeName) && !authState.isAuthenticated) {
-          if (routeName == '/') {
-            return const AuthLandingScreen();
-          }
-          return const LoginScreen();
+        if (_accountRequiredRoutes.contains(routeName) &&
+            !authState.isAuthenticated) {
+          return const LoginRequiredScreen();
         }
 
         if (_protectedConsumerRoutes.contains(routeName) &&
@@ -201,8 +211,10 @@ class AppRouter {
             return const CommunityGuidelinesScreen();
           case ContentSharingRulesScreen.routeName:
             return const ContentSharingRulesScreen();
+          case AuthLandingScreen.routeName:
+            return const AuthLandingScreen();
           case EbookScreen.routeName:
-            return const SubscriptionGate(child: EbookScreen());
+            return const EbookScreen();
           case EbookDetailsScreen.routeName:
             final ebookId = settings.arguments as String?;
             if (ebookId == null || ebookId.isEmpty) {
@@ -210,11 +222,9 @@ class AppRouter {
                 body: Center(child: Text('Missing eBook ID')),
               );
             }
-            return SubscriptionGate(
-              child: EbookDetailsScreen(ebookId: ebookId),
-            );
+            return EbookDetailsScreen(ebookId: ebookId);
           case ClipsScreen.routeName:
-            return const SubscriptionGate(child: ClipsScreen());
+            return const ClipsScreen();
           case ClipDetailsScreen.routeName:
             final clipId = settings.arguments as String?;
             if (clipId == null || clipId.isEmpty) {
@@ -250,7 +260,7 @@ class AppRouter {
             return DashboardScreen(
               authStatusLabel: authState.status == AuthStatus.authenticated
                   ? 'Authenticated'
-                  : 'Unknown',
+                  : 'Guest',
               authError: authState.errorMessage,
             );
         }

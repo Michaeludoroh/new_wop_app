@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/auth/auth_scope.dart';
 import '../core/policies/models/policy_models.dart';
 import '../core/users/users_service.dart';
 import '../widgets/membership_status_card.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/store_legal_links.dart';
+import '../widgets/login_required.dart';
 import '../widgets/trial_banner.dart';
 import 'policy_screen.dart';
 import 'settings_screen.dart';
@@ -76,6 +78,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!isAccountAuthenticated(context)) {
+      return const LoginRequiredScreen();
+    }
+
     final user = AuthScope.of(context).state.user;
     final policyLinks = PolicyTypeDefinitions.all
         .map(

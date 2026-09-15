@@ -4,6 +4,7 @@ import '../core/auth/auth_scope.dart';
 import '../core/subscriptions/trial_manager.dart';
 import '../screens/subscription_screen.dart';
 import '../screens/verify_email_screen.dart';
+import 'login_required.dart';
 import 'trial_banner.dart';
 
 class SubscriptionGate extends StatelessWidget {
@@ -19,6 +20,14 @@ class SubscriptionGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final authUser = AuthScope.maybeOf(context)?.state.user;
+    final authState = AuthScope.maybeOf(context)?.state;
+    if (authState != null && !authState.isAuthenticated) {
+      return const LoginRequiredScreen(
+        message:
+            'Please sign in or create an account to continue with WOPP Premium content.',
+      );
+    }
+
     if (authUser != null && authUser.needsEmailVerification) {
       return const EmailVerificationRequiredScreen();
     }

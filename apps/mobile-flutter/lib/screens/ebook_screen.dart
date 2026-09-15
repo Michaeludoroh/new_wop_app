@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
@@ -13,11 +14,14 @@ import 'ebook_details_screen.dart';
 import 'pdf_reader_screen.dart';
 
 class EbookScreen extends StatefulWidget {
-  const EbookScreen({super.key, this.service});
+  const EbookScreen({super.key, this.service, this.embedded = false});
 
   static const routeName = '/ebooks';
 
   final EbookService? service;
+
+  /// When true, omit the local AppBar so this screen can sit in a parent tab.
+  final bool embedded;
 
   @override
   State<EbookScreen> createState() => _EbookScreenState();
@@ -40,7 +44,9 @@ class _EbookScreenState extends State<EbookScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   @override
@@ -56,25 +62,29 @@ class _EbookScreenState extends State<EbookScreen> {
     });
 
     try {
+      final authenticated = isAccountAuthenticated(context);
       final catalog = await _service.getEbooks(
         search: _searchController.text.trim().isEmpty
             ? null
             : _searchController.text.trim(),
         category: _category.isEmpty ? null : _category,
       );
-      final recentlyRead = await _service.getRecentlyRead(limit: 5);
-      LibraryResponse library;
-      try {
-        library = await _service.getMyLibrary();
-      } catch (_) {
-        library = LibraryResponse(
-          purchased: const [],
-          subscription: const [],
-          continueReading: const [],
-          downloads: const [],
-          history: const [],
-          recentlyRead: const [],
-        );
+      var recentlyRead = RecentlyReadResponse(data: const []);
+      var library = LibraryResponse(
+        purchased: const [],
+        subscription: const [],
+        continueReading: const [],
+        downloads: const [],
+        history: const [],
+        recentlyRead: const [],
+      );
+      if (authenticated) {
+        try {
+          recentlyRead = await _service.getRecentlyRead(limit: 5);
+        } catch (_) {}
+        try {
+          library = await _service.getMyLibrary();
+        } catch (_) {}
       }
       final downloaded = <String>{
         ...library.downloads.map((item) => item.ebookId),
@@ -135,6 +145,8 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   Future<void> _handleDownload(EbookItem ebook) async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     if (!_isDownloadable(ebook)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Purchase to download')),
@@ -173,6 +185,8 @@ class _EbookScreenState extends State<EbookScreen> {
   }
 
   Future<void> _resumeReading(ReadingProgressItem item) async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final access = await _service.getAccess(item.ebookId);
     if (!mounted) return;
     if (!access.authorized || access.contentUrl.isEmpty) {
@@ -199,12 +213,9 @@ class _EbookScreenState extends State<EbookScreen> {
   Widget build(BuildContext context) {
     final data = _response;
 
-    return Scaffold(
-      appBar: AppBar(title: const MinistryAppBarTitle(title: 'eBooks')),
-      body: SafeArea(
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
                 onRefresh: _load,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -305,8 +316,15 @@ class _EbookScreenState extends State<EbookScreen> {
                     ],
                   ],
                 ),
-              ),
-      ),
+              );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const MinistryAppBarTitle(title: 'eBooks')),
+      body: SafeArea(child: body),
     );
   }
 }

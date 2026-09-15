@@ -9,10 +9,13 @@ import { PaymentsController } from '../modules/payments/payments.controller';
 import { PaymentsService } from '../modules/payments/payments.service';
 import { EventsController } from '../modules/events/events.controller';
 import { EventsService } from '../modules/events/events.service';
+import { EventsUploadService } from '../modules/events/events-upload.service';
 import { ProgramsController } from '../modules/programs/programs.controller';
 import { ProgramsService } from '../modules/programs/programs.service';
+import { ProgramsUploadService } from '../modules/programs/programs-upload.service';
 import { MentorshipController } from '../modules/mentorship/mentorship.controller';
 import { MentorshipService } from '../modules/mentorship/mentorship.service';
+import { MentorshipUploadService } from '../modules/mentorship/mentorship-upload.service';
 import { PoliciesController } from '../modules/policies/policies.controller';
 import { PoliciesService } from '../modules/policies/policies.service';
 import { JwtAuthGuard } from '../modules/auth/guards/jwt-auth.guard';
@@ -37,6 +40,9 @@ async function createApp(
     providers: [
       { provide: providerToken, useValue: providerValue },
       { provide: APP_GUARD, useClass: TestAuthGuard },
+      { provide: EventsUploadService, useValue: { saveBanner: jest.fn() } },
+      { provide: ProgramsUploadService, useValue: { saveBanner: jest.fn() } },
+      { provide: MentorshipUploadService, useValue: { saveImage: jest.fn() } },
     ],
   })
     .overrideGuard(JwtAuthGuard)

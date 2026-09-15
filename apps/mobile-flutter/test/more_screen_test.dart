@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ministry_mobile/core/auth/auth_provider.dart';
+import 'package:ministry_mobile/core/auth/auth_scope.dart';
+import 'package:ministry_mobile/core/auth/auth_service.dart';
+import 'package:ministry_mobile/core/auth/auth_state.dart';
+import 'package:ministry_mobile/core/auth/models/auth_models.dart';
+import 'package:ministry_mobile/core/auth/token_storage_service.dart';
 import 'package:ministry_mobile/core/constants/app_constants.dart';
 import 'package:ministry_mobile/screens/about_screen.dart';
 import 'package:ministry_mobile/screens/announcements_screen.dart';
@@ -8,6 +14,57 @@ import 'package:ministry_mobile/screens/more_screen.dart';
 import 'package:ministry_mobile/screens/programs_screen.dart';
 import 'package:ministry_mobile/screens/settings_screen.dart';
 import 'package:ministry_mobile/screens/subscription_screen.dart';
+
+class _FakeAuthService extends AuthService {
+  @override
+  Future<AuthSession> login(LoginRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthSession> register(RegisterRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AuthTokens> refresh() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> logout() async {}
+
+  @override
+  Future<AuthUser> me() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> forgotPassword(ForgotPasswordRequest request) async {}
+
+  @override
+  Future<void> resetPassword(ResetPasswordRequest request) async {}
+}
+
+class _AuthenticatedMoreAuthProvider extends AuthProvider {
+  _AuthenticatedMoreAuthProvider()
+      : super(
+          authService: _FakeAuthService(),
+          tokenStorageService: TokenStorageService(),
+        );
+
+  @override
+  AuthState get state => AuthState(
+        status: AuthStatus.authenticated,
+        isBootstrapped: true,
+        user: AuthUser(
+          id: 'user-1',
+          email: 'member@example.com',
+          name: 'Ada',
+          role: 'member',
+        ),
+      );
+}
 
 void main() {
   testWidgets('MoreScreen shows ministry menu items', (tester) async {
@@ -94,14 +151,32 @@ void main() {
     expect(find.text('Mentorship Screen'), findsOneWidget);
   });
 
-  testWidgets('MoreScreen navigates to subscription', (tester) async {
+  testWidgets('MoreScreen prompts login for subscription when guest',
+      (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        routes: {
-          SubscriptionScreen.routeName: (_) =>
-              const Scaffold(body: Text('Subscription Screen')),
-        },
-        home: const MoreScreen(),
+      const MaterialApp(
+        home: MoreScreen(),
+      ),
+    );
+
+    await tester.tap(find.text('WOPP Premium'));
+    await tester.pumpAndSettle();
+    expect(find.text('Login Required'), findsOneWidget);
+    expect(find.text('Subscription Screen'), findsNothing);
+  });
+
+  testWidgets('MoreScreen navigates to subscription when signed in',
+      (tester) async {
+    await tester.pumpWidget(
+      AuthScope(
+        notifier: _AuthenticatedMoreAuthProvider(),
+        child: MaterialApp(
+          routes: {
+            SubscriptionScreen.routeName: (_) =>
+                const Scaffold(body: Text('Subscription Screen')),
+          },
+          home: const MoreScreen(),
+        ),
       ),
     );
 

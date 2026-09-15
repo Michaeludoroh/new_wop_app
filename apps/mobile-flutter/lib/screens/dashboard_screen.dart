@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/auth/auth_scope.dart';
+import '../screens/auth_landing_screen.dart';
 import '../core/clips/clip_service.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/events/event_service.dart';
@@ -13,7 +15,6 @@ import '../core/notifications/providers/notifications_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/homepage/homepage_feed.dart';
 import '../widgets/ministry_app_bar_title.dart';
-import '../widgets/subscription_gate.dart';
 import 'notifications_screen.dart';
 import 'ebook_screen.dart';
 import 'my_library_screen.dart';
@@ -89,13 +90,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _notificationsProvider = NotificationsProvider()..initialize();
+    _notificationsProvider = NotificationsProvider();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final userId = AuthScope.of(context).state.user?.id;
+      final authState = AuthScope.of(context).state;
+      if (!authState.isAuthenticated) return;
+      final userId = authState.user?.id;
       if (userId == null || userId.isEmpty) return;
       maybePromptPolicyAcceptance(context: context, userId: userId);
       _bindPushNotifications();
+      unawaited(_notificationsProvider.initialize());
       // Registration during bootstrap can run before APNs is ready. Retry once
       // the first frame is up, then again on resume.
       unawaited(AuthScope.read(context).ensurePushTokenRegistered());
@@ -148,19 +152,32 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      if (!isAccountAuthenticated(context)) return;
       _notificationsProvider.refresh();
       SubscriptionScope.maybeOf(context)?.refresh();
       unawaited(AuthScope.read(context).ensurePushTokenRegistered());
     }
   }
 
-  Future<void> _logout(BuildContext context) async {
-    await AuthScope.read(context).logout();
-  }
-
   Future<void> _openNotifications(BuildContext context) async {
+    if (!await ensureAccount(context)) return;
+    if (!context.mounted) return;
     await Navigator.of(context).pushNamed(NotificationsScreen.routeName);
     await _notificationsProvider.refresh();
+  }
+
+  Future<void> _openProfile(BuildContext context) async {
+    if (!await ensureAccount(context)) return;
+    if (!context.mounted) return;
+    await Navigator.of(context).pushNamed(ProfileScreen.routeName);
+  }
+
+  Future<void> _openSignIn(BuildContext context) async {
+    await Navigator.of(context).pushNamed(AuthLandingScreen.routeName);
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await AuthScope.read(context).logout();
   }
 
   void _onDestinationSelected(int index) {
@@ -205,14 +222,19 @@ class _DashboardScreenState extends State<DashboardScreen>
           embedded: true,
         );
       case 2:
-        return _clipsTab ??= SubscriptionGate(
-          child: ClipsScreen(
-            key: const Key('dashboard_clips_content'),
-            service: widget.clipService,
-            embedded: true,
-          ),
+        return _clipsTab ??= ClipsScreen(
+          key: const Key('dashboard_clips_content'),
+          service: widget.clipService,
+          embedded: true,
         );
       case 3:
+        if (!isAccountAuthenticated(context)) {
+          return EbookScreen(
+            key: const Key('dashboard_library_content'),
+            service: widget.libraryService,
+            embedded: true,
+          );
+        }
         return _libraryTab ??= MyLibraryScreen(
           key: const Key('dashboard_library_content'),
           service: widget.libraryService,
@@ -229,10 +251,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     final authState = AuthScope.of(context).state;
     final user = authState.user;
-    final userDisplayName =
-        (user?.name != null && user!.name!.trim().isNotEmpty)
+    final isAuthenticated = authState.isAuthenticated;
+    final userDisplayName = !isAuthenticated
+        ? ''
+        : ((user?.name != null && user!.name!.trim().isNotEmpty)
             ? user.name!.trim()
-            : user?.email ?? 'Member';
+            : user?.email ?? 'Member');
 
     return Scaffold(
       appBar: AppBar(
@@ -270,7 +294,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
             },
           ),
-          if (_selectedIndex == 3)
+          if (_selectedIndex == 3 && isAuthenticated)
             TextButton(
               onPressed: () =>
                   Navigator.of(context).pushNamed(EbookScreen.routeName),
@@ -278,16 +302,22 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
           IconButton(
             tooltip: 'Profile',
-            onPressed: () =>
-                Navigator.of(context).pushNamed(ProfileScreen.routeName),
+            onPressed: () => _openProfile(context),
             icon: const Icon(Icons.person_outline),
           ),
-          IconButton(
-            key: const Key('home_logout_button'),
-            tooltip: 'Logout',
-            onPressed: () => _logout(context),
-            icon: const Icon(Icons.logout),
-          ),
+          if (isAuthenticated)
+            IconButton(
+              key: const Key('home_logout_button'),
+              tooltip: 'Logout',
+              onPressed: () => _logout(context),
+              icon: const Icon(Icons.logout),
+            )
+          else
+            TextButton(
+              key: const Key('home_sign_in_button'),
+              onPressed: () => _openSignIn(context),
+              child: const Text('Sign In'),
+            ),
         ],
       ),
       body: SafeArea(

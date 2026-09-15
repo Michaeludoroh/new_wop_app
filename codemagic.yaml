@@ -277,8 +277,8 @@ workflows:
           flutter build ipa \
             --release \
             --verbose \
-            --build-name=1.0.0 \
-            --build-number=11 \
+            --build-name=1.1.0 \
+            --build-number=12 \
             --export-options-plist=/Users/builder/export_options.plist \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=MOBILE_ANDROID_PREMIUM_PRODUCT_ID="${MOBILE_ANDROID_PREMIUM_PRODUCT_ID:-wopp_premium_monthly}" \

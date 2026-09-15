@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../core/auth/auth_scope.dart';
-import '../core/auth/auth_state.dart';
+import '../core/auth/account_required.dart';
 import '../core/notifications/providers/notifications_provider.dart';
 import '../widgets/ministry_app_bar_title.dart';
+import '../widgets/login_required.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -20,7 +20,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    _provider = NotificationsProvider()..initialize();
+    _provider = NotificationsProvider();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (isAccountAuthenticated(context)) {
+        _provider.initialize();
+      }
+    });
   }
 
   @override
@@ -33,16 +39,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = AuthScope.of(context);
-    final authState = auth.state;
-
-    if (!authState.isAuthenticated ||
-        authState.status != AuthStatus.authenticated) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Unauthorized. Please sign in again.'),
-        ),
-      );
+    if (!isAccountAuthenticated(context)) {
+      return const LoginRequiredScreen();
     }
 
     return AnimatedBuilder(

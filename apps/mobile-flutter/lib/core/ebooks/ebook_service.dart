@@ -23,7 +23,7 @@ class EbookService {
     bool? recent,
   }) async {
     final response = await _authorizedGet(
-      '/ebooks',
+      '/ebooks/public',
       queryParameters: {
         if (search != null && search.isNotEmpty) 'search': search,
         if (category != null && category.isNotEmpty) 'category': category,
@@ -36,7 +36,7 @@ class EbookService {
   }
 
   Future<EbookDetailsResponse> getEbookDetails(String id) async {
-    final response = await _authorizedGet('/ebooks/$id');
+    final response = await _authorizedGet('/ebooks/public/$id');
     return EbookDetailsResponse.fromJson(_asMap(response.data));
   }
 

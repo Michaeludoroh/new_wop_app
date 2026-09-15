@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ministry_mobile/core/auth/auth_provider.dart';
 import 'package:ministry_mobile/core/auth/auth_scope.dart';
 import 'package:ministry_mobile/core/auth/auth_service.dart';
+import 'package:ministry_mobile/core/auth/auth_state.dart';
 import 'package:ministry_mobile/core/auth/models/auth_models.dart';
 import 'package:ministry_mobile/core/auth/token_storage_service.dart';
 import 'package:ministry_mobile/core/homepage/homepage_feed_sources.dart';
@@ -63,6 +64,18 @@ class _TestAuthProvider extends AuthProvider {
         );
 
   int logoutCallCount = 0;
+
+  @override
+  AuthState get state => AuthState(
+        status: AuthStatus.authenticated,
+        isBootstrapped: true,
+        user: AuthUser(
+          id: 'user-1',
+          email: 'member@example.com',
+          name: 'Ada',
+          role: 'member',
+        ),
+      );
 
   @override
   Future<void> logout() async {
@@ -170,6 +183,7 @@ void main() {
   testWidgets('tapping logout button triggers provider logout', (tester) async {
     final provider = _TestAuthProvider();
     await tester.pumpWidget(buildTestApp(provider));
+    await tester.pump();
 
     expect(find.byKey(const Key('home_logout_button')), findsOneWidget);
 
@@ -177,5 +191,6 @@ void main() {
     await tester.pump();
 
     expect(provider.logoutCallCount, 1);
+    await tester.pump(const Duration(seconds: 30));
   });
 }

@@ -39,6 +39,13 @@ class AuthenticatedDio {
                 return;
               }
 
+              final refreshToken =
+                  await _tokenStorageService.getRefreshToken();
+              if (refreshToken == null || refreshToken.isEmpty) {
+                handler.next(error);
+                return;
+              }
+
               try {
                 await _authService.refresh();
                 final retryOptions = error.requestOptions;

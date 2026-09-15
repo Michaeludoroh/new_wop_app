@@ -115,7 +115,7 @@ void main() {
     await tester.pump(const Duration(seconds: 30));
   });
 
-  testWidgets('shows AuthLandingScreen when unauthenticated and bootstrapped',
+  testWidgets('shows DashboardScreen when unauthenticated and bootstrapped',
       (tester) async {
     await tester.pumpWidget(
       buildWithState(
@@ -128,8 +128,12 @@ void main() {
 
     await tester.pump();
 
-    expect(find.byType(AuthLandingScreen), findsOneWidget);
+    expect(find.byType(DashboardScreen), findsOneWidget);
     expect(find.byType(SplashScreen), findsNothing);
-    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.byType(AuthLandingScreen), findsNothing);
+    expect(find.byKey(const Key('home_sign_in_button')), findsOneWidget);
+    expect(find.byKey(const Key('home_logout_button')), findsNothing);
+
+    await tester.pump(const Duration(seconds: 30));
   });
 }

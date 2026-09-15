@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/ebooks/ebook_download_store.dart';
 import '../core/ebooks/ebook_service.dart';
 import '../core/ebooks/models/ebook_models.dart';
@@ -51,7 +52,9 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -61,18 +64,21 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
     });
 
     try {
+      final authenticated = isAccountAuthenticated(context);
       final details = await _service.getEbookDetails(widget.ebookId);
       AccessResponse? access;
-      try {
-        access = await _service.getAccess(widget.ebookId);
-      } catch (_) {
-        access = null;
-      }
       var downloaded = false;
-      try {
-        final progress = await _service.getReadingProgress(widget.ebookId);
-        downloaded = progress.data?.downloaded ?? false;
-      } catch (_) {}
+      if (authenticated) {
+        try {
+          access = await _service.getAccess(widget.ebookId);
+        } catch (_) {
+          access = null;
+        }
+        try {
+          final progress = await _service.getReadingProgress(widget.ebookId);
+          downloaded = progress.data?.downloaded ?? false;
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _ebook = details.data;
@@ -90,6 +96,8 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   }
 
   Future<void> _openSubscription() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     await Navigator.of(context).pushNamed(SubscriptionScreen.routeName);
     if (!mounted) return;
     SubscriptionScope.maybeOf(context)?.refresh();
@@ -97,6 +105,8 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   }
 
   Future<void> _readNow() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     if (!_canDownload && (_ebook?.isPremium ?? true)) {
       await _openSubscription();
       return;
@@ -142,6 +152,8 @@ class _EbookDetailsScreenState extends State<EbookDetailsScreen> {
   }
 
   Future<void> _download() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     if (!_canDownload) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Purchase to download')),

@@ -11,7 +11,6 @@ import 'core/logging/app_log.dart';
 import 'core/router/app_router.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/splash_screen.dart';
-import 'screens/auth_landing_screen.dart';
 
 class MinistryMobileApp extends StatefulWidget {
   const MinistryMobileApp({super.key, this.theme});
@@ -84,13 +83,11 @@ class _MinistryMobileAppState extends State<MinistryMobileApp> {
 
         final home = !authState.isBootstrapped
             ? const SplashScreen()
-            : (authState.status == AuthStatus.authenticated
-                ? DashboardScreen(
-                    key: _dashboardKey,
-                    authStatusLabel: statusText,
-                    authError: authState.errorMessage,
-                  )
-                : const AuthLandingScreen());
+            : DashboardScreen(
+                key: _dashboardKey,
+                authStatusLabel: statusText,
+                authError: authState.errorMessage,
+              );
 
         final app = MaterialApp(
           title: AppConstants.appName,

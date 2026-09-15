@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/http/api_error.dart';
 import '../core/programs/program_service.dart';
 import '../widgets/ministry_app_bar_title.dart';
@@ -36,7 +37,9 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? ProgramService();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -46,28 +49,32 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
     });
 
     try {
+      final authenticated = isAccountAuthenticated(context);
       final details = await _service.getProgramDetails(widget.programId);
       var enrolled = false;
-      try {
-        final enrollments = await _service.getMyEnrollments();
-        enrolled = enrollments.any(
-          (item) =>
-              (item.program.id == details.data.id || item.program.slug == details.data.slug) &&
-              item.status.toUpperCase() == 'ENROLLED',
-        );
-      } catch (_) {
-        enrolled = false;
-      }
-
       ProgramProgressItem? progress;
-      try {
-        final loadedProgress = await _service.getProgress(details.data.id);
-        progress = loadedProgress;
-        if (loadedProgress.enrolled == true) {
-          enrolled = true;
+      if (authenticated) {
+        try {
+          final enrollments = await _service.getMyEnrollments();
+          enrolled = enrollments.any(
+            (item) =>
+                (item.program.id == details.data.id ||
+                    item.program.slug == details.data.slug) &&
+                item.status.toUpperCase() == 'ENROLLED',
+          );
+        } catch (_) {
+          enrolled = false;
         }
-      } catch (_) {
-        progress = null;
+
+        try {
+          final loadedProgress = await _service.getProgress(details.data.id);
+          progress = loadedProgress;
+          if (loadedProgress.enrolled == true) {
+            enrolled = true;
+          }
+        } catch (_) {
+          progress = null;
+        }
       }
 
       if (!mounted) return;
@@ -85,6 +92,8 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
   }
 
   Future<void> _toggleEnrollment() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final program = _program;
     if (program == null) return;
     setState(() => _error = null);
@@ -124,6 +133,8 @@ class _ProgramDetailsScreenState extends State<ProgramDetailsScreen> {
   }
 
   Future<void> _updateProgress(double value) async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final program = _program;
     if (program == null || !_enrolled) return;
     try {

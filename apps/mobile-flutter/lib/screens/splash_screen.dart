@@ -46,7 +46,7 @@ class SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Initializing session...',
+                'Loading...',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

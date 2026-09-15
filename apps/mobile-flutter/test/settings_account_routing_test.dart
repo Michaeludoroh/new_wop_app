@@ -13,6 +13,7 @@ import 'package:ministry_mobile/screens/login_screen.dart';
 import 'package:ministry_mobile/screens/profile_screen.dart';
 import 'package:ministry_mobile/screens/settings_screen.dart';
 import 'package:ministry_mobile/screens/delete_account_screen.dart';
+import 'package:ministry_mobile/widgets/login_required.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _FakeAuthService extends AuthService {
@@ -121,7 +122,7 @@ void main() {
     );
   }
 
-  testWidgets('unauthenticated users cannot open Settings', (tester) async {
+  testWidgets('unauthenticated users can open Settings', (tester) async {
     final auth = _SessionAuthProvider(authenticated: false);
     await pumpRoutedApp(
       tester,
@@ -141,8 +142,9 @@ void main() {
     await tester.tap(find.text('open settings'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
-    expect(find.byType(SettingsScreen), findsNothing);
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byKey(const Key('settings_sign_in_tile')), findsOneWidget);
   });
 
   testWidgets('unauthenticated users cannot open Profile', (tester) async {
@@ -165,7 +167,7 @@ void main() {
     await tester.tap(find.text('open profile'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(LoginRequiredScreen), findsOneWidget);
     expect(find.byType(ProfileScreen), findsNothing);
   });
 
@@ -190,7 +192,7 @@ void main() {
     await tester.tap(find.text('open delete account'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(LoginRequiredScreen), findsOneWidget);
     expect(find.byType(DeleteAccountScreen), findsNothing);
   });
 
@@ -216,6 +218,8 @@ void main() {
     navigator.pushNamed(SettingsScreen.routeName);
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(SettingsScreen), findsWidgets);
+    expect(find.byType(LoginScreen), findsNothing);
+    expect(find.byKey(const Key('settings_sign_in_tile')), findsOneWidget);
   });
 }

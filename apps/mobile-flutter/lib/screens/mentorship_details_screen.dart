@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/mentorship/mentorship_service.dart';
 import '../widgets/ministry_app_bar_title.dart';
 import '../widgets/ministry_posted_image.dart';
@@ -39,7 +40,9 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? MentorshipService();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   @override
@@ -55,20 +58,23 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
     });
 
     try {
+      final authenticated = isAccountAuthenticated(context);
       final details = await _service.getClassDetails(widget.classId);
       final sessions = await _service.getSessions(widget.classId);
       MentorshipProgressItem? progress;
       List<MentorshipAttendanceItem> attendance = const [];
       String? enrollmentStatus;
 
-      try {
-        progress = await _service.getProgress(details.data.id);
-        attendance = await _service.getAttendance(details.data.id);
-        if (progress.completionPct > 0 || progress.currentMilestone != null) {
-          enrollmentStatus = 'ENROLLED';
+      if (authenticated) {
+        try {
+          progress = await _service.getProgress(details.data.id);
+          attendance = await _service.getAttendance(details.data.id);
+          if (progress.completionPct > 0 || progress.currentMilestone != null) {
+            enrollmentStatus = 'ENROLLED';
+          }
+        } catch (_) {
+          progress = null;
         }
-      } catch (_) {
-        progress = null;
       }
 
       if (!mounted) return;
@@ -88,6 +94,8 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
   }
 
   Future<void> _toggleEnrollment() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final item = _item;
     if (item == null) return;
     setState(() => _error = null);
@@ -121,6 +129,8 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
   }
 
   Future<void> _updateProgress(double value) async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final item = _item;
     if (item == null || _enrollmentStatus != 'ENROLLED') return;
     try {
@@ -132,6 +142,8 @@ class _MentorshipDetailsScreenState extends State<MentorshipDetailsScreen> {
   }
 
   Future<void> _submitFeedback() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final item = _item;
     if (item == null || _enrollmentStatus != 'ENROLLED') return;
     try {

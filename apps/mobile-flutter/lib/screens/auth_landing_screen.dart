@@ -11,6 +11,8 @@ import 'register_screen.dart';
 class AuthLandingScreen extends StatelessWidget {
   const AuthLandingScreen({super.key});
 
+  static const String routeName = '/welcome';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -54,7 +56,7 @@ class AuthLandingScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Sign in to access events, programs, library, and more.',
+                      'Sign in to enroll, save progress, and manage your account.',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

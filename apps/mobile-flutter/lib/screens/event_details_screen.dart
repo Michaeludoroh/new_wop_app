@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/auth/account_required.dart';
 import '../core/events/event_service.dart';
 import '../core/http/api_error.dart';
 import '../widgets/ministry_app_bar_title.dart';
@@ -36,7 +37,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   void initState() {
     super.initState();
     _service = widget.service ?? EventService();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _load();
+    });
   }
 
   Future<void> _load() async {
@@ -46,12 +49,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     });
 
     try {
+      final authenticated = isAccountAuthenticated(context);
       final details = await _service.getEventDetails(widget.eventId);
       EventRsvpStatusItem? rsvpStatus;
-      try {
-        rsvpStatus = await _service.getMyRsvp(details.data.id);
-      } catch (_) {
-        rsvpStatus = null;
+      if (authenticated) {
+        try {
+          rsvpStatus = await _service.getMyRsvp(details.data.id);
+        } catch (_) {
+          rsvpStatus = null;
+        }
       }
 
       if (!mounted) return;
@@ -67,6 +73,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Future<void> _toggleRsvp() async {
+    if (!await ensureAccount(context)) return;
+    if (!mounted) return;
     final event = _event;
     if (event == null) return;
     setState(() => _error = null);
